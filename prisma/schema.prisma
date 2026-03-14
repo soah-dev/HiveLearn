@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  firebaseUid   String    @unique
+  email         String    @unique
+  name          String?
+  image         String?
+  role          String?
+  createdAt     DateTime  @default(now())
+
+  children      ParentChild[] @relation("ParentRelation")
+  parents       ParentChild[] @relation("ChildRelation")
+  createdAssignments Assignment[] @relation("ParentAssignments")
+  receivedAssignments Assignment[] @relation("ChildAssignments")
+  answers       Answer[]
+  gamification  Gamification?
+  earnedBadges  EarnedBadge[]
+}
+
+model ParentChild {
+  id         String   @id @default(cuid())
+  parentId   String
+  childId    String?
+  inviteCode String   @unique
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  parent User  @relation("ParentRelation", fields: [parentId], references: [id])
+  child  User? @relation("ChildRelation", fields: [childId], references: [id])
+
+  @@unique([parentId, childId])
+}
+
+model Assignment {
+  id            String    @id @default(cuid())
+  parentId      String
+  childId       String
+  grade         Int
+  subject       String
+  topic         String
+  difficulty    String    @default("medium")
+  numQuestions  Int
+  timeLimitMin  Int?
+  reviewMode    String    @default("ai")
+  status        String    @default("pending")
+  aiFeedback    String?
+  parentComment String?
+  score         Int?
+  pointsAwarded Int?
+  createdAt     DateTime  @default(now())
+  startedAt     DateTime?
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+
+  parent    User       @relation("ParentAssignments", fields: [parentId], references: [id])
+  child     User       @relation("ChildAssignments", fields: [childId], references: [id])
+  questions Question[]
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  assignmentId  String
+  questionType  String
+  questionText  String
+  optionA       String?
+  optionB       String?
+  optionC       String?
+  optionD       String?
+  correctAnswer String
+  orderIndex    Int
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+}
+
+model Answer {
+  id             String   @id @default(cuid())
+  questionId     String
+  childId        String
+  selectedAnswer String?
+  isCorrect      Boolean?
+  aiExplanation  String?
+  aiScore        Int?
+  parentComment  String?
+  answeredAt     DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  child    User     @relation(fields: [childId], references: [id])
+
+  @@unique([questionId, childId])
+}
+
+model Gamification {
+  id                String  @id @default(cuid())
+  childId           String  @unique
+  totalPoints       Int     @default(0)
+  currentStreak     Int     @default(0)
+  longestStreak     Int     @default(0)
+  lastCompletedDate String?
+
+  child User @relation(fields: [childId], references: [id])
+}
+
+model Badge {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String
+  criteria    String
+
+  earnedBy EarnedBadge[]
+}
+
+model EarnedBadge {
+  id       String   @id @default(cuid())
+  childId  String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  child User  @relation(fields: [childId], references: [id])
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([childId, badgeId])
+}
