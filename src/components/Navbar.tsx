@@ -24,11 +24,13 @@ export default function Navbar() {
                 <div className="hidden sm:flex items-center gap-3">
                   <Link href="/parent/dashboard" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Dashboard</Link>
                   <Link href="/parent/create" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Create Assignment</Link>
+                  <Link href="/parent/analytics" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Analytics</Link>
                 </div>
               )}
               {user.role === 'child' && (
                 <div className="hidden sm:flex items-center gap-3">
                   <Link href="/child/dashboard" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Dashboard</Link>
+                  <Link href="/child/practice" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Practice</Link>
                   <Link href="/child/badges" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Badges</Link>
                   <Link href="/child/leaderboard" className="text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Leaderboard</Link>
                 </div>

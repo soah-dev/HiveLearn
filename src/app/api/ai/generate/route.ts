@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -14,7 +13,11 @@ export async function POST(req: NextRequest) {
 
   const { grade, subject, topic, difficulty, numQuestions, questionTypes } = await req.json();
 
-  const prompt = `Generate ${numQuestions} questions for a grade ${grade} student on the topic "${topic}" in ${subject} at ${difficulty} difficulty. Include the following question types: ${questionTypes.join(', ')}.
+  const topicClause = topic?.trim()
+    ? `on the topic "${topic.trim()}"`
+    : `covering a variety of appropriate topics`;
+
+  const prompt = `Generate ${numQuestions} questions for a grade ${grade} student ${topicClause} in ${subject} at ${difficulty} difficulty. Include the following question types: ${questionTypes.join(', ')}.
 
 For each question, return a JSON object with:
 - question_type: "multiple_choice" | "true_false" | "fill_in_blank" | "open_ended"
@@ -25,19 +28,9 @@ For each question, return a JSON object with:
 Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among the requested types.`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      return NextResponse.json({ error: 'Unexpected response' }, { status: 500 });
-    }
-
-    // Extract JSON from response (handle markdown code blocks)
-    let jsonStr = content.text;
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    let jsonStr = response.text() || '';
     const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       jsonStr = jsonMatch[0];

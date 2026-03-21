@@ -70,15 +70,7 @@ export default function ChildAssignmentPage() {
         body: JSON.stringify({ answers: answerList }),
       });
 
-      // If AI auto-review, trigger it immediately
-      if (assignment.reviewMode === 'ai') {
-        await apiFetch(`/api/assignments/${assignment.id}/review`, token, {
-          method: 'POST',
-          body: JSON.stringify({ mode: 'ai' }),
-        });
-      }
-
-      // Refresh
+      // Refresh — parent will trigger review
       const data = await apiFetch(`/api/assignments/${params.id}`, token);
       setAssignment(data.assignment);
     } catch (err) {
@@ -245,15 +237,15 @@ export default function ChildAssignmentPage() {
         )}
 
         {isSubmitted && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl text-center">
-            <p className="text-yellow-800 dark:text-yellow-200 font-medium">
-              {assignment.reviewMode === 'parent' ? 'Waiting for parent review...' : 'Being reviewed by AI...'}
-            </p>
+          <div className="p-8 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl text-center">
+            <p className="text-4xl mb-3">⏳</p>
+            <p className="text-yellow-800 dark:text-yellow-200 font-semibold text-lg">Assignment submitted!</p>
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-1">Your results will be visible once your parent reviews it.</p>
           </div>
         )}
 
         {/* Questions */}
-        {(isActive || isReviewed || isSubmitted) && (
+        {(isActive || isReviewed) && (
           <div className="space-y-4 mb-8">
             {assignment.questions.map((q, i) => {
               const ans = q.answers[0];

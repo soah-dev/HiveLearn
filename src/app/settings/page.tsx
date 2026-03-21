@@ -8,19 +8,22 @@ import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
-interface Invite {
+interface Child {
   id: string;
-  inviteCode: string;
-  status: string;
-  child: { id: string; name: string | null; email: string } | null;
+  name: string | null;
+  email: string;
+  grade: number | null;
+  image: string | null;
 }
 
 export default function SettingsPage() {
   const { user, token, loading, signOut } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
   const router = useRouter();
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [generating, setGenerating] = useState(false);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [editingGrade, setEditingGrade] = useState<Record<string, number>>({});
+  const [savingGrade, setSavingGrade] = useState<string | null>(null);
+  const [gradeSaved, setGradeSaved] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,26 +31,37 @@ export default function SettingsPage() {
       return;
     }
     if (token && user?.role === 'parent') {
-      apiFetch('/api/parent/invite', token)
-        .then(data => setInvites(data.invites || []))
+      apiFetch('/api/parent/children', token)
+        .then(data => {
+          const kids = data.children || [];
+          setChildren(kids);
+          const grades: Record<string, number> = {};
+          for (const c of kids) grades[c.id] = c.grade ?? 1;
+          setEditingGrade(grades);
+        })
         .catch(() => {});
     }
   }, [user, token, loading, router]);
 
-  const generateInvite = async () => {
-    setGenerating(true);
+  const saveGrade = async (childId: string) => {
+    setSavingGrade(childId);
     try {
-      await apiFetch('/api/parent/invite', token, { method: 'POST' });
-      // Refresh invites
-      const invitesData = await apiFetch('/api/parent/invite', token);
-      setInvites(invitesData.invites || []);
+      await apiFetch('/api/parent/children', token, {
+        method: 'PATCH',
+        body: JSON.stringify({ childId, grade: editingGrade[childId] }),
+      });
+      setChildren(prev => prev.map(c => c.id === childId ? { ...c, grade: editingGrade[childId] } : c));
+      setGradeSaved(childId);
+      setTimeout(() => setGradeSaved(null), 2000);
     } catch (err) {
       console.error(err);
     }
-    setGenerating(false);
+    setSavingGrade(null);
   };
 
   if (loading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+
+  const childGrade = (user as { grade?: number | null })?.grade;
 
   return (
     <>
@@ -72,9 +86,47 @@ export default function SettingsPage() {
               <span className="inline-block mt-1 px-3 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-medium capitalize">
                 {user?.role}
               </span>
+              {user?.role === 'child' && (
+                <span className="inline-block mt-1 ml-2 px-3 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
+                  {childGrade ? `Grade ${childGrade}` : 'Grade not set'}
+                </span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Children grade management (Parent only) */}
+        {user?.role === 'parent' && children.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Children&apos;s Grade Levels</h2>
+            <div className="space-y-4">
+              {children.map(child => (
+                <div key={child.id} className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-semibold text-sm flex-shrink-0">
+                    {(child.name || 'C')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">{child.name || child.email}</p>
+                  </div>
+                  <select
+                    value={editingGrade[child.id] ?? child.grade ?? 1}
+                    onChange={e => setEditingGrade(prev => ({ ...prev, [child.id]: Number(e.target.value) }))}
+                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                  </select>
+                  <button
+                    onClick={() => saveGrade(child.id)}
+                    disabled={savingGrade === child.id}
+                    className="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {savingGrade === child.id ? '...' : gradeSaved === child.id ? 'Saved!' : 'Save'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Dark Mode */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
@@ -91,45 +143,6 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
-
-        {/* Linked Accounts (Parent only) */}
-        {user?.role === 'parent' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Linked Children</h2>
-              <button
-                onClick={generateInvite}
-                disabled={generating}
-                className="text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50"
-              >
-                {generating ? 'Generating...' : '+ New Invite'}
-              </button>
-            </div>
-            {invites.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-sm">No invites created yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {invites.map(inv => (
-                  <div key={inv.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                    <div>
-                      <span className="font-mono font-medium text-gray-900 dark:text-white">{inv.inviteCode}</span>
-                      {inv.child ? (
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">Linked to {inv.child.name || inv.child.email}</p>
-                      ) : (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">Pending</p>
-                      )}
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      inv.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                    }`}>
-                      {inv.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Sign Out */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">

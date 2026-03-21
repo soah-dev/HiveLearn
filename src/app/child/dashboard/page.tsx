@@ -65,6 +65,10 @@ export default function ChildDashboard() {
 
   const pending = assignments.filter(a => a.status === 'pending' || a.status === 'in_progress');
   const completed = assignments.filter(a => a.status === 'reviewed');
+  const scoredAssignments = completed.filter(a => a.score !== null);
+  const accuracyRate = scoredAssignments.length > 0
+    ? Math.round(scoredAssignments.reduce((sum, a) => sum + (a.score || 0), 0) / scoredAssignments.length)
+    : 0;
 
   return (
     <>
@@ -78,8 +82,8 @@ export default function ChildDashboard() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard title="Total Points" value={gamification?.totalPoints || 0} icon="⭐" />
-          <StatCard title="Current Streak" value={`${gamification?.currentStreak || 0} days`} icon="🔥" />
-          <StatCard title="Longest Streak" value={`${gamification?.longestStreak || 0} days`} icon="🏅" />
+          <StatCard title="Accuracy Rate" value={`${accuracyRate}%`} icon="🎯" />
+          <StatCard title="Pending" value={pending.length} icon="📋" />
           <StatCard title="Completed" value={completed.length} icon="✅" />
         </div>
 

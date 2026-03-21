@@ -55,6 +55,7 @@ export default function ParentAssignmentPage() {
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [reviewing, setReviewing] = useState(false);
+  const [reviewType, setReviewType] = useState<'ai' | 'parent'>('ai');
   const [reviews, setReviews] = useState<Record<string, { isCorrect: boolean; comment: string; score?: number }>>({});
   const [parentComment, setParentComment] = useState('');
   const [overallScore, setOverallScore] = useState(0);
@@ -230,7 +231,7 @@ export default function ParentAssignmentPage() {
                 )}
 
                 {/* Parent review inputs (for submitted, parent-review mode) */}
-                {isSubmitted && assignment.reviewMode === 'parent' && (
+                {isSubmitted && reviewType === 'parent' && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2">
@@ -281,7 +282,23 @@ export default function ParentAssignmentPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Review this assignment</h3>
 
-            {assignment.reviewMode === 'parent' && (
+            {/* Review type toggle */}
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={() => setReviewType('ai')}
+                className={`flex-1 py-2 rounded-lg font-medium transition-colors ${reviewType === 'ai' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+              >
+                AI Auto-Review
+              </button>
+              <button
+                onClick={() => setReviewType('parent')}
+                className={`flex-1 py-2 rounded-lg font-medium transition-colors ${reviewType === 'parent' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+              >
+                Review Manually
+              </button>
+            </div>
+
+            {reviewType === 'parent' && (
               <div className="space-y-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Overall Score (0-100)</label>
@@ -313,34 +330,15 @@ export default function ParentAssignmentPage() {
               </div>
             )}
 
-            <div className="flex gap-3">
-              {assignment.reviewMode === 'ai' ? (
-                <button
-                  onClick={handleAIReview}
-                  disabled={reviewing}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                >
-                  {reviewing ? 'AI is reviewing...' : 'Run AI Auto-Review'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleParentReview}
-                  disabled={reviewing}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                >
-                  {reviewing ? 'Submitting review...' : 'Submit Parent Review'}
-                </button>
-              )}
-              {assignment.reviewMode === 'parent' && (
-                <button
-                  onClick={handleAIReview}
-                  disabled={reviewing}
-                  className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Use AI Instead
-                </button>
-              )}
-            </div>
+            <button
+              onClick={reviewType === 'ai' ? handleAIReview : handleParentReview}
+              disabled={reviewing}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {reviewing
+                ? reviewType === 'ai' ? 'AI is reviewing...' : 'Submitting review...'
+                : reviewType === 'ai' ? 'Run AI Auto-Review' : 'Submit Manual Review'}
+            </button>
           </div>
         )}
       </main>

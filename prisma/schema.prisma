@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,24 +14,31 @@ model User {
   name          String?
   image         String?
   role          String?
+  grade         Int?
   createdAt     DateTime  @default(now())
 
   children      ParentChild[] @relation("ParentRelation")
   parents       ParentChild[] @relation("ChildRelation")
   createdAssignments Assignment[] @relation("ParentAssignments")
   receivedAssignments Assignment[] @relation("ChildAssignments")
-  answers       Answer[]
-  gamification  Gamification?
-  earnedBadges  EarnedBadge[]
+  answers          Answer[]
+  gamification     Gamification?
+  earnedBadges     EarnedBadge[]
+  practiceSessions PracticeSession[]
 }
 
 model ParentChild {
-  id         String   @id @default(cuid())
-  parentId   String
-  childId    String?
-  inviteCode String   @unique
-  status     String   @default("pending")
-  createdAt  DateTime @default(now())
+  id          String    @id @default(cuid())
+  parentId    String
+  childId     String?
+  inviteToken String    @unique
+  childEmail  String
+  childName   String
+  childGrade  Int       @default(6)
+  status      String    @default("pending")
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
 
   parent User  @relation("ParentRelation", fields: [parentId], references: [id])
   child  User? @relation("ChildRelation", fields: [childId], references: [id])
@@ -94,6 +101,52 @@ model Answer {
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   child    User     @relation(fields: [childId], references: [id])
+
+  @@unique([questionId, childId])
+}
+
+model PracticeSession {
+  id           String    @id @default(cuid())
+  childId      String
+  grade        Int
+  subject      String
+  topic        String?
+  difficulty   String    @default("medium")
+  status       String    @default("in_progress")
+  score        Int?
+  pointsAwarded Int?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  child     User              @relation(fields: [childId], references: [id])
+  questions PracticeQuestion[]
+}
+
+model PracticeQuestion {
+  id            String  @id @default(cuid())
+  sessionId     String
+  questionText  String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctAnswer String
+  orderIndex    Int
+
+  session PracticeSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answers PracticeAnswer[]
+}
+
+model PracticeAnswer {
+  id             String   @id @default(cuid())
+  sessionId      String
+  questionId     String
+  childId        String
+  selectedAnswer String?
+  isCorrect      Boolean?
+  answeredAt     DateTime @default(now())
+
+  question PracticeQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, childId])
 }

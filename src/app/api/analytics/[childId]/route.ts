@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-export async function GET(req: NextRequest, { params }: { params: { childId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ childId: string }> }) {
   const user = await getAuthUser(req);
   if (!user || user.role !== 'parent') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -95,6 +95,37 @@ export async function GET(req: NextRequest, { params }: { params: { childId: str
     },
   });
 
+  // Practice analytics
+  const practiceSessions = await prisma.practiceSession.findMany({
+    where: { childId, status: 'completed' },
+    orderBy: { completedAt: 'asc' },
+    select: { id: true, subject: true, topic: true, difficulty: true, score: true, pointsAwarded: true, completedAt: true, grade: true },
+  });
+
+  const practiceScoreTrends = practiceSessions.map(s => ({
+    date: s.completedAt?.toISOString().split('T')[0],
+    score: s.score,
+    subject: s.subject,
+  }));
+
+  const practiceSubjectScores: Record<string, { total: number; count: number }> = {};
+  for (const s of practiceSessions) {
+    if (!practiceSubjectScores[s.subject]) practiceSubjectScores[s.subject] = { total: 0, count: 0 };
+    practiceSubjectScores[s.subject].total += s.score || 0;
+    practiceSubjectScores[s.subject].count += 1;
+  }
+  const practiceBySubject = Object.entries(practiceSubjectScores).map(([subject, data]) => ({
+    subject,
+    avgScore: Math.round(data.total / data.count),
+    count: data.count,
+  }));
+
+  const totalPracticeSessions = practiceSessions.length;
+  const avgPracticeScore = totalPracticeSessions > 0
+    ? Math.round(practiceSessions.reduce((sum, s) => sum + (s.score || 0), 0) / totalPracticeSessions)
+    : 0;
+  const totalPracticePoints = practiceSessions.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0);
+
   return NextResponse.json({
     scoreTrends,
     bySubject,
@@ -105,5 +136,12 @@ export async function GET(req: NextRequest, { params }: { params: { childId: str
     strongest,
     weakest,
     recentActivity: recentAssignments,
+    practice: {
+      scoreTrends: practiceScoreTrends,
+      bySubject: practiceBySubject,
+      totalSessions: totalPracticeSessions,
+      avgScore: avgPracticeScore,
+      totalPoints: totalPracticePoints,
+    },
   });
 }

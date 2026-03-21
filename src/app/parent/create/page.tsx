@@ -55,7 +55,6 @@ export default function CreateAssignment() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['multiple_choice']);
   const [numQuestions, setNumQuestions] = useState(5);
   const [timeLimitMin, setTimeLimitMin] = useState<number | null>(null);
-  const [reviewMode, setReviewMode] = useState('ai');
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [publishing, setPublishing] = useState(false);
@@ -82,7 +81,6 @@ export default function CreateAssignment() {
   };
 
   const handleGenerate = async () => {
-    if (!topic.trim()) { setError('Please enter a topic'); return; }
     if (selectedTypes.length === 0) { setError('Select at least one question type'); return; }
     setError('');
     setGenerating(true);
@@ -119,7 +117,7 @@ export default function CreateAssignment() {
         method: 'POST',
         body: JSON.stringify({
           childId, grade, subject, topic, difficulty, numQuestions: questions.length,
-          timeLimitMin, reviewMode, questions: mapped,
+          timeLimitMin, reviewMode: 'ai', questions: mapped,
         }),
       });
       router.push('/parent/dashboard');
@@ -174,7 +172,9 @@ export default function CreateAssignment() {
 
               {/* Topic */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topic</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Topic <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
                 <input
                   type="text"
                   value={topic}
@@ -227,19 +227,6 @@ export default function CreateAssignment() {
                   <option value="">No time limit</option>
                   {[10, 15, 20, 30, 45, 60].map(t => <option key={t} value={t}>{t} minutes</option>)}
                 </select>
-              </div>
-
-              {/* Review Mode */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Review Mode</label>
-                <div className="flex gap-3">
-                  <button onClick={() => setReviewMode('ai')} className={`flex-1 py-2 rounded-lg font-medium transition-colors ${reviewMode === 'ai' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
-                    AI Auto-Review
-                  </button>
-                  <button onClick={() => setReviewMode('parent')} className={`flex-1 py-2 rounded-lg font-medium transition-colors ${reviewMode === 'parent' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
-                    Parent Review
-                  </button>
-                </div>
               </div>
 
               {error && (

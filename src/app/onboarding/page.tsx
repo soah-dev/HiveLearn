@@ -10,7 +10,6 @@ export default function OnboardingPage() {
   const { user, token, refreshUser, loading } = useAuth();
   const router = useRouter();
   const [role, setRole] = useState<'parent' | 'child' | null>(null);
-  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -29,7 +28,7 @@ export default function OnboardingPage() {
     try {
       await apiFetch('/api/auth/onboarding', token, {
         method: 'POST',
-        body: JSON.stringify({ role, inviteCode: role === 'child' ? inviteCode : undefined }),
+        body: JSON.stringify({ role }),
       });
       await refreshUser();
       router.push(role === 'parent' ? '/parent/dashboard' : '/child/dashboard');
@@ -80,18 +79,10 @@ export default function OnboardingPage() {
           </div>
 
           {role === 'child' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Enter your parent&apos;s invite code
-              </label>
-              <input
-                type="text"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="e.g. A1B2C3D4"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Ask your parent for the code from their dashboard</p>
+            <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Ask your parent to send you an invite from their dashboard. Check your email for the invite link!
+              </p>
             </div>
           )}
 
@@ -103,7 +94,7 @@ export default function OnboardingPage() {
 
           <button
             onClick={handleSubmit}
-            disabled={!role || (role === 'child' && !inviteCode) || submitting}
+            disabled={!role || submitting}
             className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? 'Setting up...' : 'Continue'}

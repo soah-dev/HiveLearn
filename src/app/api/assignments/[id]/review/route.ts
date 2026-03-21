@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 async function aiReview(assignment: {
   grade: number;
@@ -44,16 +43,9 @@ Then provide:
 
 Return ONLY JSON in this format: { "answers": [{ "question_id": "...", "is_correct": true/false, "ai_score": null or 0-100, "ai_explanation": "..." }], "overall_score": 85, "overall_feedback": "..." }`;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const content = message.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response');
-
-  let jsonStr = content.text;
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  let jsonStr = response.text() || '';
   const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (jsonMatch) jsonStr = jsonMatch[0];
 
@@ -67,8 +59,8 @@ function calculatePoints(difficulty: string, score: number, timeLimitMin: number
   else if (score >= 80) bonus = 1.25;
   else if (score >= 70) bonus = 1.1;
 
-  let points = Math.round(base * bonus);
-  if (timeLimitMin) points += 5;
+  let points = Math.round(base * bonus * (score / 100));
+  if (timeLimitMin && score > 0) points += 5;
   return points;
 }
 
@@ -188,7 +180,7 @@ async function updateStreakAndPoints(childId: string, points: number) {
   });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

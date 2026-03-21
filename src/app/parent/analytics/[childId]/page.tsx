@@ -26,6 +26,13 @@ interface AnalyticsData {
     score: number | null;
     createdAt: string;
   }>;
+  practice: {
+    scoreTrends: Array<{ date: string; score: number; subject: string }>;
+    bySubject: Array<{ subject: string; avgScore: number; count: number }>;
+    totalSessions: number;
+    avgScore: number;
+    totalPoints: number;
+  };
 }
 
 export default function AnalyticsPage() {
@@ -136,6 +143,58 @@ export default function AnalyticsPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Practice Analytics */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Practice Analytics</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <StatCard title="Practice Sessions" value={data.practice.totalSessions} icon="🧠" />
+            <StatCard title="Avg Practice Score" value={`${data.practice.avgScore}%`} icon="🎯" />
+            <StatCard title="Practice Points" value={data.practice.totalPoints} icon="⭐" />
+          </div>
+
+          {data.practice.totalSessions > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Practice Score Trends</h3>
+                {data.practice.scoreTrends.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={data.practice.scoreTrends}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="score" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Practice by Subject</h3>
+                {data.practice.bySubject.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={data.practice.bySubject}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="subject" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                      <Tooltip />
+                      <Bar dataKey="avgScore" fill="#10B981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">No practice sessions completed yet.</p>
+            </div>
+          )}
         </div>
 
         {/* Recent Activity */}
