@@ -38,7 +38,20 @@ export default function Home() {
         await signInWithEmail(email, password);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('auth/email-already-in-use')) {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else if (msg.includes('auth/wrong-password') || msg.includes('auth/invalid-credential')) {
+        setError('Incorrect email or password.');
+      } else if (msg.includes('auth/user-not-found')) {
+        setError('No account found with this email. Please sign up first.');
+      } else if (msg.includes('auth/weak-password')) {
+        setError('Password must be at least 6 characters.');
+      } else if (msg.includes('auth/invalid-email')) {
+        setError('Please enter a valid email address.');
+      } else {
+        setError(msg || 'Authentication failed. Please try again.');
+      }
     }
     setSubmitting(false);
   };
