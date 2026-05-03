@@ -68,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.ok) {
       const data = await res.json();
       setUser(data.user);
+    } else {
+      throw new Error('Failed to connect to server. Please try again.');
     }
   };
 

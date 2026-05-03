@@ -155,7 +155,21 @@ export default function Home() {
           </div>
 
           <button
-            onClick={signInWithGoogle}
+            onClick={async () => {
+              setError('');
+              try {
+                await signInWithGoogle();
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : '';
+                if (msg.includes('auth/popup-closed-by-user')) {
+                  // User closed popup, no error needed
+                } else if (msg.includes('auth/popup-blocked')) {
+                  setError('Popup was blocked. Please allow popups and try again.');
+                } else {
+                  setError(msg || 'Google sign-in failed. Please try again.');
+                }
+              }
+            }}
             className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-6 py-3 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
