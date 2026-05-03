@@ -23,6 +23,9 @@ interface Question {
     aiExplanation: string | null;
     aiScore: number | null;
     parentComment: string | null;
+    flagged: boolean;
+    flagReason: string | null;
+    flagResolvedAt: string | null;
   }>;
 }
 
@@ -55,6 +58,9 @@ export default function ChildAssignmentPage() {
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [flaggingId, setFlaggingId] = useState<string | null>(null);
+  const [flagReason, setFlagReason] = useState('');
+  const [flagging, setFlagging] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSubmit = useCallback(async () => {
@@ -164,6 +170,24 @@ export default function ChildAssignmentPage() {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const handleFlag = async (questionId: string, flagged: boolean) => {
+    if (!assignment || !token) return;
+    setFlagging(true);
+    try {
+      await apiFetch(`/api/assignments/${assignment.id}/flag`, token, {
+        method: 'POST',
+        body: JSON.stringify({ questionId, flagged, flagReason: flagged ? flagReason : null }),
+      });
+      const data = await apiFetch(`/api/assignments/${params.id}`, token);
+      setAssignment(data.assignment);
+      setFlaggingId(null);
+      setFlagReason('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to flag question');
+    }
+    setFlagging(false);
   };
 
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
@@ -363,6 +387,63 @@ export default function ChildAssignmentPage() {
                         <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                           <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Parent says:</p>
                           <p className="text-sm text-yellow-800 dark:text-yellow-200">{ans.parentComment}</p>
+                        </div>
+                      )}
+
+                      {/* Flag for review */}
+                      {ans?.flagged && !ans.flagResolvedAt && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Flagged for parent review</p>
+                          {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{ans.flagReason}</p>}
+                          <button
+                            onClick={() => handleFlag(q.id, false)}
+                            disabled={flagging}
+                            className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline"
+                          >
+                            Remove flag
+                          </button>
+                        </div>
+                      )}
+                      {ans?.flagged && ans.flagResolvedAt && (
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                          <p className="text-sm font-medium text-green-800 dark:text-green-200">Reviewed by parent</p>
+                        </div>
+                      )}
+                      {(!ans?.flagged || ans?.flagResolvedAt) && (
+                        <div>
+                          {flaggingId === q.id ? (
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-2">
+                              <input
+                                type="text"
+                                value={flagReason}
+                                onChange={e => setFlagReason(e.target.value)}
+                                placeholder="Why do you think this is wrong? (optional)"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleFlag(q.id, true)}
+                                  disabled={flagging}
+                                  className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                                >
+                                  {flagging ? 'Submitting...' : 'Submit Flag'}
+                                </button>
+                                <button
+                                  onClick={() => { setFlaggingId(null); setFlagReason(''); }}
+                                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setFlaggingId(q.id)}
+                              className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                            >
+                              Flag for review
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

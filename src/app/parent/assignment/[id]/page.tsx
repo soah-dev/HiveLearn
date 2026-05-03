@@ -24,6 +24,9 @@ interface Question {
     aiExplanation: string | null;
     aiScore: number | null;
     parentComment: string | null;
+    flagged: boolean;
+    flagReason: string | null;
+    flagResolvedAt: string | null;
   }>;
 }
 
@@ -60,6 +63,11 @@ export default function ParentAssignmentPage() {
   const [parentComment, setParentComment] = useState('');
   const [overallScore, setOverallScore] = useState(0);
   const [error, setError] = useState('');
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [resolveCorrect, setResolveCorrect] = useState(false);
+  const [resolveComment, setResolveComment] = useState('');
+  const [resolveScore, setResolveScore] = useState<number | undefined>(undefined);
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'parent')) {
@@ -131,6 +139,40 @@ export default function ParentAssignmentPage() {
       setError(err instanceof Error ? err.message : 'Review failed');
     }
     setReviewing(false);
+  };
+
+  const handleResolveFlag = async (questionId: string, dismiss: boolean) => {
+    if (!token) return;
+    setResolving(true);
+    try {
+      await apiFetch(`/api/assignments/${params.id}/resolve-flag`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          questionId,
+          dismiss,
+          isCorrect: resolveCorrect,
+          parentComment: resolveComment || null,
+          aiScore: resolveScore,
+        }),
+      });
+      const data = await apiFetch(`/api/assignments/${params.id}`, token);
+      setAssignment(data.assignment);
+      setResolvingId(null);
+      setResolveCorrect(false);
+      setResolveComment('');
+      setResolveScore(undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resolve flag');
+    }
+    setResolving(false);
+  };
+
+  const openResolve = (q: Question) => {
+    const ans = q.answers[0];
+    setResolvingId(q.id);
+    setResolveCorrect(ans?.isCorrect ?? false);
+    setResolveComment('');
+    setResolveScore(ans?.aiScore ?? undefined);
   };
 
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
@@ -270,6 +312,80 @@ export default function ParentAssignmentPage() {
                   <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                     <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Parent comment</p>
                     <p className="text-sm text-yellow-800 dark:text-yellow-200">{ans.parentComment}</p>
+                  </div>
+                )}
+
+                {/* Flagged question indicator */}
+                {ans?.flagged && !ans.flagResolvedAt && (
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Child flagged this question for review</p>
+                    {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Reason: {ans.flagReason}</p>}
+
+                    {resolvingId === q.id ? (
+                      <div className="mt-3 space-y-3 pt-3 border-t border-amber-200 dark:border-amber-700">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={resolveCorrect}
+                            onChange={e => setResolveCorrect(e.target.checked)}
+                            className="rounded"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Mark as correct</span>
+                        </label>
+                        {q.questionType === 'open_ended' && (
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            placeholder="Override score (0-100)"
+                            value={resolveScore ?? ''}
+                            onChange={e => setResolveScore(e.target.value ? Number(e.target.value) : undefined)}
+                            className="w-40 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                          />
+                        )}
+                        <input
+                          type="text"
+                          placeholder="Comment (optional)"
+                          value={resolveComment}
+                          onChange={e => setResolveComment(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleResolveFlag(q.id, false)}
+                            disabled={resolving}
+                            className="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {resolving ? 'Saving...' : 'Override & Resolve'}
+                          </button>
+                          <button
+                            onClick={() => handleResolveFlag(q.id, true)}
+                            disabled={resolving}
+                            className="px-4 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50"
+                          >
+                            Dismiss
+                          </button>
+                          <button
+                            onClick={() => setResolvingId(null)}
+                            className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => openResolve(q)}
+                        className="mt-2 px-4 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600"
+                      >
+                        Review Flag
+                      </button>
+                    )}
+                  </div>
+                )}
+                {ans?.flagged && ans.flagResolvedAt && (
+                  <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <p className="text-xs text-green-600 dark:text-green-400">Flag resolved</p>
                   </div>
                 )}
               </div>

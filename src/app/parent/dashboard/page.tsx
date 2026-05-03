@@ -38,6 +38,7 @@ interface Assignment {
   timeLimitMin: number | null;
   createdAt: string;
   child: { id: string; name: string | null };
+  questions?: Array<{ answers?: Array<{ id: string }> }>;
 }
 
 interface PracticeSession {
@@ -326,6 +327,7 @@ export default function ParentDashboard() {
                   createdAt={a.createdAt}
                   childName={a.child?.name || undefined}
                   role="parent"
+                  flaggedCount={a.questions?.reduce((sum: number, q: { answers?: { id: string }[] }) => sum + (q.answers?.length || 0), 0) || 0}
                 />
               ))}
             </div>

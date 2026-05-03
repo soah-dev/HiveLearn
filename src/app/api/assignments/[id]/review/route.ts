@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { calculatePoints } from '@/lib/points';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -50,18 +51,6 @@ Return ONLY JSON in this format: { "answers": [{ "question_id": "...", "is_corre
   if (jsonMatch) jsonStr = jsonMatch[0];
 
   return JSON.parse(jsonStr);
-}
-
-function calculatePoints(difficulty: string, score: number, timeLimitMin: number | null): number {
-  const base = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30;
-  let bonus = 1;
-  if (score >= 90) bonus = 1.5;
-  else if (score >= 80) bonus = 1.25;
-  else if (score >= 70) bonus = 1.1;
-
-  let points = Math.round(base * bonus * (score / 100));
-  if (timeLimitMin && score > 0) points += 5;
-  return points;
 }
 
 async function checkBadges(childId: string) {

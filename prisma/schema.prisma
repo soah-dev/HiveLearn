@@ -89,7 +89,7 @@ model Question {
 }
 
 model Answer {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   questionId     String
   childId        String
   selectedAnswer String?
@@ -97,7 +97,10 @@ model Answer {
   aiExplanation  String?
   aiScore        Int?
   parentComment  String?
-  answeredAt     DateTime @default(now())
+  flagged        Boolean   @default(false)
+  flagReason     String?
+  flagResolvedAt DateTime?
+  answeredAt     DateTime  @default(now())
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   child    User     @relation(fields: [childId], references: [id])

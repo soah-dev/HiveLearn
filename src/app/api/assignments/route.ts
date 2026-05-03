@@ -73,7 +73,15 @@ export async function GET(req: NextRequest) {
   const assignments = await prisma.assignment.findMany({
     where,
     include: {
-      questions: { orderBy: { orderIndex: 'asc' } },
+      questions: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          answers: {
+            where: { flagged: true, flagResolvedAt: null },
+            select: { id: true },
+          },
+        },
+      },
       child: { select: { id: true, name: true, image: true } },
       parent: { select: { id: true, name: true } },
     },

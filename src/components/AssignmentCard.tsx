@@ -12,6 +12,7 @@ interface AssignmentCardProps {
   createdAt: string;
   childName?: string;
   role: 'parent' | 'child';
+  flaggedCount?: number;
 }
 
 const subjectIcons: Record<string, string> = {
@@ -33,7 +34,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AssignmentCard({
-  id, subject, topic, difficulty, status, score, numQuestions, timeLimitMin, createdAt, childName, role,
+  id, subject, topic, difficulty, status, score, numQuestions, timeLimitMin, createdAt, childName, role, flaggedCount,
 }: AssignmentCardProps) {
   const href = role === 'parent' ? `/parent/assignment/${id}` : `/child/assignment/${id}`;
 
@@ -70,6 +71,11 @@ export default function AssignmentCard({
           {timeLimitMin && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
               {timeLimitMin} min
+            </span>
+          )}
+          {flaggedCount !== undefined && flaggedCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              {flaggedCount} flagged
             </span>
           )}
         </div>
