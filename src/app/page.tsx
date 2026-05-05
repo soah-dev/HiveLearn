@@ -62,8 +62,8 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center p-4">
       <div className="max-w-lg w-full text-center">
         <div className="mb-8">
-          <h1 className="text-5xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">HomeworkHub</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">Homework Collaboration for Families</p>
+          <h1 className="text-5xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">StudyHub</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300">Learning Collaboration for Families</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">

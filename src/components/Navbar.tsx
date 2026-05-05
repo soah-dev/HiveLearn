@@ -14,7 +14,7 @@ export default function Navbar() {
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link href={user?.role === 'parent' ? '/parent/dashboard' : user?.role === 'child' ? '/child/dashboard' : '/'} className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-          HomeworkHub
+          StudyHub
         </Link>
 
         <div className="flex items-center gap-4">

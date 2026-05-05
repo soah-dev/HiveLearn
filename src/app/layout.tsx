@@ -6,7 +6,7 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'HomeworkHub - Parent-Kid Homework Collaboration',
+  title: 'StudyHub - Learning Collaboration for Families',
   description: 'Homework assignments for grades 6-12 with gamification and analytics',
 };
 
