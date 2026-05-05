@@ -25,6 +25,8 @@ model User {
   gamification     Gamification?
   earnedBadges     EarnedBadge[]
   practiceSessions PracticeSession[]
+  offlineWork      OfflineWork[] @relation("ChildOfflineWork")
+  reviewedOfflineWork OfflineWork[] @relation("ParentOfflineWork")
 }
 
 model ParentChild {
@@ -152,6 +154,25 @@ model PracticeAnswer {
   question PracticeQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, childId])
+}
+
+model OfflineWork {
+  id             String    @id @default(cuid())
+  childId        String
+  parentId       String?
+  subject        String
+  bookReference  String?
+  numQuestions   Int
+  score          Int
+  difficulty     String    @default("medium")
+  status         String    @default("pending")
+  parentComment  String?
+  pointsAwarded  Int?
+  createdAt      DateTime  @default(now())
+  reviewedAt     DateTime?
+
+  child  User  @relation("ChildOfflineWork", fields: [childId], references: [id])
+  parent User? @relation("ParentOfflineWork", fields: [parentId], references: [id])
 }
 
 model Gamification {

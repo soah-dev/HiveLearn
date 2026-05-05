@@ -41,6 +41,20 @@ interface Assignment {
   questions?: Array<{ answers?: Array<{ id: string }> }>;
 }
 
+interface OfflineWork {
+  id: string;
+  subject: string;
+  bookReference: string | null;
+  numQuestions: number;
+  score: number;
+  difficulty: string;
+  status: string;
+  parentComment: string | null;
+  pointsAwarded: number | null;
+  createdAt: string;
+  child: { id: string; name: string | null };
+}
+
 interface PracticeSession {
   id: string;
   subject: string;
@@ -61,7 +75,11 @@ export default function ParentDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [pendingInvites, setPendingInvites] = useState<Invite[]>([]);
   const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>([]);
+  const [offlineWork, setOfflineWork] = useState<OfflineWork[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [reviewingOwId, setReviewingOwId] = useState<string | null>(null);
+  const [owComment, setOwComment] = useState('');
+  const [owProcessing, setOwProcessing] = useState(false);
 
   // Add Child modal state
   const [showModal, setShowModal] = useState(false);
@@ -84,12 +102,14 @@ export default function ParentDashboard() {
         apiFetch('/api/assignments', token),
         apiFetch('/api/parent/invite', token),
         apiFetch('/api/practice', token),
-      ]).then(([childrenData, assignmentsData, invitesData, practiceData]) => {
+        apiFetch('/api/offline-work', token),
+      ]).then(([childrenData, assignmentsData, invitesData, practiceData, offlineData]) => {
         setChildren(childrenData.children || []);
         setAssignments(assignmentsData.assignments || []);
         const invites = invitesData.invites || [];
         setPendingInvites(invites.filter((i: Invite) => i.status === 'pending'));
         setPracticeSessions(practiceData.sessions || []);
+        setOfflineWork(offlineData.entries || []);
         setDataLoading(false);
       }).catch(() => setDataLoading(false));
     }
@@ -152,8 +172,27 @@ export default function ParentDashboard() {
     }
   };
 
+  const handleOfflineReview = async (id: string, action: 'approve' | 'reject') => {
+    if (!token) return;
+    setOwProcessing(true);
+    try {
+      await apiFetch(`/api/offline-work/${id}/review`, token, {
+        method: 'POST',
+        body: JSON.stringify({ action, parentComment: owComment || null }),
+      });
+      const data = await apiFetch('/api/offline-work', token);
+      setOfflineWork(data.entries || []);
+      setReviewingOwId(null);
+      setOwComment('');
+    } catch {
+      // silently fail
+    }
+    setOwProcessing(false);
+  };
+
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
+  const pendingOffline = offlineWork.filter(ow => ow.status === 'pending');
   const pendingReview = assignments.filter(a => a.status === 'submitted').length;
   const totalCompleted = assignments.filter(a => a.status === 'reviewed').length;
 
@@ -298,6 +337,74 @@ export default function ParentDashboard() {
                       {s.pointsAwarded && <span className="text-xs text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pending Offline Work */}
+        {pendingOffline.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Offline Work Reviews <span className="text-sm font-normal text-gray-500">({pendingOffline.length} pending)</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingOffline.map(ow => (
+                <div key={ow.id} className="bg-white dark:bg-gray-800 rounded-xl border border-teal-200 dark:border-teal-800 p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-teal-600 dark:text-teal-400 capitalize">{ow.subject.replace('_', ' ')}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+                      Pending
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{ow.child?.name || 'Child'}</p>
+                  {ow.bookReference && <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{ow.bookReference}</p>}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">
+                    {ow.difficulty} · {ow.numQuestions} questions · Self-reported: {ow.score}%
+                  </p>
+
+                  {reviewingOwId === ow.id ? (
+                    <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <input
+                        type="text"
+                        value={owComment}
+                        onChange={e => setOwComment(e.target.value)}
+                        placeholder="Comment (optional)"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleOfflineReview(ow.id, 'approve')}
+                          disabled={owProcessing}
+                          className="flex-1 bg-green-600 text-white text-sm py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {owProcessing ? '...' : 'Approve'}
+                        </button>
+                        <button
+                          onClick={() => handleOfflineReview(ow.id, 'reject')}
+                          disabled={owProcessing}
+                          className="flex-1 bg-red-500 text-white text-sm py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50"
+                        >
+                          {owProcessing ? '...' : 'Reject'}
+                        </button>
+                        <button
+                          onClick={() => { setReviewingOwId(null); setOwComment(''); }}
+                          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 px-2"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setReviewingOwId(ow.id)}
+                      className="w-full bg-teal-600 text-white text-sm py-2 rounded-lg hover:bg-teal-700 transition-colors"
+                    >
+                      Review
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(ow.createdAt).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>
