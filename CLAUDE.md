@@ -1,8 +1,8 @@
-# HomeworkHub - Project Context & Setup Guide
+# StudyHub - Project Context & Setup Guide
 
 ## Overview
 
-HomeworkHub is a parent-kid homework collaboration web app. Parents generate assignments (powered by Claude API), children complete them on their own device, and results are reviewed with gamification (points, streaks, badges, leaderboards).
+StudyHub is a parent-kid homework collaboration web app. Parents generate assignments (powered by Claude API), children complete them on their own device, and results are reviewed with gamification (points, streaks, badges, leaderboards).
 
 ## Tech Stack
 
