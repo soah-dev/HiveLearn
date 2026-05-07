@@ -95,21 +95,21 @@ export default function PracticeSessionPage() {
     <>
       <Navbar />
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <button onClick={() => router.push('/child/practice')} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline mb-2">&larr; Back to Practice</button>
+        <div className="mb-6 animate-slide-up">
+          <button onClick={() => router.push('/child/practice')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline mb-3 inline-block">&larr; Back to Practice</button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
+              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white capitalize">
                 {session.subject.replace('_', ' ')}{session.topic ? `: ${session.topic}` : ''}
               </h1>
               <p className="text-gray-500 dark:text-gray-400">Grade {session.grade} · {session.difficulty} · 10 questions</p>
             </div>
             {isCompleted && session.score !== null && (
               <div className="text-right">
-                <p className={`text-4xl font-bold ${session.score >= 80 ? 'text-green-600' : session.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                <p className={`text-4xl font-extrabold ${session.score >= 80 ? 'text-green-600' : session.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
                   {session.score}%
                 </p>
-                {session.pointsAwarded && <p className="text-sm text-indigo-600 dark:text-indigo-400">+{session.pointsAwarded} pts</p>}
+                {session.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">+{session.pointsAwarded} pts</p>}
               </div>
             )}
           </div>
@@ -117,9 +117,9 @@ export default function PracticeSessionPage() {
 
         {/* Result banner */}
         {result && (
-          <div className="mb-6 p-5 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center">
-            <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-200 mb-1">{result.correct}/{result.total} correct</p>
-            <p className="text-indigo-600 dark:text-indigo-300">You earned <strong>+{result.pointsAwarded} points</strong>!</p>
+          <div className="mb-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl text-center animate-slide-up">
+            <p className="text-3xl font-extrabold text-indigo-800 dark:text-indigo-200 mb-1">{result.correct}/{result.total} correct</p>
+            <p className="text-indigo-600 dark:text-indigo-300 font-medium">You earned <strong>+{result.pointsAwarded} points</strong>!</p>
           </div>
         )}
 
@@ -130,9 +130,13 @@ export default function PracticeSessionPage() {
             const myAnswer = answers[q.id] || '';
 
             return (
-              <div key={q.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <div
+                key={q.id}
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up"
+                style={{ animationDelay: `${i * 30}ms` }}
+              >
                 <div className="flex items-start justify-between mb-4">
-                  <p className="text-gray-900 dark:text-white font-medium">Q{i + 1}. {q.questionText}</p>
+                  <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. {q.questionText}</p>
                   {isCompleted && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                     <span className={`text-xl ml-2 flex-shrink-0 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
                       {ans.isCorrect ? '✓' : '✗'}
@@ -151,26 +155,26 @@ export default function PracticeSessionPage() {
                       key={opt.key}
                       onClick={() => !isCompleted && setAnswers(prev => ({ ...prev, [q.id]: opt.key }))}
                       disabled={isCompleted}
-                      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
                         isCompleted
                           ? opt.key === q.correctAnswer
                             ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200'
                             : myAnswer === opt.key && !ans?.isCorrect
                               ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                              : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                              : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
                           : myAnswer === opt.key
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200'
-                            : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-indigo-300'
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 shadow-sm shadow-indigo-500/20'
+                            : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
                       }`}
                     >
-                      <span className="font-medium">{opt.key}.</span> {opt.val}
+                      <span className="font-bold">{opt.key}.</span> {opt.val}
                     </button>
                   ))}
                 </div>
 
                 {isCompleted && myAnswer !== q.correctAnswer && (
                   <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                    Correct answer: <span className="font-medium text-green-600 dark:text-green-400">{q.correctAnswer}</span>
+                    Correct answer: <span className="font-bold text-green-600 dark:text-green-400">{q.correctAnswer}</span>
                   </p>
                 )}
               </div>
@@ -179,7 +183,7 @@ export default function PracticeSessionPage() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
             {error}
           </div>
         )}
@@ -188,7 +192,7 @@ export default function PracticeSessionPage() {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
           >
             {submitting ? 'Submitting...' : 'Submit Practice'}
           </button>
@@ -197,7 +201,7 @@ export default function PracticeSessionPage() {
         {isCompleted && (
           <button
             onClick={() => router.push('/child/practice')}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25"
           >
             Start Another Session
           </button>

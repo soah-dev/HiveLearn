@@ -47,37 +47,41 @@ export default function AnalyticsIndexPage() {
     <>
       <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Analytics</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-8">Select a child to view their progress</p>
+        <div className="mb-8 animate-slide-up">
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Analytics</h1>
+          <p className="text-gray-500 dark:text-gray-400">Select a child to view their progress</p>
+        </div>
 
         {children.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-12 text-center animate-slide-up">
+            <p className="text-5xl mb-3 animate-float">📊</p>
             <p className="text-gray-500 dark:text-gray-400">No children linked yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {children.map(child => (
+            {children.map((child, i) => (
               <button
                 key={child.id}
                 onClick={() => router.push(`/parent/analytics/${child.id}`)}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-left hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all"
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 text-left card-hover animate-slide-up"
+                style={{ animationDelay: `${i * 50}ms` }}
               >
                 <div className="flex items-center gap-3 mb-4">
                   {child.image ? (
-                    <img src={child.image} alt="" className="w-12 h-12 rounded-full" />
+                    <img src={child.image} alt="" className="w-12 h-12 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-800 shadow-sm" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300 text-lg font-semibold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                       {(child.name || 'C')[0].toUpperCase()}
                     </div>
                   )}
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{child.name || child.email}</p>
+                    <p className="font-bold text-gray-900 dark:text-white">{child.name || child.email}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{child.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500 dark:text-gray-400">⭐ {child.gamification?.totalPoints || 0} pts</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 font-medium">View Analytics →</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold">View Analytics &rarr;</span>
                 </div>
               </button>
             ))}

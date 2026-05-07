@@ -204,11 +204,11 @@ export default function ChildAssignmentPage() {
       <Navbar />
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <button onClick={() => router.push('/child/dashboard')} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline mb-2">&larr; Back to Dashboard</button>
+        <div className="mb-6 animate-slide-up">
+          <button onClick={() => router.push('/child/dashboard')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline mb-3 inline-block">&larr; Back to Dashboard</button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
+              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white capitalize">
                 {assignment.subject.replace('_', ' ')}: {assignment.topic}
               </h1>
               <p className="text-gray-500 dark:text-gray-400">
@@ -217,10 +217,10 @@ export default function ChildAssignmentPage() {
             </div>
             {isReviewed && assignment.score !== null && (
               <div className="text-right">
-                <p className={`text-4xl font-bold ${assignment.score >= 80 ? 'text-green-600' : assignment.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                <p className={`text-4xl font-extrabold ${assignment.score >= 80 ? 'text-green-600' : assignment.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
                   {assignment.score}%
                 </p>
-                {assignment.pointsAwarded && <p className="text-sm text-indigo-600 dark:text-indigo-400">+{assignment.pointsAwarded} pts</p>}
+                {assignment.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">+{assignment.pointsAwarded} pts</p>}
               </div>
             )}
           </div>
@@ -228,24 +228,24 @@ export default function ChildAssignmentPage() {
 
         {/* Timer */}
         {timeLeft !== null && canAnswer && (
-          <div className={`mb-6 p-4 rounded-xl text-center font-mono text-2xl font-bold ${
-            timeLeft < 60 ? 'bg-red-50 dark:bg-red-900/30 text-red-600' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600'
-          }`}>
+          <div className={`mb-6 p-4 rounded-2xl text-center font-mono text-2xl font-extrabold ${
+            timeLeft < 60 ? 'bg-red-50 dark:bg-red-900/30 text-red-600 border-2 border-red-200 dark:border-red-800' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 border-2 border-indigo-200 dark:border-indigo-800'
+          } animate-slide-up`}>
             ⏱ {formatTime(timeLeft)}
           </div>
         )}
 
         {/* Start button for pending */}
         {isPending && (
-          <div className="text-center mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8">
-              <p className="text-4xl mb-4">📝</p>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to begin?</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <div className="text-center mb-8 animate-slide-up">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8">
+              <p className="text-5xl mb-4 animate-float">📝</p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Ready to begin?</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
                 {assignment.numQuestions} questions | {assignment.difficulty}
                 {assignment.timeLimitMin && ` | ${assignment.timeLimitMin} min time limit`}
               </p>
-              <button onClick={startAssignment} className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+              <button onClick={startAssignment} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
                 Start Assignment
               </button>
             </div>
@@ -254,16 +254,16 @@ export default function ChildAssignmentPage() {
 
         {/* Feedback banner */}
         {isReviewed && assignment.aiFeedback && (
-          <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-            <p className="text-sm font-medium text-indigo-800 dark:text-indigo-200">Feedback</p>
+          <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl animate-slide-up">
+            <p className="text-sm font-bold text-indigo-800 dark:text-indigo-200">Feedback</p>
             <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">{assignment.aiFeedback}</p>
           </div>
         )}
 
         {isSubmitted && (
-          <div className="p-8 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl text-center">
-            <p className="text-4xl mb-3">⏳</p>
-            <p className="text-yellow-800 dark:text-yellow-200 font-semibold text-lg">Assignment submitted!</p>
+          <div className="p-8 bg-yellow-50 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl text-center animate-slide-up">
+            <p className="text-5xl mb-3 animate-float">⏳</p>
+            <p className="text-yellow-800 dark:text-yellow-200 font-bold text-lg">Assignment submitted!</p>
             <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-1">Your results will be visible once your parent reviews it.</p>
           </div>
         )}
@@ -276,9 +276,13 @@ export default function ChildAssignmentPage() {
               const myAnswer = answers[q.id] || '';
 
               return (
-                <div key={q.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <div
+                  key={q.id}
+                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up"
+                  style={{ animationDelay: `${i * 30}ms` }}
+                >
                   <div className="flex items-start justify-between mb-3">
-                    <p className="text-gray-900 dark:text-white font-medium">Q{i + 1}. {q.questionText}</p>
+                    <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. {q.questionText}</p>
                     {isReviewed && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                       <span className={`text-xl ml-2 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
                         {ans.isCorrect ? '✓' : '✗'}
@@ -299,19 +303,19 @@ export default function ChildAssignmentPage() {
                           key={opt.key}
                           onClick={() => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: opt.key }))}
                           disabled={!canAnswer}
-                          className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                          className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
                             isReviewed
                               ? opt.key === q.correctAnswer
                                 ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
                                 : myAnswer === opt.key && !ans?.isCorrect
                                   ? 'border-red-500 bg-red-50 dark:bg-red-900/30'
-                                  : 'border-gray-200 dark:border-gray-600'
+                                  : 'border-gray-200/60 dark:border-gray-600/60'
                               : myAnswer === opt.key
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
-                                : 'border-gray-200 dark:border-gray-600 hover:border-indigo-300'
+                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-sm shadow-indigo-500/20'
+                                : 'border-gray-200/60 dark:border-gray-600/60 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
                           }`}
                         >
-                          <span className="font-medium">{opt.key}.</span> {opt.val}
+                          <span className="font-bold">{opt.key}.</span> {opt.val}
                         </button>
                       ))}
                     </div>
@@ -325,16 +329,16 @@ export default function ChildAssignmentPage() {
                           key={val}
                           onClick={() => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: val }))}
                           disabled={!canAnswer}
-                          className={`flex-1 py-3 rounded-lg border font-medium transition-colors ${
+                          className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${
                             isReviewed
                               ? val === q.correctAnswer
                                 ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200'
                                 : myAnswer === val && !ans?.isCorrect
                                   ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                                  : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                                  : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
                               : myAnswer === val
                                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200'
-                                : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-indigo-300'
+                                : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300 hover:border-indigo-300'
                           }`}
                         >
                           {val}
@@ -351,7 +355,7 @@ export default function ChildAssignmentPage() {
                       onChange={e => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
                       disabled={!canAnswer}
                       placeholder="Type your answer..."
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-60"
+                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-60 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     />
                   )}
 
@@ -363,7 +367,7 @@ export default function ChildAssignmentPage() {
                       disabled={!canAnswer}
                       placeholder="Write your response..."
                       rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-60 resize-none"
+                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-60 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     />
                   )}
 
@@ -372,65 +376,65 @@ export default function ChildAssignmentPage() {
                     <div className="mt-3 space-y-2">
                       {q.questionType !== 'open_ended' && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Correct answer: <span className="font-medium text-green-600 dark:text-green-400">{q.correctAnswer}</span>
+                          Correct answer: <span className="font-bold text-green-600 dark:text-green-400">{q.correctAnswer}</span>
                         </p>
                       )}
                       {ans?.aiScore !== null && ans?.aiScore !== undefined && (
                         <p className="text-sm text-gray-500">AI Score: {ans.aiScore}/100</p>
                       )}
                       {ans?.aiExplanation && (
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                           <p className="text-sm text-blue-800 dark:text-blue-200">{ans.aiExplanation}</p>
                         </div>
                       )}
                       {ans?.parentComment && (
-                        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Parent says:</p>
+                        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-bold">Parent says:</p>
                           <p className="text-sm text-yellow-800 dark:text-yellow-200">{ans.parentComment}</p>
                         </div>
                       )}
 
                       {/* Flag for review */}
                       {ans?.flagged && !ans.flagResolvedAt && (
-                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Flagged for parent review</p>
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                          <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Flagged for parent review</p>
                           {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{ans.flagReason}</p>}
                           <button
                             onClick={() => handleFlag(q.id, false)}
                             disabled={flagging}
-                            className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline"
+                            className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
                           >
                             Remove flag
                           </button>
                         </div>
                       )}
                       {ans?.flagged && ans.flagResolvedAt && (
-                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                          <p className="text-sm font-medium text-green-800 dark:text-green-200">Reviewed by parent</p>
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                          <p className="text-sm font-bold text-green-800 dark:text-green-200">Reviewed by parent</p>
                         </div>
                       )}
                       {(!ans?.flagged || ans?.flagResolvedAt) && (
                         <div>
                           {flaggingId === q.id ? (
-                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-2">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl space-y-2">
                               <input
                                 type="text"
                                 value={flagReason}
                                 onChange={e => setFlagReason(e.target.value)}
                                 placeholder="Why do you think this is wrong? (optional)"
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                               />
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleFlag(q.id, true)}
                                   disabled={flagging}
-                                  className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                                  className="px-4 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-all"
                                 >
                                   {flagging ? 'Submitting...' : 'Submit Flag'}
                                 </button>
                                 <button
                                   onClick={() => { setFlaggingId(null); setFlagReason(''); }}
-                                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium"
                                 >
                                   Cancel
                                 </button>
@@ -439,7 +443,7 @@ export default function ChildAssignmentPage() {
                           ) : (
                             <button
                               onClick={() => setFlaggingId(q.id)}
-                              className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                              className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold"
                             >
                               Flag for review
                             </button>
@@ -461,7 +465,7 @@ export default function ChildAssignmentPage() {
               <button
                 onClick={saveProgress}
                 disabled={saving}
-                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
               >
                 {saving ? 'Saving...' : 'Save Progress'}
               </button>
@@ -469,7 +473,7 @@ export default function ChildAssignmentPage() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
             >
               {submitting ? 'Submitting...' : 'Submit Assignment'}
             </button>
@@ -477,7 +481,7 @@ export default function ChildAssignmentPage() {
         )}
 
         {error && (
-          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
             {error}
           </div>
         )}

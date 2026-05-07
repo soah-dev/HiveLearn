@@ -135,9 +135,15 @@ export default function ChildDashboard() {
     <>
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Hey, {user?.name || 'Student'}! 👋</h1>
+        <div className="mb-8 animate-slide-up">
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Hey, {user?.name || 'Student'}! 👋</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Ready to learn something new today?</p>
+          {gamification && gamification.currentStreak > 0 && (
+            <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-full">
+              <span className="text-xl animate-float">🔥</span>
+              <span className="font-bold text-orange-700 dark:text-orange-300">{gamification.currentStreak} day streak!</span>
+            </div>
+          )}
         </div>
 
         {/* Stats */}
@@ -150,16 +156,20 @@ export default function ChildDashboard() {
 
         {/* Recent Badges */}
         {recentBadges.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-8 animate-slide-up">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Badges</h2>
-              <button onClick={() => router.push('/child/badges')} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View all</button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Badges</h2>
+              <button onClick={() => router.push('/child/badges')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline">View all</button>
             </div>
             <div className="flex gap-3">
-              {recentBadges.map(b => (
-                <div key={b.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center min-w-[120px]">
-                  <p className="text-3xl mb-1">{b.badge.icon}</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{b.badge.name}</p>
+              {recentBadges.map((b, i) => (
+                <div
+                  key={b.id}
+                  className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 p-4 text-center card-hover animate-slide-up min-w-[120px]"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <p className="text-3xl mb-1 animate-float">{b.badge.icon}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{b.badge.name}</p>
                 </div>
               ))}
             </div>
@@ -168,13 +178,13 @@ export default function ChildDashboard() {
 
         {/* Pending Assignments */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 animate-slide-up">
             Pending Assignments {pending.length > 0 && <span className="text-sm font-normal text-gray-500">({pending.length})</span>}
           </h2>
           {pending.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-              <p className="text-4xl mb-3">🎉</p>
-              <p className="text-gray-500 dark:text-gray-400">All caught up! No pending assignments.</p>
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center">
+              <p className="text-5xl mb-3 animate-float">🎉</p>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">All caught up! No pending assignments.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -200,7 +210,7 @@ export default function ChildDashboard() {
         {/* Completed Assignments */}
         {completed.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Completed</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Completed</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {completed.slice(0, 6).map(a => (
                 <AssignmentCard
@@ -224,35 +234,35 @@ export default function ChildDashboard() {
         {/* Offline Work */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Offline Work</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Offline Work</h2>
             <button
               onClick={() => setShowOfflineForm(!showOfflineForm)}
-              className="text-sm bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-4 py-2 rounded-lg hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
+              className="text-sm bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold hover:from-teal-600 hover:to-emerald-600 transition-all shadow-md shadow-teal-500/20"
             >
               + Log Offline Work
             </button>
           </div>
 
           {showOfflineForm && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Log Offline Work</h3>
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-4 animate-slide-up">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Log Offline Work</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Subject</label>
                   <select
                     value={owSubject}
                     onChange={e => setOwSubject(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   >
                     {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
                   <select
                     value={owDifficulty}
                     onChange={e => setOwDifficulty(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   >
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
@@ -260,40 +270,40 @@ export default function ChildDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Number of Questions</label>
                   <input
                     type="number"
                     min={1}
                     max={100}
                     value={owQuestions}
                     onChange={e => setOwQuestions(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score (%)</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Score (%)</label>
                   <input
                     type="number"
                     min={0}
                     max={100}
                     value={owScore}
                     onChange={e => setOwScore(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Book / Resource Reference (optional)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Book / Resource Reference (optional)</label>
                 <input
                   type="text"
                   value={owBook}
                   onChange={e => setOwBook(e.target.value)}
                   placeholder="e.g. Math Workbook Ch. 5, Khan Academy Algebra"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                 />
               </div>
               {owError && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
                   {owError}
                 </div>
               )}
@@ -301,13 +311,13 @@ export default function ChildDashboard() {
                 <button
                   onClick={submitOfflineWork}
                   disabled={owSubmitting || owQuestions < 1}
-                  className="bg-teal-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-teal-700 disabled:opacity-50 transition-colors"
+                  className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold hover:from-teal-600 hover:to-emerald-600 disabled:opacity-50 transition-all shadow-md"
                 >
                   {owSubmitting ? 'Submitting...' : 'Submit for Review'}
                 </button>
                 <button
                   onClick={() => setShowOfflineForm(false)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-4 py-2"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-4 py-2.5 font-medium"
                 >
                   Cancel
                 </button>
@@ -316,16 +326,21 @@ export default function ChildDashboard() {
           )}
 
           {offlineWork.length === 0 && !showOfflineForm ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center">
+              <p className="text-4xl mb-3 animate-float">📝</p>
               <p className="text-gray-500 dark:text-gray-400">No offline work logged yet. Studied on your own? Log it here!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {offlineWork.slice(0, 6).map(ow => (
-                <div key={ow.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              {offlineWork.slice(0, 6).map((ow, i) => (
+                <div
+                  key={ow.id}
+                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 card-hover animate-slide-up"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-teal-600 dark:text-teal-400 capitalize">{ow.subject.replace('_', ' ')}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    <span className="text-sm font-bold text-teal-600 dark:text-teal-400 capitalize">{ow.subject.replace('_', ' ')}</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                       ow.status === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                         : ow.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                         : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
@@ -336,7 +351,7 @@ export default function ChildDashboard() {
                   {ow.bookReference && <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">{ow.bookReference}</p>}
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-2">{ow.difficulty} · {ow.numQuestions} questions · {ow.score}%</p>
                   {ow.status === 'approved' && ow.pointsAwarded && (
-                    <p className="text-xs text-teal-600 dark:text-teal-400">+{ow.pointsAwarded} pts</p>
+                    <p className="text-xs font-bold text-teal-600 dark:text-teal-400">+{ow.pointsAwarded} pts</p>
                   )}
                   {ow.parentComment && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{ow.parentComment}</p>
