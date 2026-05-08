@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import MathText from '@/components/MathText';
 
 interface Question {
   id: string;
@@ -228,7 +229,7 @@ export default function ParentAssignmentPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-full">{q.questionType.replace('_', ' ')}</span>
-                    <p className="text-gray-900 dark:text-white font-bold mt-2">Q{i + 1}. {q.questionText}</p>
+                    <p className="text-gray-900 dark:text-white font-bold mt-2">Q{i + 1}. <MathText text={q.questionText} /></p>
                   </div>
                   {ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                     <span className={`text-lg ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
@@ -251,7 +252,7 @@ export default function ParentAssignmentPage() {
                           ? ans?.isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-red-500 bg-red-50 dark:bg-red-900/30'
                           : q.correctAnswer === opt.key && isReviewed ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-gray-200/60 dark:border-gray-600/60'
                       }`}>
-                        <span className="font-bold">{opt.key}.</span> {opt.val}
+                        <span className="font-bold">{opt.key}.</span> {opt.val && <MathText text={opt.val} />}
                       </div>
                     ))}
                   </div>
@@ -261,10 +262,10 @@ export default function ParentAssignmentPage() {
                 {ans && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Answer: <span className="font-bold text-gray-900 dark:text-white">{ans.selectedAnswer || '(no answer)'}</span>
+                      Answer: <span className="font-bold text-gray-900 dark:text-white">{ans.selectedAnswer ? <MathText text={ans.selectedAnswer} /> : '(no answer)'}</span>
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Correct: <span className="font-bold text-gray-900 dark:text-white">{q.correctAnswer}</span>
+                      Correct: <span className="font-bold text-gray-900 dark:text-white"><MathText text={q.correctAnswer} /></span>
                     </p>
                   </div>
                 )}

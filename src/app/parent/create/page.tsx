@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import MathText from '@/components/MathText';
 
 const subjects = [
   { value: 'math', label: 'Math' },

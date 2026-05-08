@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import MathText from '@/components/MathText';
 
 interface Question {
   id: string;
@@ -282,7 +283,7 @@ export default function ChildAssignmentPage() {
                   style={{ animationDelay: `${i * 30}ms` }}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. {q.questionText}</p>
+                    <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. <MathText text={q.questionText} /></p>
                     {isReviewed && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                       <span className={`text-xl ml-2 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
                         {ans.isCorrect ? '✓' : '✗'}
@@ -315,7 +316,7 @@ export default function ChildAssignmentPage() {
                                 : 'border-gray-200/60 dark:border-gray-600/60 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
                           }`}
                         >
-                          <span className="font-bold">{opt.key}.</span> {opt.val}
+                          <span className="font-bold">{opt.key}.</span> {opt.val && <MathText text={opt.val} />}
                         </button>
                       ))}
                     </div>
@@ -376,7 +377,7 @@ export default function ChildAssignmentPage() {
                     <div className="mt-3 space-y-2">
                       {q.questionType !== 'open_ended' && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Correct answer: <span className="font-bold text-green-600 dark:text-green-400">{q.correctAnswer}</span>
+                          Correct answer: <span className="font-bold text-green-600 dark:text-green-400"><MathText text={q.correctAnswer} /></span>
                         </p>
                       )}
                       {ans?.aiScore !== null && ans?.aiScore !== undefined && (
