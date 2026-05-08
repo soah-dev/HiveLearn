@@ -49,7 +49,7 @@ interface Assignment {
 }
 
 export default function ChildAssignmentPage() {
-  const { user, token, loading } = useAuth();
+  const { user, token, getToken, loading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
@@ -65,26 +65,27 @@ export default function ChildAssignmentPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSubmit = useCallback(async () => {
-    if (!assignment || !token) return;
+    if (!assignment) return;
     setSubmitting(true);
     try {
       const answerList = assignment.questions.map(q => ({
         questionId: q.id,
         selectedAnswer: answers[q.id] || null,
       }));
-      await apiFetch(`/api/assignments/${assignment.id}/submit`, token, {
+      await apiFetch(`/api/assignments/${assignment.id}/submit`, getToken, {
         method: 'POST',
         body: JSON.stringify({ answers: answerList }),
       });
 
       // Refresh — parent will trigger review
-      const data = await apiFetch(`/api/assignments/${params.id}`, token);
+      const freshToken = await getToken();
+      const data = await apiFetch(`/api/assignments/${params.id}`, freshToken);
       setAssignment(data.assignment);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submit failed');
     }
     setSubmitting(false);
-  }, [assignment, token, answers, params.id]);
+  }, [assignment, getToken, answers, params.id]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'child')) {
@@ -174,14 +175,15 @@ export default function ChildAssignmentPage() {
   };
 
   const handleFlag = async (questionId: string, flagged: boolean) => {
-    if (!assignment || !token) return;
+    if (!assignment) return;
     setFlagging(true);
     try {
-      await apiFetch(`/api/assignments/${assignment.id}/flag`, token, {
+      await apiFetch(`/api/assignments/${assignment.id}/flag`, getToken, {
         method: 'POST',
         body: JSON.stringify({ questionId, flagged, flagReason: flagged ? flagReason : null }),
       });
-      const data = await apiFetch(`/api/assignments/${params.id}`, token);
+      const freshToken = await getToken();
+      const data = await apiFetch(`/api/assignments/${params.id}`, freshToken);
       setAssignment(data.assignment);
       setFlaggingId(null);
       setFlagReason('');

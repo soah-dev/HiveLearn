@@ -33,7 +33,7 @@ interface PracticeSession {
 }
 
 export default function PracticeSessionPage() {
-  const { user, token, loading } = useAuth();
+  const { user, token, getToken, loading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [session, setSession] = useState<PracticeSession | null>(null);
@@ -65,7 +65,7 @@ export default function PracticeSessionPage() {
   }, [user, token, loading, router, params.id]);
 
   const handleSubmit = async () => {
-    if (!session || !token) return;
+    if (!session) return;
     setSubmitting(true);
     setError('');
     try {
@@ -73,13 +73,14 @@ export default function PracticeSessionPage() {
         questionId: q.id,
         selectedAnswer: answers[q.id] || null,
       }));
-      const data = await apiFetch(`/api/practice/${session.id}/submit`, token, {
+      const data = await apiFetch(`/api/practice/${session.id}/submit`, getToken, {
         method: 'POST',
         body: JSON.stringify({ answers: answerList }),
       });
       setResult(data);
       // Refresh session to show correct answers
-      const refreshed = await apiFetch(`/api/practice/${session.id}`, token);
+      const freshToken = await getToken();
+      const refreshed = await apiFetch(`/api/practice/${session.id}`, freshToken);
       setSession(refreshed.session);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submit failed');

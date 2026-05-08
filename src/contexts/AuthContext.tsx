@@ -26,6 +26,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   token: string | null;
+  getToken: () => Promise<string | null>;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
@@ -120,6 +121,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
   };
 
+  const getToken = async (): Promise<string | null> => {
+    if (firebaseUser) {
+      const freshToken = await firebaseUser.getIdToken();
+      setToken(freshToken);
+      return freshToken;
+    }
+    return null;
+  };
+
   const refreshUser = async () => {
     if (token) {
       await fetchUser(token);
@@ -133,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         token,
+        getToken,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
