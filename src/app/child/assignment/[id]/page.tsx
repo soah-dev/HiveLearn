@@ -64,8 +64,20 @@ export default function ChildAssignmentPage() {
   const [flagging, setFlagging] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (skipConfirm = false) => {
     if (!assignment) return;
+
+    // Warn about unanswered questions
+    if (!skipConfirm) {
+      const unanswered = assignment.questions.filter(q => !answers[q.id]);
+      if (unanswered.length > 0) {
+        const confirmed = window.confirm(
+          `You have ${unanswered.length} unanswered question${unanswered.length > 1 ? 's' : ''}. Submit anyway?`
+        );
+        if (!confirmed) return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const answerList = assignment.questions.map(q => ({
@@ -125,8 +137,8 @@ export default function ChildAssignmentPage() {
       setTimeLeft(prev => {
         if (prev === null || prev <= 1) {
           clearInterval(timerRef.current!);
-          // Auto-submit
-          handleSubmit();
+          // Auto-submit (skip confirmation)
+          handleSubmit(true);
           return 0;
         }
         return prev - 1;
@@ -474,7 +486,7 @@ export default function ChildAssignmentPage() {
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={submitting}
               className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
             >

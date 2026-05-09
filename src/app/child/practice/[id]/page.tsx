@@ -66,6 +66,16 @@ export default function PracticeSessionPage() {
 
   const handleSubmit = async () => {
     if (!session) return;
+
+    // Warn about unanswered questions
+    const unanswered = session.questions.filter(q => !answers[q.id]);
+    if (unanswered.length > 0) {
+      const confirmed = window.confirm(
+        `You have ${unanswered.length} unanswered question${unanswered.length > 1 ? 's' : ''}. Submit anyway?`
+      );
+      if (!confirmed) return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
