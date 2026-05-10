@@ -203,8 +203,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   let overallFeedback: string;
 
   if (body.mode === 'parent' || assignment.reviewMode === 'parent') {
-    // Parent review mode
-    if (user.role !== 'parent' || assignment.parentId !== user.id) {
+    // Parent review mode — any linked parent can review
+    if (user.role !== 'parent') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const parentLink = await prisma.parentChild.findFirst({
+      where: { parentId: user.id, childId: assignment.childId, status: 'active' },
+    });
+    if (!parentLink) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

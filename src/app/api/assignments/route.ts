@@ -62,8 +62,13 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
 
   if (user.role === 'parent') {
-    where.parentId = user.id;
-    if (childId) where.childId = childId;
+    // Show all assignments for children linked to this parent
+    const links = await prisma.parentChild.findMany({
+      where: { parentId: user.id, status: 'active' },
+      select: { childId: true },
+    });
+    const linkedChildIds = links.map(l => l.childId).filter(Boolean) as string[];
+    where.childId = childId ? childId : { in: linkedChildIds };
   } else {
     where.childId = user.id;
   }

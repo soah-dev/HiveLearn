@@ -28,9 +28,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Verify access
-  if (user.role === 'parent' && assignment.parentId !== user.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Verify access — any linked parent can view
+  if (user.role === 'parent') {
+    const link = await prisma.parentChild.findFirst({
+      where: { parentId: user.id, childId: assignment.childId, status: 'active' },
+    });
+    if (!link) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
   if (user.role === 'child' && assignment.childId !== user.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -56,8 +61,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  if (user.role === 'parent' && assignment.parentId !== user.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'parent') {
+    const link = await prisma.parentChild.findFirst({
+      where: { parentId: user.id, childId: assignment.childId, status: 'active' },
+    });
+    if (!link) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const updated = await prisma.assignment.update({

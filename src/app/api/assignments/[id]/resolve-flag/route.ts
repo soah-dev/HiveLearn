@@ -21,8 +21,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
 
-  if (!assignment || assignment.parentId !== user.id) {
+  if (!assignment) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  // Any linked parent can resolve flags
+  const parentLink = await prisma.parentChild.findFirst({
+    where: { parentId: user.id, childId: assignment.childId, status: 'active' },
+  });
+  if (!parentLink) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Find the flagged answer

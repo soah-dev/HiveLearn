@@ -18,15 +18,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Score must be between 0 and 100' }, { status: 400 });
   }
 
-  // Find parent linked to this child
-  const link = await prisma.parentChild.findFirst({
-    where: { childId: user.id, status: 'active' },
-  });
-
   const offlineWork = await prisma.offlineWork.create({
     data: {
       childId: user.id,
-      parentId: link?.parentId || null,
+      parentId: null,
       subject,
       bookReference: bookReference || null,
       numQuestions,

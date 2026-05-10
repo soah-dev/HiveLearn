@@ -16,11 +16,19 @@ interface Child {
   image: string | null;
 }
 
+interface LinkedParent {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+}
+
 export default function SettingsPage() {
   const { user, token, loading, signOut } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
   const router = useRouter();
   const [children, setChildren] = useState<Child[]>([]);
+  const [linkedParents, setLinkedParents] = useState<LinkedParent[]>([]);
   const [editingGrade, setEditingGrade] = useState<Record<string, number>>({});
   const [savingGrade, setSavingGrade] = useState<string | null>(null);
   const [gradeSaved, setGradeSaved] = useState<string | null>(null);
@@ -39,6 +47,11 @@ export default function SettingsPage() {
           for (const c of kids) grades[c.id] = c.grade ?? 1;
           setEditingGrade(grades);
         })
+        .catch(() => {});
+    }
+    if (token && user?.role === 'child') {
+      apiFetch('/api/child/parents', token)
+        .then(data => setLinkedParents(data.parents || []))
         .catch(() => {});
     }
   }, [user, token, loading, router]);
@@ -96,6 +109,30 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Linked Parents (Child only) */}
+        {user?.role === 'child' && linkedParents.length > 0 && (
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '50ms' }}>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Linked Parents</h2>
+            <div className="space-y-3">
+              {linkedParents.map(parent => (
+                <div key={parent.id} className="flex items-center gap-3">
+                  {parent.image ? (
+                    <img src={parent.image} alt="" className="w-9 h-9 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-800" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {(parent.name || 'P')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">{parent.name || 'Parent'}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{parent.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Children grade management (Parent only) */}
         {user?.role === 'parent' && children.length > 0 && (
