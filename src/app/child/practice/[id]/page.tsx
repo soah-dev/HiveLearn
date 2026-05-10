@@ -17,7 +17,7 @@ interface PracticeQuestion {
   optionD: string;
   correctAnswer: string;
   orderIndex: number;
-  answers: Array<{ selectedAnswer: string | null; isCorrect: boolean | null }>;
+  answers: Array<{ selectedAnswer: string | null; isCorrect: boolean | null; flagged: boolean }>;
 }
 
 interface PracticeSession {
@@ -38,9 +38,10 @@ export default function PracticeSessionPage() {
   const params = useParams();
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [dataLoading, setDataLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ score: number; pointsAwarded: number; correct: number; total: number } | null>(null);
+  const [result, setResult] = useState<{ score: number; pointsAwarded: number; correct: number; total: number; flagged?: number } | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -52,12 +53,15 @@ export default function PracticeSessionPage() {
       apiFetch(`/api/practice/${params.id}`, token)
         .then(data => {
           setSession(data.session);
-          // Pre-fill saved answers
+          // Pre-fill saved answers and flags
           const saved: Record<string, string> = {};
+          const savedFlags: Record<string, boolean> = {};
           for (const q of data.session.questions) {
             if (q.answers[0]?.selectedAnswer) saved[q.id] = q.answers[0].selectedAnswer;
+            if (q.answers[0]?.flagged) savedFlags[q.id] = true;
           }
           setAnswers(saved);
+          setFlags(savedFlags);
           setDataLoading(false);
         })
         .catch(() => setDataLoading(false));
@@ -67,8 +71,8 @@ export default function PracticeSessionPage() {
   const handleSubmit = async () => {
     if (!session) return;
 
-    // Warn about unanswered questions
-    const unanswered = session.questions.filter(q => !answers[q.id]);
+    // Warn about unanswered (non-flagged) questions
+    const unanswered = session.questions.filter(q => !answers[q.id] && !flags[q.id]);
     if (unanswered.length > 0) {
       const confirmed = window.confirm(
         `You have ${unanswered.length} unanswered question${unanswered.length > 1 ? 's' : ''}. Submit anyway?`
@@ -82,6 +86,7 @@ export default function PracticeSessionPage() {
       const answerList = session.questions.map(q => ({
         questionId: q.id,
         selectedAnswer: answers[q.id] || null,
+        flagged: flags[q.id] || false,
       }));
       const data = await apiFetch(`/api/practice/${session.id}/submit`, getToken, {
         method: 'POST',
@@ -131,6 +136,9 @@ export default function PracticeSessionPage() {
         {result && (
           <div className="mb-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl text-center animate-slide-up">
             <p className="text-3xl font-extrabold text-indigo-800 dark:text-indigo-200 mb-1">{result.correct}/{result.total} correct</p>
+            {result.flagged && result.flagged > 0 && (
+              <p className="text-sm text-indigo-600 dark:text-indigo-300 mb-1">{result.flagged} question{result.flagged > 1 ? 's' : ''} excluded from scoring</p>
+            )}
             <p className="text-indigo-600 dark:text-indigo-300 font-medium">You earned <strong>+{result.pointsAwarded} points</strong>!</p>
           </div>
         )}
@@ -140,16 +148,25 @@ export default function PracticeSessionPage() {
           {session.questions.map((q, i) => {
             const ans = q.answers[0];
             const myAnswer = answers[q.id] || '';
+            const isFlagged = flags[q.id] || false;
+            const wasFlagged = ans?.flagged || false;
 
             return (
               <div
                 key={q.id}
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up"
+                className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border p-6 animate-slide-up ${
+                  isFlagged || wasFlagged
+                    ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10'
+                    : 'border-gray-200/60 dark:border-gray-700/60'
+                }`}
                 style={{ animationDelay: `${i * 30}ms` }}
               >
                 <div className="flex items-start justify-between mb-4">
                   <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. <MathText text={q.questionText} /></p>
-                  {isCompleted && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
+                  {isCompleted && wasFlagged && (
+                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400 ml-2 flex-shrink-0">Excluded</span>
+                  )}
+                  {isCompleted && !wasFlagged && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                     <span className={`text-xl ml-2 flex-shrink-0 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
                       {ans.isCorrect ? '✓' : '✗'}
                     </span>
@@ -168,15 +185,17 @@ export default function PracticeSessionPage() {
                       onClick={() => !isCompleted && setAnswers(prev => ({ ...prev, [q.id]: opt.key }))}
                       disabled={isCompleted}
                       className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
-                        isCompleted
+                        isCompleted && !wasFlagged
                           ? opt.key === q.correctAnswer
                             ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200'
                             : myAnswer === opt.key && !ans?.isCorrect
                               ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200'
                               : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
-                          : myAnswer === opt.key
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 shadow-sm shadow-indigo-500/20'
-                            : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
+                          : isCompleted && wasFlagged
+                            ? 'border-gray-200/60 dark:border-gray-600/60 text-gray-400 dark:text-gray-500'
+                            : myAnswer === opt.key
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 shadow-sm shadow-indigo-500/20'
+                              : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
                       }`}
                     >
                       <span className="font-bold">{opt.key}.</span> {opt.val && <MathText text={opt.val} />}
@@ -184,7 +203,28 @@ export default function PracticeSessionPage() {
                   ))}
                 </div>
 
-                {isCompleted && myAnswer !== q.correctAnswer && (
+                {/* Flag checkbox - during quiz */}
+                {!isCompleted && (
+                  <label className="flex items-center gap-2 mt-4 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={isFlagged}
+                      onChange={e => setFlags(prev => ({ ...prev, [q.id]: e.target.checked }))}
+                      className="rounded border-amber-300 text-amber-500 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-amber-700 dark:text-amber-400 font-medium group-hover:underline">
+                      Flag this question (will be excluded from scoring)
+                    </span>
+                  </label>
+                )}
+                {!isCompleted && isFlagged && (
+                  <p className="mt-1 ml-6 text-xs text-amber-600 dark:text-amber-400">
+                    This question will be disregarded from scoring
+                  </p>
+                )}
+
+                {/* After completion: show correct answer if not flagged */}
+                {isCompleted && !wasFlagged && myAnswer !== q.correctAnswer && (
                   <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                     Correct answer: <span className="font-bold text-green-600 dark:text-green-400"><MathText text={q.correctAnswer} /></span>
                   </p>

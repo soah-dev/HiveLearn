@@ -29,9 +29,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const question = assignment.questions.find(q => q.id === ans.questionId);
     if (!question) continue;
 
-    // Auto-grade non-open-ended questions
+    const flagged = ans.flagged === true;
+
+    // Auto-grade non-open-ended questions (skip grading for flagged questions)
     let isCorrect: boolean | null = null;
-    if (question.questionType !== 'open_ended') {
+    if (!flagged && question.questionType !== 'open_ended') {
       isCorrect = ans.selectedAnswer?.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
     }
 
@@ -45,12 +47,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       update: {
         selectedAnswer: ans.selectedAnswer,
         isCorrect,
+        flagged,
+        flagReason: ans.flagReason || null,
       },
       create: {
         questionId: ans.questionId,
         childId: user.id,
         selectedAnswer: ans.selectedAnswer,
         isCorrect,
+        flagged,
+        flagReason: ans.flagReason || null,
       },
     });
   }

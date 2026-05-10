@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const { questionId, isCorrect, parentComment, aiScore, dismiss } = await req.json();
+  const { questionId, isCorrect, parentComment, aiScore, dismiss, exclude } = await req.json();
 
   const assignment = await prisma.assignment.findUnique({
     where: { id },
@@ -34,8 +34,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Update the answer
-  if (dismiss) {
-    // Dismiss without changing grade
+  if (exclude) {
+    // Exclude question from scoring entirely
+    await prisma.answer.update({
+      where: { id: answer.id },
+      data: {
+        isCorrect: null,
+        flagResolvedAt: new Date(),
+        parentComment: parentComment || 'Question excluded from scoring',
+      },
+    });
+  } else if (dismiss) {
+    // Dismiss flag without changing grade (keep original grading)
     await prisma.answer.update({
       where: { id: answer.id },
       data: {
@@ -56,21 +66,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   }
 
-  // Recalculate assignment score from all answers
+  // Recalculate assignment score from all answers (exclude null isCorrect for non-open-ended)
   const allAnswers = await prisma.answer.findMany({
     where: { question: { assignmentId: id } },
     include: { question: true },
   });
 
+  // Filter out excluded questions (flagged + resolved with isCorrect=null for non-open-ended)
+  const scoredAnswers = allAnswers.filter(a => {
+    if (a.question.questionType === 'open_ended') return a.aiScore !== null;
+    return a.isCorrect !== null;
+  });
+
   let totalScore = 0;
-  for (const a of allAnswers) {
+  for (const a of scoredAnswers) {
     if (a.question.questionType === 'open_ended') {
       totalScore += (a.aiScore ?? 0);
     } else {
       totalScore += a.isCorrect ? 100 : 0;
     }
   }
-  const newScore = Math.round(totalScore / allAnswers.length);
+  const newScore = scoredAnswers.length > 0 ? Math.round(totalScore / scoredAnswers.length) : 0;
   const oldPoints = assignment.pointsAwarded ?? 0;
   const newPoints = calculatePoints(assignment.difficulty, newScore, assignment.timeLimitMin);
   const pointsDelta = newPoints - oldPoints;

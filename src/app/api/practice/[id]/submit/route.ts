@@ -66,21 +66,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Save answers and grade
   let correct = 0;
+  let flaggedCount = 0;
   for (const ans of answers) {
     const question = session.questions.find(q => q.id === ans.questionId);
     if (!question) continue;
 
-    const isCorrect = ans.selectedAnswer?.toUpperCase().trim() === question.correctAnswer.toUpperCase().trim();
+    const flagged = ans.flagged === true;
+    if (flagged) {
+      flaggedCount++;
+    }
+
+    const isCorrect = flagged
+      ? null
+      : ans.selectedAnswer?.toUpperCase().trim() === question.correctAnswer.toUpperCase().trim();
     if (isCorrect) correct++;
 
     await prisma.practiceAnswer.upsert({
       where: { questionId_childId: { questionId: ans.questionId, childId: user.id } },
-      update: { selectedAnswer: ans.selectedAnswer, isCorrect },
-      create: { sessionId: id, questionId: ans.questionId, childId: user.id, selectedAnswer: ans.selectedAnswer, isCorrect },
+      update: { selectedAnswer: ans.selectedAnswer, isCorrect, flagged },
+      create: { sessionId: id, questionId: ans.questionId, childId: user.id, selectedAnswer: ans.selectedAnswer, isCorrect, flagged },
     });
   }
 
-  const score = Math.round((correct / session.questions.length) * 100);
+  // Exclude flagged questions from scoring
+  const scoredTotal = session.questions.length - flaggedCount;
+  const score = scoredTotal > 0 ? Math.round((correct / scoredTotal) * 100) : 0;
   const points = calculatePoints(session.difficulty, score);
 
   await prisma.practiceSession.update({
@@ -90,5 +100,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   await updateStreakAndPoints(user.id, points);
 
-  return NextResponse.json({ score, pointsAwarded: points, correct, total: session.questions.length });
+  return NextResponse.json({ score, pointsAwarded: points, correct, total: scoredTotal, flagged: flaggedCount });
 }

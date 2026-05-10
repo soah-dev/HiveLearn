@@ -149,6 +149,7 @@ model PracticeAnswer {
   childId        String
   selectedAnswer String?
   isCorrect      Boolean?
+  flagged        Boolean  @default(false)
   answeredAt     DateTime @default(now())
 
   question PracticeQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)

@@ -54,22 +54,21 @@ export default function ChildAssignmentPage() {
   const params = useParams();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
+  const [flagReasons, setFlagReasons] = useState<Record<string, string>>({});
   const [dataLoading, setDataLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const [flaggingId, setFlaggingId] = useState<string | null>(null);
-  const [flagReason, setFlagReason] = useState('');
-  const [flagging, setFlagging] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSubmit = useCallback(async (skipConfirm = false) => {
     if (!assignment) return;
 
-    // Warn about unanswered questions
+    // Warn about unanswered (non-flagged) questions
     if (!skipConfirm) {
-      const unanswered = assignment.questions.filter(q => !answers[q.id]);
+      const unanswered = assignment.questions.filter(q => !answers[q.id] && !flags[q.id]);
       if (unanswered.length > 0) {
         const confirmed = window.confirm(
           `You have ${unanswered.length} unanswered question${unanswered.length > 1 ? 's' : ''}. Submit anyway?`
@@ -83,13 +82,15 @@ export default function ChildAssignmentPage() {
       const answerList = assignment.questions.map(q => ({
         questionId: q.id,
         selectedAnswer: answers[q.id] || null,
+        flagged: flags[q.id] || false,
+        flagReason: flags[q.id] ? (flagReasons[q.id] || null) : null,
       }));
       await apiFetch(`/api/assignments/${assignment.id}/submit`, getToken, {
         method: 'POST',
         body: JSON.stringify({ answers: answerList }),
       });
 
-      // Refresh — parent will trigger review
+      // Refresh
       const freshToken = await getToken();
       const data = await apiFetch(`/api/assignments/${params.id}`, freshToken);
       setAssignment(data.assignment);
@@ -97,7 +98,7 @@ export default function ChildAssignmentPage() {
       setError(err instanceof Error ? err.message : 'Submit failed');
     }
     setSubmitting(false);
-  }, [assignment, getToken, answers, params.id]);
+  }, [assignment, getToken, answers, flags, flagReasons, params.id]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'child')) {
@@ -109,14 +110,19 @@ export default function ChildAssignmentPage() {
         .then(data => {
           const a = data.assignment;
           setAssignment(a);
-          // Pre-fill saved answers
+          // Pre-fill saved answers and flags
           const saved: Record<string, string> = {};
+          const savedFlags: Record<string, boolean> = {};
           for (const q of a.questions) {
             if (q.answers[0]?.selectedAnswer) {
               saved[q.id] = q.answers[0].selectedAnswer;
             }
+            if (q.answers[0]?.flagged) {
+              savedFlags[q.id] = true;
+            }
           }
           setAnswers(saved);
+          setFlags(savedFlags);
 
           // Start timer if timed and in progress
           if (a.timeLimitMin && a.startedAt && (a.status === 'in_progress' || a.status === 'pending')) {
@@ -184,25 +190,6 @@ export default function ChildAssignmentPage() {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
-  const handleFlag = async (questionId: string, flagged: boolean) => {
-    if (!assignment) return;
-    setFlagging(true);
-    try {
-      await apiFetch(`/api/assignments/${assignment.id}/flag`, getToken, {
-        method: 'POST',
-        body: JSON.stringify({ questionId, flagged, flagReason: flagged ? flagReason : null }),
-      });
-      const freshToken = await getToken();
-      const data = await apiFetch(`/api/assignments/${params.id}`, freshToken);
-      setAssignment(data.assignment);
-      setFlaggingId(null);
-      setFlagReason('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to flag question');
-    }
-    setFlagging(false);
   };
 
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
@@ -289,16 +276,28 @@ export default function ChildAssignmentPage() {
             {assignment.questions.map((q, i) => {
               const ans = q.answers[0];
               const myAnswer = answers[q.id] || '';
+              const isFlagged = flags[q.id] || false;
+              const wasFlagged = ans?.flagged || false;
 
               return (
                 <div
                   key={q.id}
-                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up"
+                  className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border p-6 animate-slide-up ${
+                    (isFlagged || wasFlagged)
+                      ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10'
+                      : 'border-gray-200/60 dark:border-gray-700/60'
+                  }`}
                   style={{ animationDelay: `${i * 30}ms` }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. <MathText text={q.questionText} /></p>
-                    {isReviewed && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
+                    {isReviewed && wasFlagged && !ans.flagResolvedAt && (
+                      <span className="text-sm font-bold text-amber-600 dark:text-amber-400 ml-2 flex-shrink-0">Pending review</span>
+                    )}
+                    {isReviewed && wasFlagged && ans.flagResolvedAt && (
+                      <span className="text-sm font-bold text-green-600 dark:text-green-400 ml-2 flex-shrink-0">Resolved</span>
+                    )}
+                    {isReviewed && !wasFlagged && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                       <span className={`text-xl ml-2 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
                         {ans.isCorrect ? '✓' : '✗'}
                       </span>
@@ -386,10 +385,52 @@ export default function ChildAssignmentPage() {
                     />
                   )}
 
-                  {/* Review info */}
+                  {/* Flag checkbox - during quiz */}
+                  {canAnswer && (
+                    <div className="mt-4">
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={isFlagged}
+                          onChange={e => setFlags(prev => ({ ...prev, [q.id]: e.target.checked }))}
+                          className="rounded border-amber-300 text-amber-500 focus:ring-amber-500"
+                        />
+                        <span className="text-sm text-amber-700 dark:text-amber-400 font-medium group-hover:underline">
+                          Flag this question
+                        </span>
+                      </label>
+                      {isFlagged && (
+                        <div className="mt-2 ml-6">
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                            Make your best guess and your parent will review
+                          </p>
+                          <input
+                            type="text"
+                            value={flagReasons[q.id] || ''}
+                            onChange={e => setFlagReasons(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            placeholder="What's wrong with this question? (optional)"
+                            className="w-full px-3 py-2 border border-amber-200 dark:border-amber-700 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Post-review info */}
                   {isReviewed && (
                     <div className="mt-3 space-y-2">
-                      {q.questionType !== 'open_ended' && (
+                      {wasFlagged && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                          <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                            {ans.flagResolvedAt ? 'Flag resolved by parent' : 'Flagged — awaiting parent review'}
+                          </p>
+                          {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Reason: {ans.flagReason}</p>}
+                          {ans.parentComment && (
+                            <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">Parent: {ans.parentComment}</p>
+                          )}
+                        </div>
+                      )}
+                      {!wasFlagged && q.questionType !== 'open_ended' && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           Correct answer: <span className="font-bold text-green-600 dark:text-green-400"><MathText text={q.correctAnswer} /></span>
                         </p>
@@ -402,67 +443,10 @@ export default function ChildAssignmentPage() {
                           <p className="text-sm text-blue-800 dark:text-blue-200">{ans.aiExplanation}</p>
                         </div>
                       )}
-                      {ans?.parentComment && (
+                      {!wasFlagged && ans?.parentComment && (
                         <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
                           <p className="text-xs text-yellow-600 dark:text-yellow-400 font-bold">Parent says:</p>
                           <p className="text-sm text-yellow-800 dark:text-yellow-200">{ans.parentComment}</p>
-                        </div>
-                      )}
-
-                      {/* Flag for review */}
-                      {ans?.flagged && !ans.flagResolvedAt && (
-                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                          <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Flagged for parent review</p>
-                          {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{ans.flagReason}</p>}
-                          <button
-                            onClick={() => handleFlag(q.id, false)}
-                            disabled={flagging}
-                            className="mt-2 text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
-                          >
-                            Remove flag
-                          </button>
-                        </div>
-                      )}
-                      {ans?.flagged && ans.flagResolvedAt && (
-                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                          <p className="text-sm font-bold text-green-800 dark:text-green-200">Reviewed by parent</p>
-                        </div>
-                      )}
-                      {(!ans?.flagged || ans?.flagResolvedAt) && (
-                        <div>
-                          {flaggingId === q.id ? (
-                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl space-y-2">
-                              <input
-                                type="text"
-                                value={flagReason}
-                                onChange={e => setFlagReason(e.target.value)}
-                                placeholder="Why do you think this is wrong? (optional)"
-                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                              />
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleFlag(q.id, true)}
-                                  disabled={flagging}
-                                  className="px-4 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-all"
-                                >
-                                  {flagging ? 'Submitting...' : 'Submit Flag'}
-                                </button>
-                                <button
-                                  onClick={() => { setFlaggingId(null); setFlagReason(''); }}
-                                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setFlaggingId(q.id)}
-                              className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold"
-                            >
-                              Flag for review
-                            </button>
-                          )}
                         </div>
                       )}
                     </div>

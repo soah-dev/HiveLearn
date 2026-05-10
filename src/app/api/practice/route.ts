@@ -28,17 +28,53 @@ export async function POST(req: NextRequest) {
 
 For each question return:
 - question_text: the question
-- option_a, option_b, option_c, option_d: four answer options
-- correct_answer: "A", "B", "C", or "D"
+- option_a, option_b, option_c, option_d: four answer options (all must be non-empty)
+- correct_answer: MUST be exactly "A", "B", "C", or "D" — the letter of the option that contains the correct answer
+
+CRITICAL: Double-check that correct_answer is the letter whose option actually contains the right answer. Do NOT put answer text in correct_answer — only the letter.
 
 Return ONLY a JSON array. Ensure questions are age-appropriate and progressively challenging.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    let jsonStr = result.response.text() || '';
-    const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
-    if (jsonMatch) jsonStr = jsonMatch[0];
-    const questions = JSON.parse(jsonStr);
+    let validQuestions: Array<{
+      question_text: string;
+      option_a: string;
+      option_b: string;
+      option_c: string;
+      option_d: string;
+      correct_answer: string;
+    }> = [];
+    let attempts = 0;
+
+    while (validQuestions.length < 10 && attempts < 2) {
+      attempts++;
+      const remaining = 10 - validQuestions.length;
+      const genPrompt = attempts === 1
+        ? prompt
+        : `Generate ${remaining} MORE multiple choice questions for grade ${grade} in ${subject} ${topicClause} at ${difficulty} difficulty. Same format. correct_answer MUST be "A", "B", "C", or "D". Return ONLY a JSON array.`;
+
+      const result = await model.generateContent(genPrompt);
+      let jsonStr = result.response.text() || '';
+      const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (jsonMatch) jsonStr = jsonMatch[0];
+      const questions = JSON.parse(jsonStr);
+
+      // Validate each question
+      for (const q of questions) {
+        const answer = q.correct_answer?.toUpperCase().trim();
+        const options: Record<string, string> = { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d };
+        if (['A', 'B', 'C', 'D'].includes(answer) && options[answer]) {
+          validQuestions.push({ ...q, correct_answer: answer });
+        }
+      }
+    }
+
+    // Use up to 10 valid questions
+    validQuestions = validQuestions.slice(0, 10);
+
+    if (validQuestions.length === 0) {
+      return NextResponse.json({ error: 'Failed to generate valid questions' }, { status: 500 });
+    }
 
     const session = await prisma.practiceSession.create({
       data: {
@@ -48,14 +84,7 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
         topic: topic?.trim() || null,
         difficulty,
         questions: {
-          create: questions.map((q: {
-            question_text: string;
-            option_a: string;
-            option_b: string;
-            option_c: string;
-            option_d: string;
-            correct_answer: string;
-          }, i: number) => ({
+          create: validQuestions.map((q, i) => ({
             questionText: q.question_text,
             optionA: q.option_a,
             optionB: q.option_b,

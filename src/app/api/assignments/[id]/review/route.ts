@@ -17,10 +17,13 @@ async function aiReview(assignment: {
     questionType: string;
     questionText: string;
     correctAnswer: string;
-    answers: Array<{ selectedAnswer: string | null }>;
+    answers: Array<{ selectedAnswer: string | null; flagged: boolean }>;
   }>;
 }) {
-  const questionsWithAnswers = assignment.questions.map((q, i) => ({
+  // Only review non-flagged questions
+  const reviewableQuestions = assignment.questions.filter(q => !q.answers[0]?.flagged);
+
+  const questionsWithAnswers = reviewableQuestions.map((q, i) => ({
     index: i + 1,
     question_id: q.id,
     question_type: q.questionType,
@@ -220,22 +223,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     overallScore = body.overallScore || 0;
     overallFeedback = body.parentComment || '';
   } else {
-    // AI auto-review
-    const reviewResult = await aiReview(assignment);
+    // AI auto-review — skip flagged questions
+    const flaggedCount = assignment.questions.filter(q => q.answers[0]?.flagged).length;
 
-    for (const ans of reviewResult.answers) {
-      await prisma.answer.updateMany({
-        where: { questionId: ans.question_id, childId: assignment.childId },
-        data: {
-          isCorrect: ans.is_correct,
-          aiExplanation: ans.ai_explanation,
-          aiScore: ans.ai_score || null,
-        },
-      });
+    if (flaggedCount === assignment.questions.length) {
+      // All questions flagged — no scoring possible
+      overallScore = 0;
+      overallFeedback = 'All questions were flagged by the student. Please review manually.';
+    } else {
+      const reviewResult = await aiReview(assignment);
+
+      for (const ans of reviewResult.answers) {
+        await prisma.answer.updateMany({
+          where: { questionId: ans.question_id, childId: assignment.childId },
+          data: {
+            isCorrect: ans.is_correct,
+            aiExplanation: ans.ai_explanation,
+            aiScore: ans.ai_score || null,
+          },
+        });
+      }
+
+      overallScore = reviewResult.overall_score;
+      overallFeedback = reviewResult.overall_feedback;
+      if (flaggedCount > 0) {
+        overallFeedback += ` (${flaggedCount} question${flaggedCount > 1 ? 's' : ''} excluded — flagged by student)`;
+      }
     }
-
-    overallScore = reviewResult.overall_score;
-    overallFeedback = reviewResult.overall_feedback;
   }
 
   // Calculate points

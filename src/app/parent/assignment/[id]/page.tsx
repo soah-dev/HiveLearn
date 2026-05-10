@@ -142,7 +142,7 @@ export default function ParentAssignmentPage() {
     setReviewing(false);
   };
 
-  const handleResolveFlag = async (questionId: string, dismiss: boolean) => {
+  const handleResolveFlag = async (questionId: string, action: 'override' | 'dismiss' | 'exclude') => {
     if (!token) return;
     setResolving(true);
     try {
@@ -150,7 +150,8 @@ export default function ParentAssignmentPage() {
         method: 'POST',
         body: JSON.stringify({
           questionId,
-          dismiss,
+          dismiss: action === 'dismiss',
+          exclude: action === 'exclude',
           isCorrect: resolveCorrect,
           parentComment: resolveComment || null,
           aiScore: resolveScore,
@@ -323,8 +324,8 @@ export default function ParentAssignmentPage() {
                 {/* Flagged question indicator */}
                 {ans?.flagged && !ans.flagResolvedAt && (
                   <div className="mt-3 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-2xl">
-                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Child flagged this question for review</p>
-                    {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Reason: {ans.flagReason}</p>}
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Child flagged this question</p>
+                    {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Reason: &ldquo;{ans.flagReason}&rdquo;</p>}
 
                     {resolvingId === q.id ? (
                       <div className="mt-3 space-y-3 pt-3 border-t border-amber-200 dark:border-amber-700">
@@ -355,20 +356,27 @@ export default function ParentAssignmentPage() {
                           onChange={e => setResolveComment(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                         />
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <button
-                            onClick={() => handleResolveFlag(q.id, false)}
+                            onClick={() => handleResolveFlag(q.id, 'override')}
                             disabled={resolving}
                             className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 disabled:opacity-50 transition-all"
                           >
-                            {resolving ? 'Saving...' : 'Override & Resolve'}
+                            {resolving ? 'Saving...' : 'Override & Include'}
                           </button>
                           <button
-                            onClick={() => handleResolveFlag(q.id, true)}
+                            onClick={() => handleResolveFlag(q.id, 'exclude')}
+                            disabled={resolving}
+                            className="px-4 py-2 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-all"
+                          >
+                            Exclude from Score
+                          </button>
+                          <button
+                            onClick={() => handleResolveFlag(q.id, 'dismiss')}
                             disabled={resolving}
                             className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 transition-all"
                           >
-                            Dismiss
+                            Dismiss Flag
                           </button>
                           <button
                             onClick={() => setResolvingId(null)}
@@ -390,7 +398,9 @@ export default function ParentAssignmentPage() {
                 )}
                 {ans?.flagged && ans.flagResolvedAt && (
                   <div className="mt-3 p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                    <p className="text-xs font-bold text-green-600 dark:text-green-400">Flag resolved</p>
+                    <p className="text-xs font-bold text-green-600 dark:text-green-400">
+                      Flag resolved {ans.isCorrect === null ? '(excluded from scoring)' : ''}
+                    </p>
                   </div>
                 )}
               </div>
