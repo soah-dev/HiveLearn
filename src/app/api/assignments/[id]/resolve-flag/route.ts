@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
+import { checkBadges } from '@/lib/badges';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
@@ -112,6 +113,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: { totalPoints: { increment: pointsDelta } },
     });
   }
+
+  // Check badges after score change
+  await checkBadges(assignment.childId);
 
   return NextResponse.json({ success: true, newScore, newPoints });
 }
