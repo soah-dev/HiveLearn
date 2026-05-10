@@ -76,6 +76,7 @@ CRITICAL RULES:
 - For multiple_choice: The correct_answer MUST be the letter (A/B/C/D) of the option that is correct. Double-check that the option text for that letter actually contains the right answer.
 - All four options (option_a through option_d) must be non-null and non-empty for multiple_choice questions.
 - Do NOT put the answer text in correct_answer for multiple_choice — only the letter.
+- For reading/language arts: If you include a passage, you MUST also include an explicit question after the passage in question_text (e.g. "Read the passage below:\\n\\n[passage]\\n\\nWhat is the main idea of this passage?"). Never leave the question implied — always state what the student is being asked.
 
 Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among the requested types.`;
 

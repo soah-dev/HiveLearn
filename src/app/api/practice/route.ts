@@ -31,7 +31,9 @@ For each question return:
 - option_a, option_b, option_c, option_d: four answer options (all must be non-empty)
 - correct_answer: MUST be exactly "A", "B", "C", or "D" — the letter of the option that contains the correct answer
 
-CRITICAL: Double-check that correct_answer is the letter whose option actually contains the right answer. Do NOT put answer text in correct_answer — only the letter.
+CRITICAL RULES:
+- Double-check that correct_answer is the letter whose option actually contains the right answer. Do NOT put answer text in correct_answer — only the letter.
+- For reading/language arts: If you include a passage, you MUST also include an explicit question after the passage in question_text (e.g. "Read the passage below:\\n\\n[passage]\\n\\nWhat is the main idea of this passage?"). Never leave the question implied — always state what the student is being asked.
 
 Return ONLY a JSON array. Ensure questions are age-appropriate and progressively challenging.`;
 
