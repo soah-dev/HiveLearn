@@ -24,7 +24,7 @@ interface LinkedParent {
 }
 
 export default function SettingsPage() {
-  const { user, token, loading, signOut } = useAuth();
+  const { user, token, getToken, loading, signOut } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
   const router = useRouter();
   const [children, setChildren] = useState<Child[]>([]);
@@ -39,7 +39,7 @@ export default function SettingsPage() {
       return;
     }
     if (token && user?.role === 'parent') {
-      apiFetch('/api/parent/children', token)
+      apiFetch('/api/parent/children', getToken)
         .then(data => {
           const kids = data.children || [];
           setChildren(kids);
@@ -50,7 +50,7 @@ export default function SettingsPage() {
         .catch(() => {});
     }
     if (token && user?.role === 'child') {
-      apiFetch('/api/child/parents', token)
+      apiFetch('/api/child/parents', getToken)
         .then(data => setLinkedParents(data.parents || []))
         .catch(() => {});
     }
@@ -59,7 +59,7 @@ export default function SettingsPage() {
   const saveGrade = async (childId: string) => {
     setSavingGrade(childId);
     try {
-      await apiFetch('/api/parent/children', token, {
+      await apiFetch('/api/parent/children', getToken, {
         method: 'PATCH',
         body: JSON.stringify({ childId, grade: editingGrade[childId] }),
       });
@@ -67,7 +67,7 @@ export default function SettingsPage() {
       setGradeSaved(childId);
       setTimeout(() => setGradeSaved(null), 2000);
     } catch (err) {
-      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to save grade');
     }
     setSavingGrade(null);
   };
