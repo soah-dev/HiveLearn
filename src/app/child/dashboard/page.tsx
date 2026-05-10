@@ -52,6 +52,7 @@ export default function ChildDashboard() {
   const { user, token, loading } = useAuth();
   const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [practiceSessions, setPracticeSessions] = useState<{ score: number | null; status: string }[]>([]);
   const [gamification, setGamification] = useState<GamificationData | null>(null);
   const [recentBadges, setRecentBadges] = useState<Badge[]>([]);
   const [offlineWork, setOfflineWork] = useState<OfflineWork[]>([]);
@@ -77,11 +78,13 @@ export default function ChildDashboard() {
         apiFetch('/api/assignments', token),
         apiFetch('/api/gamification', token),
         apiFetch('/api/offline-work', token),
-      ]).then(([assignmentsData, gamData, offlineData]) => {
+        apiFetch('/api/practice', token),
+      ]).then(([assignmentsData, gamData, offlineData, practiceData]) => {
         setAssignments(assignmentsData.assignments || []);
         setGamification(gamData.gamification);
         setRecentBadges((gamData.earnedBadges || []).slice(0, 3));
         setOfflineWork(offlineData.entries || []);
+        setPracticeSessions(practiceData.sessions || []);
         setDataLoading(false);
       }).catch(() => setDataLoading(false));
     }
@@ -127,9 +130,11 @@ export default function ChildDashboard() {
   const pending = assignments.filter(a => a.status === 'pending' || a.status === 'in_progress');
   const completed = assignments.filter(a => a.status === 'reviewed');
   const scoredAssignments = completed.filter(a => a.score !== null);
-  const accuracyRate = scoredAssignments.length > 0
-    ? Math.round(scoredAssignments.reduce((sum, a) => sum + (a.score || 0), 0) / scoredAssignments.length)
-    : 0;
+  const completedPractice = practiceSessions.filter(p => p.status === 'completed' && p.score !== null);
+  const totalScoredCount = scoredAssignments.length + completedPractice.length;
+  const totalScoreSum = scoredAssignments.reduce((sum, a) => sum + (a.score || 0), 0)
+    + completedPractice.reduce((sum, p) => sum + (p.score || 0), 0);
+  const accuracyRate = totalScoredCount > 0 ? Math.round(totalScoreSum / totalScoredCount) : 0;
 
   return (
     <>
