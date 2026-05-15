@@ -2,14 +2,14 @@
 
 ## Overview
 
-HiveExcel is a parent-kid homework collaboration web app. Parents generate assignments (powered by Claude API), children complete them on their own device, and results are reviewed with gamification (points, streaks, badges, leaderboards).
+HiveExcel is a parent-kid homework collaboration web app. Parents generate assignments (powered by Gemini API), children complete them on their own device, and results are reviewed with gamification (points, streaks, badges, leaderboards).
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router) with TypeScript
 - **Database**: Prisma ORM v6 + SQLite (local dev), swap to Postgres for production
 - **Auth**: Firebase Auth (Google sign-in + email/password) + Firebase Admin SDK for server-side token verification
-- **AI**: Claude API (Anthropic SDK) for question generation and auto-review
+- **AI**: Gemini API (@google/generative-ai SDK) for question generation and auto-review
 - **Styling**: Tailwind CSS with class-based dark mode
 - **Charts**: Recharts for progress analytics
 - **Deployment target**: Vercel
@@ -52,7 +52,7 @@ homework-hub/
 │   │       ├── assignments/[id]/submit/ # POST - Child submits answers
 │   │       ├── assignments/[id]/save-progress/ # POST - Save without submitting
 │   │       ├── assignments/[id]/review/ # POST - AI auto-review or parent review
-│   │       ├── ai/generate/   # POST - Claude API question generation
+│   │       ├── ai/generate/   # POST - Gemini API question generation
 │   │       ├── gamification/  # GET - Points, badges data
 │   │       ├── leaderboard/   # GET - Family leaderboard
 │   │       └── analytics/[childId]/ # GET - Score trends, subject breakdown
@@ -103,7 +103,7 @@ FIREBASE_ADMIN_CLIENT_EMAIL=
 FIREBASE_ADMIN_PRIVATE_KEY=
 
 # AI
-ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
 
 # Database (auto-configured for SQLite)
 DATABASE_URL=file:./dev.db
@@ -138,7 +138,7 @@ npm run dev
 - **firebase-admin.ts** uses a Proxy pattern for lazy initialization so the app builds even with placeholder env vars
 - **SQLite** for local dev, designed for easy swap to Postgres (change provider + DATABASE_URL)
 - All API routes use `getAuthUser()` from `src/lib/auth.ts` for consistent auth checking
-- Question generation and auto-review both call Claude API (`claude-sonnet-4-20250514` model)
+- Question generation and auto-review both call Gemini API (@google/generative-ai SDK)
 - Dark mode uses Tailwind `class` strategy with localStorage persistence
 
 ## Next Steps for Testing & Improvement
@@ -146,7 +146,7 @@ npm run dev
 ### Immediate (to get app running)
 1. Create a Firebase project and enable Google + Email/Password auth
 2. Add real Firebase credentials to `.env.local`
-3. Add Anthropic API key to `.env.local`
+3. Add Gemini API key to `.env.local`
 4. Run `npm run dev` and test the full flow
 
 ### Testing Checklist
