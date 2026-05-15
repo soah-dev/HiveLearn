@@ -35,7 +35,7 @@ export default function Navbar() {
     <nav className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link href={homeHref} className="text-xl font-extrabold gradient-text tracking-tight">
-          StudyHub
+          HiveExcel
         </Link>
 
         {/* Desktop nav */}

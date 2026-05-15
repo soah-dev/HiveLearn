@@ -48,7 +48,7 @@ export default function OnboardingPage() {
       <div className="max-w-md w-full relative z-10">
         <div className="text-center mb-8 animate-slide-up">
           <p className="text-5xl mb-3 animate-float">👋</p>
-          <h1 className="text-4xl font-extrabold gradient-text mb-2">Welcome to StudyHub!</h1>
+          <h1 className="text-4xl font-extrabold gradient-text mb-2">Welcome to HiveExcel!</h1>
           <p className="text-gray-500 dark:text-gray-400 font-medium">Let&apos;s set up your account</p>
         </div>
 

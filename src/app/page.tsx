@@ -67,7 +67,7 @@ export default function Home() {
 
       <div className="max-w-md w-full text-center relative z-10">
         <div className="mb-8 animate-slide-up">
-          <h1 className="text-6xl font-extrabold gradient-text mb-3 tracking-tight">StudyHub</h1>
+          <h1 className="text-6xl font-extrabold gradient-text mb-3 tracking-tight">HiveExcel</h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 font-medium">Learning made fun for families</p>
         </div>
 

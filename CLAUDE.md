@@ -1,8 +1,8 @@
-# StudyHub - Project Context & Setup Guide
+# HiveExcel - Project Context & Setup Guide
 
 ## Overview
 
-StudyHub is a parent-kid homework collaboration web app. Parents generate assignments (powered by Claude API), children complete them on their own device, and results are reviewed with gamification (points, streaks, badges, leaderboards).
+HiveExcel is a parent-kid homework collaboration web app. Parents generate assignments (powered by Claude API), children complete them on their own device, and results are reviewed with gamification (points, streaks, badges, leaderboards).
 
 ## Tech Stack
 
