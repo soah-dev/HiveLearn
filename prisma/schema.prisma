@@ -28,6 +28,7 @@ model User {
   practiceSessions PracticeSession[]
   offlineWork      OfflineWork[] @relation("ChildOfflineWork")
   reviewedOfflineWork OfflineWork[] @relation("ParentOfflineWork")
+  feedback         Feedback[]
 }
 
 model ParentChild {
@@ -208,4 +209,15 @@ model EarnedBadge {
   badge Badge @relation(fields: [badgeId], references: [id])
 
   @@unique([childId, badgeId])
+}
+
+model Feedback {
+  id             String   @id @default(cuid())
+  userId         String
+  category       String   @default("general")
+  message        String
+  screenshotUrl  String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }

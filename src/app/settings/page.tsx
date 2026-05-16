@@ -32,6 +32,13 @@ export default function SettingsPage() {
   const [editingGrade, setEditingGrade] = useState<Record<string, number>>({});
   const [savingGrade, setSavingGrade] = useState<string | null>(null);
   const [gradeSaved, setGradeSaved] = useState<string | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackCategory, setFeedbackCategory] = useState('general');
+  const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -70,6 +77,37 @@ export default function SettingsPage() {
       alert(err instanceof Error ? err.message : 'Failed to save grade');
     }
     setSavingGrade(null);
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackMessage.trim()) { setFeedbackError('Please enter a message'); return; }
+    setFeedbackSubmitting(true);
+    setFeedbackError('');
+    try {
+      const freshToken = await getToken();
+      const formData = new FormData();
+      formData.append('message', feedbackMessage.trim());
+      formData.append('category', feedbackCategory);
+      if (feedbackFile) formData.append('screenshot', feedbackFile);
+
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${freshToken}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to submit');
+      }
+      setFeedbackSuccess(true);
+      setFeedbackMessage('');
+      setFeedbackCategory('general');
+      setFeedbackFile(null);
+      setTimeout(() => { setFeedbackSuccess(false); setFeedbackOpen(false); }, 2000);
+    } catch (err) {
+      setFeedbackError(err instanceof Error ? err.message : 'Failed to submit feedback');
+    }
+    setFeedbackSubmitting(false);
   };
 
   if (loading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
@@ -183,8 +221,95 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Feedback */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '150ms' }}>
+          {!feedbackOpen ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Feedback</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Help us improve HiveExcel</p>
+              </div>
+              <button
+                onClick={() => setFeedbackOpen(true)}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm"
+              >
+                Send Feedback
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Send Feedback</h2>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                <select
+                  value={feedbackCategory}
+                  onChange={e => setFeedbackCategory(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                >
+                  <option value="general">General Feedback</option>
+                  <option value="bug">Bug Report</option>
+                  <option value="feature_request">Feature Request</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Message</label>
+                <textarea
+                  value={feedbackMessage}
+                  onChange={e => setFeedbackMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Tell us what's on your mind..."
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Screenshot (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setFeedbackFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-600 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/50 transition-all"
+                />
+                {feedbackFile && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{feedbackFile.name} ({(feedbackFile.size / 1024).toFixed(0)} KB)</p>
+                )}
+              </div>
+
+              {feedbackError && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
+                  {feedbackError}
+                </div>
+              )}
+
+              {feedbackSuccess && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-600 dark:text-green-400">
+                  Thank you! Your feedback has been submitted.
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setFeedbackOpen(false); setFeedbackError(''); }}
+                  className="flex-1 py-3 rounded-xl font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitFeedback}
+                  disabled={feedbackSubmitting || !feedbackMessage.trim()}
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
+                >
+                  {feedbackSubmitting ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Sign Out */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up" style={{ animationDelay: '150ms' }}>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>
           <button
             onClick={async () => { await signOut(); router.push('/'); }}
             className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 py-3.5 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all border border-red-200/50 dark:border-red-800/50"
