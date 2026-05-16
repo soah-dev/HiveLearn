@@ -18,6 +18,7 @@ export default function Navbar() {
     { href: '/parent/dashboard', label: 'Dashboard' },
     { href: '/parent/create', label: 'Create' },
     { href: '/parent/analytics', label: 'Analytics' },
+    { href: '/how-it-works', label: 'How It Works' },
     { href: '/settings', label: 'Settings' },
   ];
 
@@ -26,6 +27,7 @@ export default function Navbar() {
     { href: '/child/practice', label: 'Practice' },
     { href: '/child/badges', label: 'Badges' },
     { href: '/child/leaderboard', label: 'Leaderboard' },
+    { href: '/how-it-works', label: 'How It Works' },
     { href: '/settings', label: 'Settings' },
   ];
 
