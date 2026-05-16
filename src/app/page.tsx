@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function Home() {
@@ -196,6 +197,13 @@ export default function Home() {
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1">Gamified</p>
             </div>
           </div>
+
+          <Link
+            href="/how-it-works"
+            className="mt-4 inline-block text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline transition-all"
+          >
+            How does it work?
+          </Link>
         </div>
       </div>
     </div>
