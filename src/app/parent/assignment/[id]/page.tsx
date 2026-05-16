@@ -419,7 +419,7 @@ export default function ParentAssignmentPage() {
                 onClick={() => setReviewType('ai')}
                 className={`flex-1 py-3 rounded-xl font-bold transition-all ${reviewType === 'ai' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
               >
-                AI Auto-Review
+                Auto-Review
               </button>
               <button
                 onClick={() => setReviewType('parent')}
@@ -467,8 +467,8 @@ export default function ParentAssignmentPage() {
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
             >
               {reviewing
-                ? reviewType === 'ai' ? 'AI is reviewing...' : 'Submitting review...'
-                : reviewType === 'ai' ? 'Run AI Auto-Review' : 'Submit Manual Review'}
+                ? reviewType === 'ai' ? 'Reviewing...' : 'Submitting review...'
+                : reviewType === 'ai' ? 'Run Auto-Review' : 'Submit Manual Review'}
             </button>
           </div>
         )}

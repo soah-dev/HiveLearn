@@ -436,7 +436,7 @@ export default function ChildAssignmentPage() {
                         </p>
                       )}
                       {ans?.aiScore !== null && ans?.aiScore !== undefined && (
-                        <p className="text-sm text-gray-500">AI Score: {ans.aiScore}/100</p>
+                        <p className="text-sm text-gray-500">Score: {ans.aiScore}/100</p>
                       )}
                       {ans?.aiExplanation && (
                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">

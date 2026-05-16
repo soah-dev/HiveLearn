@@ -28,6 +28,19 @@ const questionTypes = [
   { value: 'open_ended', label: 'Open Ended' },
 ];
 
+const subjectQuestionTypes: Record<string, string[]> = {
+  math: ['multiple_choice', 'fill_in_blank', 'true_false'],
+  reading: ['multiple_choice', 'true_false', 'open_ended'],
+  science: ['multiple_choice', 'true_false', 'fill_in_blank', 'open_ended'],
+  history: ['multiple_choice', 'true_false', 'open_ended'],
+  english: ['multiple_choice', 'fill_in_blank', 'open_ended'],
+  geography: ['multiple_choice', 'true_false', 'fill_in_blank'],
+  art: ['multiple_choice', 'open_ended'],
+  music: ['multiple_choice', 'true_false', 'open_ended'],
+  computer_science: ['multiple_choice', 'fill_in_blank', 'true_false'],
+  foreign_languages: ['multiple_choice', 'fill_in_blank', 'open_ended'],
+};
+
 interface Child {
   id: string;
   name: string | null;
@@ -53,7 +66,7 @@ export default function CreateAssignment() {
   const [subject, setSubject] = useState('math');
   const [topic, setTopic] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['multiple_choice']);
+  const [selectedType, setSelectedType] = useState('multiple_choice');
   const [numQuestions, setNumQuestions] = useState(5);
   const [timeLimitMin, setTimeLimitMin] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -75,14 +88,18 @@ export default function CreateAssignment() {
     }
   }, [user, token, loading, router]);
 
-  const toggleType = (type: string) => {
-    setSelectedTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
-  };
+  const availableTypes = questionTypes.filter(qt => (subjectQuestionTypes[subject] || ['multiple_choice']).includes(qt.value));
+
+  // Reset to first available type when subject changes and current selection is no longer valid
+  useEffect(() => {
+    const valid = availableTypes.some(qt => qt.value === selectedType);
+    if (!valid && availableTypes.length > 0) {
+      setSelectedType(availableTypes[0].value);
+    }
+  }, [subject]);
 
   const handleGenerate = async () => {
-    if (selectedTypes.length === 0) { setError('Select at least one question type'); return; }
+    if (!selectedType) { setError('Select a question type'); return; }
     setError('');
     setGenerating(true);
 
@@ -90,7 +107,7 @@ export default function CreateAssignment() {
       const data = await apiFetch('/api/ai/generate', token, {
         method: 'POST',
         body: JSON.stringify({
-          grade, subject, topic, difficulty, numQuestions, questionTypes: selectedTypes,
+          grade, subject, topic, difficulty, numQuestions, questionTypes: [selectedType],
         }),
       });
       setQuestions(data.questions);
@@ -140,7 +157,7 @@ export default function CreateAssignment() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Create Assignment</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Generate AI-powered questions for your child</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Generate questions for your child</p>
         </div>
 
         {step === 'form' ? (
@@ -200,12 +217,12 @@ export default function CreateAssignment() {
                 </div>
               </div>
 
-              {/* Question Types */}
+              {/* Question Type */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Question Types</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Question Type</label>
                 <div className="flex flex-wrap gap-2">
-                  {questionTypes.map(qt => (
-                    <button key={qt.value} onClick={() => toggleType(qt.value)} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedTypes.includes(qt.value) ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                  {availableTypes.map(qt => (
+                    <button key={qt.value} onClick={() => setSelectedType(qt.value)} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedType === qt.value ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
                       {qt.label}
                     </button>
                   ))}
@@ -244,7 +261,7 @@ export default function CreateAssignment() {
                 disabled={generating || children.length === 0}
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 flex items-center justify-center gap-2"
               >
-                {generating ? <><LoadingSpinner size="sm" /> Generating with AI...</> : 'Generate Questions'}
+                {generating ? <><LoadingSpinner size="sm" /> Generating questions...</> : 'Generate Questions'}
               </button>
             </div>
           </div>

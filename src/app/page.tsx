@@ -190,7 +190,7 @@ export default function Home() {
             </div>
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
               <p className="text-2xl animate-float-slow">🤖</p>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1">AI Powered</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1">Smart Learning</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
               <p className="text-2xl animate-float">🏆</p>
