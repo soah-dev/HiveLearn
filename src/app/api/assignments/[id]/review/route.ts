@@ -176,7 +176,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Calculate points
-  const points = calculatePoints(assignment.difficulty, overallScore, assignment.timeLimitMin);
+  const child = await prisma.user.findUnique({ where: { id: assignment.childId }, select: { grade: true } });
+  const points = calculatePoints(assignment.difficulty, overallScore, assignment.timeLimitMin, child?.grade, assignment.grade);
 
   // Update assignment
   await prisma.assignment.update({

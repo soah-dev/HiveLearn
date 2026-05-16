@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-
-function calculatePoints(difficulty: string, score: number): number {
-  const base = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30;
-  let bonus = 1;
-  if (score >= 90) bonus = 1.5;
-  else if (score >= 80) bonus = 1.25;
-  else if (score >= 70) bonus = 1.1;
-  return Math.round(base * bonus * (score / 100));
-}
+import { calculatePoints } from '@/lib/points';
 
 async function updateStreakAndPoints(childId: string, points: number) {
   const today = new Date().toISOString().split('T')[0];
@@ -91,7 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Exclude flagged questions from scoring
   const scoredTotal = session.questions.length - flaggedCount;
   const score = scoredTotal > 0 ? Math.round((correct / scoredTotal) * 100) : 0;
-  const points = calculatePoints(session.difficulty, score);
+  const points = calculatePoints(session.difficulty, score, null, user.grade, session.grade);
 
   await prisma.practiceSession.update({
     where: { id },
