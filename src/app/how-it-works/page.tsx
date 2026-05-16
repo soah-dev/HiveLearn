@@ -63,8 +63,14 @@ const childSteps = [
   },
   {
     number: 5,
+    title: 'Practice On Your Own',
+    description: 'Don\u0027t wait for assignments — start practice sessions anytime to earn extra points and badges while keeping your streak alive.',
+    icon: '💪',
+  },
+  {
+    number: 6,
     title: 'Earn Points & Badges',
-    description: 'Every assignment earns you points. Build streaks, unlock badges, and climb the family leaderboard.',
+    description: 'Every assignment and practice session earns you points. Build streaks, unlock badges, and climb the family leaderboard.',
     icon: '🏆',
   },
 ];
