@@ -1,13 +1,40 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { startOfWeek, startOfMonth, subDays, format } from 'date-fns';
+import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+
+interface ActivityItem {
+  id: string;
+  type: 'assignment' | 'practice' | 'offline';
+  date: string;
+  subject: string;
+  topic: string;
+  difficulty: string;
+  score: number | null;
+  pointsAwarded: number | null;
+}
+
+interface ActivityView {
+  from: string;
+  to: string;
+  summary: {
+    totalActivities: number;
+    assignmentCount: number;
+    practiceCount: number;
+    offlineCount: number;
+    avgScore: number;
+    totalPoints: number;
+  };
+  chartData: Array<{ date: string; score: number | null; type: string }>;
+  activities: ActivityItem[];
+}
 
 interface AnalyticsData {
   scoreTrends: Array<{ date: string; score: number; subject: string }>;
@@ -18,22 +45,10 @@ interface AnalyticsData {
   avgScore: number;
   strongest: string | null;
   weakest: string | null;
-  recentActivity: Array<{
-    id: string;
-    subject: string;
-    topic: string;
-    status: string;
-    score: number | null;
-    createdAt: string;
-  }>;
-  practice: {
-    scoreTrends: Array<{ date: string; score: number; subject: string }>;
-    bySubject: Array<{ subject: string; avgScore: number; count: number }>;
-    totalSessions: number;
-    avgScore: number;
-    totalPoints: number;
-  };
+  activityView: ActivityView;
 }
+
+type DatePreset = 'this_week' | 'last_7' | 'this_month' | 'custom';
 
 export default function AnalyticsPage() {
   const { user, token, loading } = useAuth();
@@ -41,21 +56,82 @@ export default function AnalyticsPage() {
   const params = useParams();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [datePreset, setDatePreset] = useState<DatePreset>('this_week');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
+  const getDateRange = useCallback((preset: DatePreset): { from: string; to: string } | null => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    switch (preset) {
+      case 'this_week':
+        return { from: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'), to: today };
+      case 'last_7':
+        return { from: format(subDays(now, 6), 'yyyy-MM-dd'), to: today };
+      case 'this_month':
+        return { from: format(startOfMonth(now), 'yyyy-MM-dd'), to: today };
+      case 'custom':
+        if (customFrom && customTo) return { from: customFrom, to: customTo };
+        return null;
+      default:
+        return null;
+    }
+  }, [customFrom, customTo]);
+
+  // Auth guard
   useEffect(() => {
     if (!loading && (!user || user.role !== 'parent')) {
       router.push('/');
-      return;
     }
-    if (token && params.childId) {
-      apiFetch(`/api/analytics/${params.childId}`, token)
-        .then(d => { setData(d); setDataLoading(false); })
-        .catch(() => setDataLoading(false));
-    }
-  }, [user, token, loading, router, params.childId]);
+  }, [user, loading, router]);
+
+  // Fetch data (initial + when date range changes)
+  useEffect(() => {
+    if (!token || !params.childId || datePreset === 'custom') return;
+    const range = getDateRange(datePreset);
+    if (!range) return;
+
+    const isInitial = data === null;
+    if (isInitial) setDataLoading(true);
+    else setActivityLoading(true);
+
+    apiFetch(`/api/analytics/${params.childId}?from=${range.from}&to=${range.to}`, token)
+      .then(d => { setData(d); setDataLoading(false); setActivityLoading(false); })
+      .catch(() => { setDataLoading(false); setActivityLoading(false); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datePreset, token, params.childId]);
+
+  const handleCustomApply = () => {
+    if (!customFrom || !customTo || !token || !params.childId) return;
+    setActivityLoading(true);
+    apiFetch(`/api/analytics/${params.childId}?from=${customFrom}&to=${customTo}`, token)
+      .then(d => { setData(d); setActivityLoading(false); })
+      .catch(() => setActivityLoading(false));
+  };
 
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
   if (!data) return <><Navbar /><div className="p-8 text-center text-gray-500">No data available</div></>;
+
+  const { activityView } = data;
+
+  // Prepare scatter chart data grouped by type
+  const assignmentChartData = activityView.chartData.filter(d => d.type === 'assignment');
+  const practiceChartData = activityView.chartData.filter(d => d.type === 'practice');
+  const offlineChartData = activityView.chartData.filter(d => d.type === 'offline');
+
+  const typeBadge = (type: string) => {
+    switch (type) {
+      case 'assignment':
+        return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200">Assignment</span>;
+      case 'practice':
+        return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200">Practice</span>;
+      case 'offline':
+        return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">Offline</span>;
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -66,7 +142,7 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Progress Analytics</h1>
         </div>
 
-        {/* Stats */}
+        {/* Lifetime Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard title="Total Completed" value={data.totalAssignments} icon="📝" />
           <StatCard title="Completion Rate" value={`${data.completionRate}%`} icon="✅" />
@@ -74,7 +150,7 @@ export default function AnalyticsPage() {
           <StatCard title="Strongest Subject" value={data.strongest ? data.strongest.replace('_', ' ') : 'N/A'} icon="💪" />
         </div>
 
-        {/* Charts */}
+        {/* Lifetime Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Score Trends */}
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
@@ -147,82 +223,144 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Practice Analytics */}
+        {/* Activity View */}
         <div className="mb-8">
-          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6">Practice Analytics</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <StatCard title="Practice Sessions" value={data.practice.totalSessions} icon="🧠" />
-            <StatCard title="Avg Practice Score" value={`${data.practice.avgScore}%`} icon="🎯" />
-            <StatCard title="Practice Points" value={data.practice.totalPoints} icon="⭐" />
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6">Activity View</h2>
+
+          {/* Date Range Controls */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-4 mb-6">
+            <div className="flex flex-wrap items-center gap-2">
+              {(['this_week', 'last_7', 'this_month', 'custom'] as DatePreset[]).map(preset => (
+                <button
+                  key={preset}
+                  onClick={() => setDatePreset(preset)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                    datePreset === preset
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {preset === 'this_week' ? 'This Week' : preset === 'last_7' ? 'Last 7 Days' : preset === 'this_month' ? 'This Month' : 'Custom'}
+                </button>
+              ))}
+              {datePreset === 'custom' && (
+                <div className="flex items-center gap-2 ml-2">
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={e => setCustomFrom(e.target.value)}
+                    className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                  />
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">to</span>
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={e => setCustomTo(e.target.value)}
+                    className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                  />
+                  <button
+                    onClick={handleCustomApply}
+                    disabled={!customFrom || !customTo}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700"
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Showing: {activityView.from} to {activityView.to}
+            </p>
           </div>
 
-          {data.practice.totalSessions > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Practice Score Trends</h3>
-                {data.practice.scoreTrends.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={data.practice.scoreTrends}>
+          {activityLoading ? (
+            <div className="py-8"><LoadingSpinner size="md" /></div>
+          ) : (
+            <>
+              {/* Activity Summary Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <StatCard title="Total Activities" value={activityView.summary.totalActivities} icon="📋" />
+                <StatCard title="Avg Score" value={`${activityView.summary.avgScore}%`} icon="🎯" />
+                <StatCard title="Points Earned" value={activityView.summary.totalPoints} icon="⭐" />
+                <StatCard
+                  title="Breakdown"
+                  value={`${activityView.summary.assignmentCount}A / ${activityView.summary.practiceCount}P / ${activityView.summary.offlineCount}O`}
+                  icon="📊"
+                />
+              </div>
+
+              {/* Combined Score Chart */}
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 card-hover">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scores by Activity Type</h3>
+                {activityView.chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <ScatterChart>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="score" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                    </LineChart>
+                      <XAxis dataKey="date" type="category" allowDuplicatedCategory={false} tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                      <YAxis dataKey="score" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                      <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                      <Legend />
+                      {assignmentChartData.length > 0 && (
+                        <Scatter name="Assignments" data={assignmentChartData} fill="#6366F1" />
+                      )}
+                      {practiceChartData.length > 0 && (
+                        <Scatter name="Practice" data={practiceChartData} fill="#10B981" />
+                      )}
+                      {offlineChartData.length > 0 && (
+                        <Scatter name="Offline" data={offlineChartData} fill="#F59E0B" />
+                      )}
+                    </ScatterChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-12">No scored activities in this range</p>
                 )}
               </div>
 
+              {/* Unified Activity Feed */}
               <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Practice by Subject</h3>
-                {data.practice.bySubject.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={data.practice.bySubject}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="subject" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                      <Tooltip />
-                      <Bar dataKey="avgScore" fill="#10B981" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Activity Feed</h3>
+                {activityView.activities.length > 0 ? (
+                  <>
+                    {/* Desktop header */}
+                    <div className="hidden md:grid grid-cols-6 gap-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider pb-2 border-b border-gray-200 dark:border-gray-700 mb-2">
+                      <span>Date</span>
+                      <span>Subject</span>
+                      <span>Type</span>
+                      <span>Topic</span>
+                      <span className="text-right">Score</span>
+                      <span className="text-right">Points</span>
+                    </div>
+                    <div className="space-y-2">
+                      {activityView.activities.map(a => (
+                        <div key={a.id} className="md:grid md:grid-cols-6 md:gap-4 md:items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                          {/* Mobile stacked layout */}
+                          <div className="md:hidden flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              {typeBadge(a.type)}
+                              <span className="text-sm font-bold text-gray-900 dark:text-white capitalize">{a.subject.replace('_', ' ')}</span>
+                            </div>
+                            <span className="text-sm font-extrabold text-gray-900 dark:text-white">{a.score !== null ? `${a.score}%` : '—'}</span>
+                          </div>
+                          <div className="md:hidden flex items-center justify-between">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{a.date} {a.topic && `· ${a.topic}`}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{a.pointsAwarded ? `+${a.pointsAwarded} pts` : ''}</span>
+                          </div>
+                          {/* Desktop grid layout */}
+                          <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">{a.date}</span>
+                          <span className="hidden md:block text-sm font-semibold text-gray-900 dark:text-white capitalize">{a.subject.replace('_', ' ')}</span>
+                          <span className="hidden md:block">{typeBadge(a.type)}</span>
+                          <span className="hidden md:block text-sm text-gray-600 dark:text-gray-400 truncate">{a.topic || '—'}</span>
+                          <span className="hidden md:block text-sm font-bold text-right text-gray-900 dark:text-white">{a.score !== null ? `${a.score}%` : '—'}</span>
+                          <span className="hidden md:block text-sm text-right text-gray-600 dark:text-gray-400">{a.pointsAwarded ? `+${a.pointsAwarded}` : '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-8">No activities in this date range</p>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center">
-              <p className="text-gray-500 dark:text-gray-400">No practice sessions completed yet.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Recent Activity</h2>
-          {data.recentActivity.length > 0 ? (
-            <div className="space-y-3">
-              {data.recentActivity.map(a => (
-                <div key={a.id} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                  <div>
-                    <p className="font-bold text-gray-900 dark:text-white capitalize text-sm">{a.subject.replace('_', ' ')}: {a.topic}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(a.createdAt).toLocaleDateString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      a.status === 'reviewed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' :
-                      a.status === 'submitted' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200' :
-                      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                    }`}>{a.status.replace('_', ' ')}</span>
-                    {a.score !== null && <p className="text-sm font-extrabold mt-1">{a.score}%</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No activity yet</p>
+            </>
           )}
         </div>
       </main>
