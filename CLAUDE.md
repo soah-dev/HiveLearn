@@ -7,7 +7,7 @@ HiveExcel is a parent-kid homework collaboration web app. Parents generate assig
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router) with TypeScript
-- **Database**: Prisma ORM v6 + SQLite (local dev), swap to Postgres for production
+- **Database**: Prisma ORM v6 + PostgreSQL (Supabase)
 - **Auth**: Firebase Auth (Google sign-in + email/password) + Firebase Admin SDK for server-side token verification
 - **AI**: Gemini API (@google/generative-ai SDK) for question generation and auto-review
 - **Styling**: Tailwind CSS with class-based dark mode
@@ -21,8 +21,7 @@ homework-hub/
 ├── prisma/
 │   ├── schema.prisma          # 8 models: User, ParentChild, Assignment, Question, Answer, Gamification, Badge, EarnedBadge
 │   ├── seed.ts                # Seeds 14 badges
-│   ├── migrations/            # SQLite migration
-│   └── dev.db                 # Local SQLite database (gitignored, regenerate with prisma migrate dev)
+│   └── migrations/            # PostgreSQL migrations (legacy init migration has SQLite syntax — use `prisma db push` for schema changes)
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx         # Root layout with Providers wrapper
@@ -105,8 +104,9 @@ FIREBASE_ADMIN_PRIVATE_KEY=
 # AI
 GEMINI_API_KEY=
 
-# Database (auto-configured for SQLite)
-DATABASE_URL=file:./dev.db
+# Database (PostgreSQL via Supabase)
+DATABASE_URL=postgresql://...  # Supabase pooled connection string
+DIRECT_URL=postgresql://...    # Supabase direct connection string
 ```
 
 ## Setup on a New Machine
@@ -121,9 +121,9 @@ npm install
 # 3. Set up environment variables
 cp .env.local.example .env.local  # or create .env.local manually with values above
 
-# 4. Generate Prisma client and run migrations
+# 4. Generate Prisma client and sync schema
 npx prisma generate
-npx prisma migrate dev
+npx prisma db push
 
 # 5. Seed badges
 npx tsx prisma/seed.ts
@@ -134,9 +134,9 @@ npm run dev
 
 ## Key Design Decisions
 
-- **Prisma v6** (not v7) used because v7 requires adapter-based initialization incompatible with SQLite direct access
+- **Prisma v6** (not v7) used because v7 requires adapter-based initialization incompatible with current setup
 - **firebase-admin.ts** uses a Proxy pattern for lazy initialization so the app builds even with placeholder env vars
-- **SQLite** for local dev, designed for easy swap to Postgres (change provider + DATABASE_URL)
+- **PostgreSQL** via Supabase (pooled + direct connections). Legacy migrations have SQLite syntax, so use `prisma db push` instead of `prisma migrate dev` for schema changes
 - All API routes use `getAuthUser()` from `src/lib/auth.ts` for consistent auth checking
 - Question generation and auto-review both call Gemini API (@google/generative-ai SDK)
 - Dark mode uses Tailwind `class` strategy with localStorage persistence
@@ -180,11 +180,7 @@ npm run dev
 - [ ] Write E2E tests with Playwright
 
 ### Production Deployment
-1. Swap SQLite to Postgres:
-   - Change `provider = "sqlite"` to `"postgresql"` in `prisma/schema.prisma`
-   - Set `DATABASE_URL` to Postgres connection string (Supabase/Neon)
-   - Run `npx prisma migrate dev` then `npx prisma db seed`
-2. Deploy to Vercel: `npx vercel` and add all env vars in dashboard
-3. Optional: replace Firebase Auth with Supabase Auth if using Supabase DB
-4. Add rate limiting to AI generation endpoint
-5. Add row-level security if using Supabase
+1. Deploy to Vercel: `npx vercel` and add all env vars in dashboard
+2. Optional: replace Firebase Auth with Supabase Auth if using Supabase DB
+3. Add rate limiting to AI generation endpoint
+4. Add row-level security if using Supabase

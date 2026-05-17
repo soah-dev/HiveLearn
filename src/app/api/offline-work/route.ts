@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { subject, bookReference, numQuestions, score, difficulty } = await req.json();
+  const { subject, bookReference, numQuestions, score, difficulty, activityDate } = await req.json();
 
   if (!subject || !numQuestions || score === undefined || score === null) {
     return NextResponse.json({ error: 'Subject, number of questions, and score are required' }, { status: 400 });
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       numQuestions,
       score,
       difficulty: difficulty || 'medium',
+      activityDate: activityDate ? new Date(activityDate) : null,
     },
   });
 

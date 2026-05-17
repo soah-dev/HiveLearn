@@ -31,6 +31,7 @@ interface OfflineWork {
   status: string;
   parentComment: string | null;
   pointsAwarded: number | null;
+  activityDate: string | null;
   createdAt: string;
 }
 
@@ -65,6 +66,7 @@ export default function ChildDashboard() {
   const [owQuestions, setOwQuestions] = useState(10);
   const [owScore, setOwScore] = useState(0);
   const [owDifficulty, setOwDifficulty] = useState('medium');
+  const [owActivityDate, setOwActivityDate] = useState('');
   const [owSubmitting, setOwSubmitting] = useState(false);
   const [owError, setOwError] = useState('');
 
@@ -111,6 +113,7 @@ export default function ChildDashboard() {
           numQuestions: owQuestions,
           score: owScore,
           difficulty: owDifficulty,
+          activityDate: owActivityDate || null,
         }),
       });
       const data = await apiFetch('/api/offline-work', token);
@@ -119,6 +122,7 @@ export default function ChildDashboard() {
       setOwBook('');
       setOwQuestions(10);
       setOwScore(0);
+      setOwActivityDate('');
     } catch (err) {
       setOwError(err instanceof Error ? err.message : 'Failed to submit');
     }
@@ -307,6 +311,17 @@ export default function ChildDashboard() {
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                 />
               </div>
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Date of Activity (optional)</label>
+                <input
+                  type="date"
+                  value={owActivityDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={e => setOwActivityDate(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave blank to use today&apos;s date</p>
+              </div>
               {owError && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
                   {owError}
@@ -361,7 +376,7 @@ export default function ChildDashboard() {
                   {ow.parentComment && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{ow.parentComment}</p>
                   )}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(ow.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(ow.activityDate || ow.createdAt).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>

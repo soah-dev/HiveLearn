@@ -168,6 +168,7 @@ model OfflineWork {
   numQuestions   Int
   score          Int
   difficulty     String    @default("medium")
+  activityDate   DateTime?
   status         String    @default("pending")
   parentComment  String?
   pointsAwarded  Int?
