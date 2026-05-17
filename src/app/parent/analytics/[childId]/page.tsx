@@ -60,6 +60,8 @@ export default function AnalyticsPage() {
   const [datePreset, setDatePreset] = useState<DatePreset>('this_week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [feedPage, setFeedPage] = useState(1);
+  const FEED_PAGE_SIZE = 10;
 
   const getDateRange = useCallback((preset: DatePreset): { from: string; to: string } | null => {
     const now = new Date();
@@ -97,7 +99,7 @@ export default function AnalyticsPage() {
     else setActivityLoading(true);
 
     apiFetch(`/api/analytics/${params.childId}?from=${range.from}&to=${range.to}`, token)
-      .then(d => { setData(d); setDataLoading(false); setActivityLoading(false); })
+      .then(d => { setData(d); setDataLoading(false); setActivityLoading(false); setFeedPage(1); })
       .catch(() => { setDataLoading(false); setActivityLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datePreset, token, params.childId]);
@@ -106,7 +108,7 @@ export default function AnalyticsPage() {
     if (!customFrom || !customTo || !token || !params.childId) return;
     setActivityLoading(true);
     apiFetch(`/api/analytics/${params.childId}?from=${customFrom}&to=${customTo}`, token)
-      .then(d => { setData(d); setActivityLoading(false); })
+      .then(d => { setData(d); setActivityLoading(false); setFeedPage(1); })
       .catch(() => setActivityLoading(false));
   };
 
@@ -317,49 +319,100 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Unified Activity Feed */}
-              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Activity Feed</h3>
-                {activityView.activities.length > 0 ? (
-                  <>
-                    {/* Desktop header */}
-                    <div className="hidden md:grid grid-cols-6 gap-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider pb-2 border-b border-gray-200 dark:border-gray-700 mb-2">
-                      <span>Date</span>
-                      <span>Subject</span>
-                      <span>Type</span>
-                      <span>Topic</span>
-                      <span className="text-right">Score</span>
-                      <span className="text-right">Points</span>
+              {(() => {
+                const totalItems = activityView.activities.length;
+                const totalPages = Math.ceil(totalItems / FEED_PAGE_SIZE);
+                const paginatedActivities = activityView.activities.slice(
+                  (feedPage - 1) * FEED_PAGE_SIZE,
+                  feedPage * FEED_PAGE_SIZE
+                );
+
+                return (
+                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Activity Feed</h3>
+                      {totalItems > 0 && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {(feedPage - 1) * FEED_PAGE_SIZE + 1}–{Math.min(feedPage * FEED_PAGE_SIZE, totalItems)} of {totalItems}
+                        </span>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      {activityView.activities.map(a => (
-                        <div key={a.id} className="md:grid md:grid-cols-6 md:gap-4 md:items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                          {/* Mobile stacked layout */}
-                          <div className="md:hidden flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              {typeBadge(a.type)}
-                              <span className="text-sm font-bold text-gray-900 dark:text-white capitalize">{a.subject.replace('_', ' ')}</span>
-                            </div>
-                            <span className="text-sm font-extrabold text-gray-900 dark:text-white">{a.score !== null ? `${a.score}%` : '—'}</span>
-                          </div>
-                          <div className="md:hidden flex items-center justify-between">
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{a.date} {a.topic && `· ${a.topic}`}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{a.pointsAwarded ? `+${a.pointsAwarded} pts` : ''}</span>
-                          </div>
-                          {/* Desktop grid layout */}
-                          <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">{a.date}</span>
-                          <span className="hidden md:block text-sm font-semibold text-gray-900 dark:text-white capitalize">{a.subject.replace('_', ' ')}</span>
-                          <span className="hidden md:block">{typeBadge(a.type)}</span>
-                          <span className="hidden md:block text-sm text-gray-600 dark:text-gray-400 truncate">{a.topic || '—'}</span>
-                          <span className="hidden md:block text-sm font-bold text-right text-gray-900 dark:text-white">{a.score !== null ? `${a.score}%` : '—'}</span>
-                          <span className="hidden md:block text-sm text-right text-gray-600 dark:text-gray-400">{a.pointsAwarded ? `+${a.pointsAwarded}` : '—'}</span>
+                    {totalItems > 0 ? (
+                      <>
+                        {/* Desktop header */}
+                        <div className="hidden md:grid grid-cols-6 gap-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider pb-2 border-b border-gray-200 dark:border-gray-700 mb-2">
+                          <span>Date</span>
+                          <span>Subject</span>
+                          <span>Type</span>
+                          <span>Topic</span>
+                          <span className="text-right">Score</span>
+                          <span className="text-right">Points</span>
                         </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-8">No activities in this date range</p>
-                )}
-              </div>
+                        <div className="space-y-2">
+                          {paginatedActivities.map(a => (
+                            <div key={a.id} className="md:grid md:grid-cols-6 md:gap-4 md:items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                              {/* Mobile stacked layout */}
+                              <div className="md:hidden flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  {typeBadge(a.type)}
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white capitalize">{a.subject.replace('_', ' ')}</span>
+                                </div>
+                                <span className="text-sm font-extrabold text-gray-900 dark:text-white">{a.score !== null ? `${a.score}%` : '—'}</span>
+                              </div>
+                              <div className="md:hidden flex items-center justify-between">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{a.date} {a.topic && `· ${a.topic}`}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{a.pointsAwarded ? `+${a.pointsAwarded} pts` : ''}</span>
+                              </div>
+                              {/* Desktop grid layout */}
+                              <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">{a.date}</span>
+                              <span className="hidden md:block text-sm font-semibold text-gray-900 dark:text-white capitalize">{a.subject.replace('_', ' ')}</span>
+                              <span className="hidden md:block">{typeBadge(a.type)}</span>
+                              <span className="hidden md:block text-sm text-gray-600 dark:text-gray-400 truncate">{a.topic || '—'}</span>
+                              <span className="hidden md:block text-sm font-bold text-right text-gray-900 dark:text-white">{a.score !== null ? `${a.score}%` : '—'}</span>
+                              <span className="hidden md:block text-sm text-right text-gray-600 dark:text-gray-400">{a.pointsAwarded ? `+${a.pointsAwarded}` : '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button
+                              onClick={() => setFeedPage(p => Math.max(1, p - 1))}
+                              disabled={feedPage === 1}
+                              className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              Previous
+                            </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                              <button
+                                key={page}
+                                onClick={() => setFeedPage(page)}
+                                className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${
+                                  feedPage === page
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => setFeedPage(p => Math.min(totalPages, p + 1))}
+                              disabled={feedPage === totalPages}
+                              className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-gray-500 dark:text-gray-400 text-center py-8">No activities in this date range</p>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
