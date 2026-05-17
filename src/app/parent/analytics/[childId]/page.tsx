@@ -40,7 +40,7 @@ interface AnalyticsData {
   scoreTrends: Array<{ date: string; score: number; subject: string }>;
   bySubject: Array<{ subject: string; avgScore: number; count: number }>;
   byDifficulty: Array<{ difficulty: string; avgScore: number; count: number }>;
-  totalAssignments: number;
+  totalCompleted: number;
   completionRate: number;
   avgScore: number;
   strongest: string | null;
@@ -146,7 +146,7 @@ export default function AnalyticsPage() {
 
         {/* Lifetime Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Total Completed" value={data.totalAssignments} icon="📝" />
+          <StatCard title="Total Completed" value={data.totalCompleted} icon="📝" />
           <StatCard title="Completion Rate" value={`${data.completionRate}%`} icon="✅" />
           <StatCard title="Average Score" value={`${data.avgScore}%`} icon="📊" />
           <StatCard title="Strongest Subject" value={data.strongest ? data.strongest.replace('_', ' ') : 'N/A'} icon="💪" />

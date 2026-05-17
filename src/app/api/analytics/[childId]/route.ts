@@ -27,35 +27,54 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chil
   const from = fromParam ? new Date(fromParam + 'T00:00:00') : startOfWeek(now, { weekStartsOn: 1 });
   const to = toParam ? new Date(toParam + 'T23:59:59.999') : now;
 
-  // --- Lifetime data (unchanged) ---
-  const assignments = await prisma.assignment.findMany({
-    where: { childId, status: 'reviewed' },
-    orderBy: { reviewedAt: 'asc' },
-    select: {
-      id: true,
-      subject: true,
-      topic: true,
-      difficulty: true,
-      score: true,
-      pointsAwarded: true,
-      reviewedAt: true,
-      createdAt: true,
-    },
-  });
+  // --- Lifetime data (all three sources) ---
+  const [assignments, allPractice, allOffline] = await Promise.all([
+    prisma.assignment.findMany({
+      where: { childId, status: 'reviewed' },
+      orderBy: { reviewedAt: 'asc' },
+      select: {
+        id: true, subject: true, topic: true, difficulty: true,
+        score: true, pointsAwarded: true, reviewedAt: true, createdAt: true,
+      },
+    }),
+    prisma.practiceSession.findMany({
+      where: { childId, status: 'completed' },
+      orderBy: { completedAt: 'asc' },
+      select: {
+        id: true, subject: true, difficulty: true,
+        score: true, completedAt: true,
+      },
+    }),
+    prisma.offlineWork.findMany({
+      where: { childId, status: 'approved' },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true, subject: true, difficulty: true,
+        score: true, activityDate: true, createdAt: true,
+      },
+    }),
+  ]);
 
-  // Score trends over time
-  const scoreTrends = assignments.map(a => ({
-    date: a.reviewedAt?.toISOString().split('T')[0],
-    score: a.score,
-    subject: a.subject,
-  }));
+  // Combine all scored items for lifetime stats
+  type ScoredItem = { subject: string; difficulty: string; score: number | null; date: string | undefined };
+  const allItems: ScoredItem[] = [
+    ...assignments.map(a => ({ subject: a.subject, difficulty: a.difficulty, score: a.score, date: a.reviewedAt?.toISOString().split('T')[0] })),
+    ...allPractice.map(p => ({ subject: p.subject, difficulty: p.difficulty, score: p.score, date: p.completedAt?.toISOString().split('T')[0] })),
+    ...allOffline.map(o => ({ subject: o.subject, difficulty: o.difficulty, score: o.score, date: (o.activityDate || o.createdAt).toISOString().split('T')[0] })),
+  ];
 
-  // Scores by subject
+  // Score trends over time (all sources, sorted by date)
+  const scoreTrends = allItems
+    .filter(i => i.date && i.score !== null)
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .map(i => ({ date: i.date, score: i.score, subject: i.subject }));
+
+  // Scores by subject (all sources)
   const subjectScores: Record<string, { total: number; count: number }> = {};
-  for (const a of assignments) {
-    if (!subjectScores[a.subject]) subjectScores[a.subject] = { total: 0, count: 0 };
-    subjectScores[a.subject].total += a.score || 0;
-    subjectScores[a.subject].count += 1;
+  for (const item of allItems) {
+    if (!subjectScores[item.subject]) subjectScores[item.subject] = { total: 0, count: 0 };
+    subjectScores[item.subject].total += item.score || 0;
+    subjectScores[item.subject].count += 1;
   }
   const bySubject = Object.entries(subjectScores).map(([subject, data]) => ({
     subject,
@@ -63,12 +82,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chil
     count: data.count,
   }));
 
-  // Scores by difficulty
+  // Scores by difficulty (all sources)
   const diffScores: Record<string, { total: number; count: number }> = {};
-  for (const a of assignments) {
-    if (!diffScores[a.difficulty]) diffScores[a.difficulty] = { total: 0, count: 0 };
-    diffScores[a.difficulty].total += a.score || 0;
-    diffScores[a.difficulty].count += 1;
+  for (const item of allItems) {
+    if (!diffScores[item.difficulty]) diffScores[item.difficulty] = { total: 0, count: 0 };
+    diffScores[item.difficulty].total += item.score || 0;
+    diffScores[item.difficulty].count += 1;
   }
   const byDifficulty = Object.entries(diffScores).map(([difficulty, data]) => ({
     difficulty,
@@ -76,15 +95,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chil
     count: data.count,
   }));
 
-  // Overall stats
-  const totalAssignments = assignments.length;
+  // Overall stats (all sources)
+  const totalCompleted = allItems.length;
   const totalCreated = await prisma.assignment.count({ where: { childId } });
-  const completionRate = totalCreated > 0 ? Math.round((totalAssignments / totalCreated) * 100) : 0;
-  const avgScore = totalAssignments > 0
-    ? Math.round(assignments.reduce((sum, a) => sum + (a.score || 0), 0) / totalAssignments)
+  const completionRate = totalCreated > 0 ? Math.round((assignments.length / totalCreated) * 100) : 0;
+  const itemsWithScore = allItems.filter(i => i.score !== null);
+  const avgScore = itemsWithScore.length > 0
+    ? Math.round(itemsWithScore.reduce((sum, i) => sum + (i.score || 0), 0) / itemsWithScore.length)
     : 0;
 
-  // Strongest/weakest
+  // Strongest/weakest (all sources)
   const sorted = [...bySubject].sort((a, b) => b.avgScore - a.avgScore);
   const strongest = sorted[0]?.subject || null;
   const weakest = sorted[sorted.length - 1]?.subject || null;
@@ -198,7 +218,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chil
     scoreTrends,
     bySubject,
     byDifficulty,
-    totalAssignments,
+    totalCompleted,
     completionRate,
     avgScore,
     strongest,
