@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
     practiceBySubject,
     offlineBySubject,
     assignmentsByParent,
+    allFeedback,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'parent' } }),
@@ -89,6 +90,11 @@ export async function GET(req: NextRequest) {
       _count: { parentId: true },
       orderBy: { _count: { parentId: 'desc' } },
       take: 10,
+    }),
+    // Feedback
+    prisma.feedback.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { name: true, email: true, role: true } } },
     }),
   ]);
 
@@ -181,5 +187,15 @@ export async function GET(req: NextRequest) {
       approved: approvedOffline,
     },
     subjects,
+    feedback: allFeedback.map(f => ({
+      id: f.id,
+      category: f.category,
+      message: f.message,
+      screenshotUrl: f.screenshotUrl,
+      createdAt: f.createdAt.toISOString(),
+      userName: f.user.name || 'Unknown',
+      userEmail: f.user.email,
+      userRole: f.user.role || 'unknown',
+    })),
   });
 }

@@ -42,6 +42,16 @@ interface AdminStats {
     approved: number;
   };
   subjects: Array<{ subject: string; count: number }>;
+  feedback: Array<{
+    id: string;
+    category: string;
+    message: string;
+    screenshotUrl: string | null;
+    createdAt: string;
+    userName: string;
+    userEmail: string;
+    userRole: string;
+  }>;
 }
 
 export default function AdminDashboard() {
@@ -165,6 +175,49 @@ export default function AdminDashboard() {
               <p className="text-gray-500 dark:text-gray-400 text-center py-12">No family activity yet</p>
             )}
           </div>
+        </div>
+
+        {/* Feedback */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">User Feedback</h2>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{data.feedback.length} total</span>
+          </div>
+          {data.feedback.length > 0 ? (
+            <div className="space-y-4">
+              {data.feedback.map(f => (
+                <div key={f.id} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{f.userName}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">{f.userEmail}</span>
+                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+                        f.userRole === 'parent'
+                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200'
+                          : f.userRole === 'child'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>{f.userRole}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      f.category === 'bug' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' :
+                      f.category === 'feature' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200' :
+                      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>{f.category}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{f.message}</p>
+                  {f.screenshotUrl && (
+                    <a href={f.screenshotUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-2 inline-block">
+                      View screenshot
+                    </a>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(f.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No feedback submitted yet</p>
+          )}
         </div>
       </main>
     </>
