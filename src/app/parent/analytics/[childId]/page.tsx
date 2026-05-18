@@ -144,87 +144,6 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Progress Analytics</h1>
         </div>
 
-        {/* Lifetime Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Total Completed" value={data.totalCompleted} icon="📝" />
-          <StatCard title="Completion Rate" value={`${data.completionRate}%`} icon="✅" />
-          <StatCard title="Average Score" value={`${data.avgScore}%`} icon="📊" />
-          <StatCard title="Strongest Subject" value={data.strongest ? data.strongest.replace('_', ' ') : 'N/A'} icon="💪" />
-        </div>
-
-        {/* Lifetime Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Score Trends */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Score Trends</h2>
-            {data.scoreTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={data.scoreTrends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="score" stroke="#6366F1" strokeWidth={2} dot={{ fill: '#6366F1' }} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
-            )}
-          </div>
-
-          {/* By Subject */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scores by Subject</h2>
-            {data.bySubject.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.bySubject}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="subject" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                  <Tooltip />
-                  <Bar dataKey="avgScore" fill="#6366F1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
-            )}
-          </div>
-
-          {/* By Difficulty */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scores by Difficulty</h2>
-            {data.byDifficulty.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.byDifficulty}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="difficulty" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                  <Tooltip />
-                  <Bar dataKey="avgScore" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
-            )}
-          </div>
-
-          {/* Weakest Subject */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Areas to Improve</h2>
-            <div className="flex flex-col items-center justify-center h-[260px]">
-              {data.weakest ? (
-                <>
-                  <p className="text-5xl mb-4 animate-float">📈</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{data.weakest.replace('_', ' ')}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Could use more practice</p>
-                </>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">Complete more assignments to see insights</p>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Activity View */}
         <div className="mb-8">
           <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6">Activity View</h2>
@@ -415,6 +334,88 @@ export default function AnalyticsPage() {
               })()}
             </>
           )}
+        </div>
+
+        {/* Lifetime Stats */}
+        <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6">Lifetime Stats</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Total Completed" value={data.totalCompleted} icon="📝" />
+          <StatCard title="Completion Rate" value={`${data.completionRate}%`} icon="✅" />
+          <StatCard title="Average Score" value={`${data.avgScore}%`} icon="📊" />
+          <StatCard title="Strongest Subject" value={data.strongest ? data.strongest.replace('_', ' ') : 'N/A'} icon="💪" />
+        </div>
+
+        {/* Lifetime Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Score Trends */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Score Trends</h2>
+            {data.scoreTrends.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={data.scoreTrends}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="score" stroke="#6366F1" strokeWidth={2} dot={{ fill: '#6366F1' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+            )}
+          </div>
+
+          {/* By Subject */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scores by Subject</h2>
+            {data.bySubject.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.bySubject}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="subject" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                  <Tooltip />
+                  <Bar dataKey="avgScore" fill="#6366F1" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+            )}
+          </div>
+
+          {/* By Difficulty */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scores by Difficulty</h2>
+            {data.byDifficulty.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.byDifficulty}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="difficulty" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                  <Tooltip />
+                  <Bar dataKey="avgScore" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
+            )}
+          </div>
+
+          {/* Weakest Subject */}
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Areas to Improve</h2>
+            <div className="flex flex-col items-center justify-center h-[260px]">
+              {data.weakest ? (
+                <>
+                  <p className="text-5xl mb-4 animate-float">📈</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{data.weakest.replace('_', ' ')}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Could use more practice</p>
+                </>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">Complete more assignments to see insights</p>
+              )}
+            </div>
+          </div>
         </div>
       </main>
     </>
