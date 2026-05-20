@@ -3,6 +3,7 @@ import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
 import { checkBadges } from '@/lib/badges';
+import { updateStreakAndPoints } from '@/lib/streak';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -58,36 +59,7 @@ Return ONLY JSON in this format: { "answers": [{ "question_id": "...", "is_corre
 }
 
 
-async function updateStreakAndPoints(childId: string, points: number) {
-  const today = new Date().toISOString().split('T')[0];
-
-  const gam = await prisma.gamification.upsert({
-    where: { childId },
-    update: {},
-    create: { childId },
-  });
-
-  let newStreak = gam.currentStreak;
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-  if (gam.lastCompletedDate === yesterdayStr) {
-    newStreak += 1;
-  } else if (gam.lastCompletedDate !== today) {
-    newStreak = 1;
-  }
-
-  await prisma.gamification.update({
-    where: { childId },
-    data: {
-      totalPoints: gam.totalPoints + points,
-      currentStreak: newStreak,
-      longestStreak: Math.max(gam.longestStreak, newStreak),
-      lastCompletedDate: today,
-    },
-  });
-}
+// Streak logic moved to @/lib/streak
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
@@ -193,7 +165,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   // Update streak and points
-  await updateStreakAndPoints(assignment.childId, points);
+  await updateStreakAndPoints(assignment.childId, points, assignment.submittedAt);
 
   // Check badges
   await checkBadges(assignment.childId);

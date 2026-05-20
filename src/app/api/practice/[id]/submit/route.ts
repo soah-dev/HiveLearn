@@ -2,37 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
-
-async function updateStreakAndPoints(childId: string, points: number) {
-  const today = new Date().toISOString().split('T')[0];
-
-  const gam = await prisma.gamification.upsert({
-    where: { childId },
-    update: {},
-    create: { childId },
-  });
-
-  let newStreak = gam.currentStreak;
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-  if (gam.lastCompletedDate === yesterdayStr) {
-    newStreak += 1;
-  } else if (gam.lastCompletedDate !== today) {
-    newStreak = 1;
-  }
-
-  await prisma.gamification.update({
-    where: { childId },
-    data: {
-      totalPoints: gam.totalPoints + points,
-      currentStreak: newStreak,
-      longestStreak: Math.max(gam.longestStreak, newStreak),
-      lastCompletedDate: today,
-    },
-  });
-}
+import { updateStreakAndPoints } from '@/lib/streak';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
