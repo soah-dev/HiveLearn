@@ -1,30 +1,34 @@
 import prisma from '@/lib/prisma';
 
 /**
+ * Streak freeze: students get a 1-day grace period.
+ * A gap of 1 missed day keeps the streak alive. Two consecutive misses resets it.
+ */
+
+/**
  * Get a date string in US Central timezone (YYYY-MM-DD).
- * This ensures streaks are consistent for US-based users regardless of
- * server timezone or UTC offset.
  */
 function toLocalDateStr(date: Date): string {
   return date.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
   // en-CA locale formats as YYYY-MM-DD
 }
 
-function getYesterdayStr(): string {
-  const now = new Date();
-  // Get today in Central time, then subtract one day
-  const todayStr = toLocalDateStr(now);
-  const yesterday = new Date(todayStr + 'T12:00:00'); // noon to avoid DST issues
-  yesterday.setDate(yesterday.getDate() - 1);
-  return yesterday.toISOString().split('T')[0];
+/** Subtract N days from a YYYY-MM-DD string and return YYYY-MM-DD */
+function subtractDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T12:00:00'); // noon to avoid DST issues
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
+
+function getTodayStr(): string {
+  return toLocalDateStr(new Date());
 }
 
 /**
  * Recalculate a child's streak from scratch by looking at all completed activities.
- * Returns the recalculated values.
+ * Allows a 1-day gap (streak freeze) between active days.
  */
 export async function recalculateStreak(childId: string) {
-  // Gather all activity dates from the three sources
   const [assignments, practice, offline] = await Promise.all([
     prisma.assignment.findMany({
       where: { childId, status: 'reviewed', submittedAt: { not: null } },
@@ -52,7 +56,6 @@ export async function recalculateStreak(childId: string) {
     daySet.add(toLocalDateStr(o.activityDate || o.createdAt));
   }
 
-  // Sort days ascending
   const days = [...daySet].sort();
 
   if (days.length === 0) {
@@ -64,17 +67,17 @@ export async function recalculateStreak(childId: string) {
     return { currentStreak: 0, longestStreak: 0, lastCompletedDate: null, activeDays: 0 };
   }
 
-  // Walk through days and compute streaks
+  // Walk through days — allow 1-day gap (streak freeze)
   let currentStreak = 1;
   let longestStreak = 1;
 
   for (let i = 1; i < days.length; i++) {
     const prev = new Date(days[i - 1] + 'T12:00:00');
     const curr = new Date(days[i] + 'T12:00:00');
-    const diffMs = curr.getTime() - prev.getTime();
-    const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000));
 
-    if (diffDays === 1) {
+    if (diffDays <= 2) {
+      // Consecutive day (1) or 1-day freeze gap (2) — streak continues
       currentStreak += 1;
     } else {
       currentStreak = 1;
@@ -82,29 +85,21 @@ export async function recalculateStreak(childId: string) {
     longestStreak = Math.max(longestStreak, currentStreak);
   }
 
-  // Check if the streak is still active (last day is today or yesterday)
+  // Check if the streak is still active
+  // With freeze: streak holds if last activity was today, yesterday, or 2 days ago
   const lastDay = days[days.length - 1];
-  const today = toLocalDateStr(new Date());
-  const yesterdayStr = getYesterdayStr();
+  const today = getTodayStr();
+  const yesterday = subtractDays(today, 1);
+  const dayBefore = subtractDays(today, 2);
 
-  if (lastDay !== today && lastDay !== yesterdayStr) {
-    // Streak has lapsed
+  if (lastDay !== today && lastDay !== yesterday && lastDay !== dayBefore) {
     currentStreak = 0;
   }
 
   await prisma.gamification.upsert({
     where: { childId },
-    update: {
-      currentStreak,
-      longestStreak,
-      lastCompletedDate: lastDay,
-    },
-    create: {
-      childId,
-      currentStreak,
-      longestStreak,
-      lastCompletedDate: lastDay,
-    },
+    update: { currentStreak, longestStreak, lastCompletedDate: lastDay },
+    create: { childId, currentStreak, longestStreak, lastCompletedDate: lastDay },
   });
 
   return { currentStreak, longestStreak, lastCompletedDate: lastDay, activeDays: days.length };
@@ -112,9 +107,7 @@ export async function recalculateStreak(childId: string) {
 
 /**
  * Update a child's streak and points.
- * @param childId - The child's user ID
- * @param points - Points to award
- * @param activityDate - The date the work was actually done (optional, defaults to now)
+ * Allows a 1-day gap (streak freeze) — missing one day doesn't break the streak.
  */
 export async function updateStreakAndPoints(
   childId: string,
@@ -122,9 +115,10 @@ export async function updateStreakAndPoints(
   activityDate?: Date | null,
 ) {
   const effectiveDate = activityDate || new Date();
-  const today = toLocalDateStr(new Date());
+  const today = getTodayStr();
   const activityDay = toLocalDateStr(effectiveDate);
-  const yesterdayStr = getYesterdayStr();
+  const yesterday = subtractDays(today, 1);
+  const dayBefore = subtractDays(today, 2);
 
   const gam = await prisma.gamification.upsert({
     where: { childId },
@@ -133,30 +127,29 @@ export async function updateStreakAndPoints(
   });
 
   let newStreak = gam.currentStreak;
-
-  // Use the more recent of activityDay and lastCompletedDate to determine streak
   const lastDate = gam.lastCompletedDate;
 
   if (lastDate === activityDay) {
     // Already completed on this activity day — just add points, no streak change
-  } else if (lastDate === yesterdayStr && (activityDay === today || activityDay === yesterdayStr)) {
-    // Last completed yesterday, and activity is today or yesterday — continue streak
+  } else if (
+    (lastDate === yesterday || lastDate === dayBefore) &&
+    (activityDay === today || activityDay === yesterday)
+  ) {
+    // Last activity was yesterday or day before (freeze), and new activity is recent — continue
     newStreak += 1;
-  } else if (!lastDate && activityDay) {
+  } else if (!lastDate) {
     // First ever completion
     newStreak = 1;
   } else if (activityDay === today && lastDate !== today) {
-    // Activity is today but last completion was before yesterday — reset
+    // Activity is today but last completion was 3+ days ago — reset
     newStreak = 1;
-  } else if (activityDay !== today && activityDay !== yesterdayStr) {
+  } else if (activityDay !== today && activityDay !== yesterday) {
     // Activity date is further in the past — don't break current streak, just add points
-    // (e.g., parent approving old offline work shouldn't reset a current streak)
-  } else if (lastDate !== yesterdayStr && lastDate !== activityDay) {
-    // Gap in dates — reset
+  } else if (lastDate !== yesterday && lastDate !== dayBefore && lastDate !== activityDay) {
+    // Gap too large — reset
     newStreak = 1;
   }
 
-  // Only update lastCompletedDate if activityDay is more recent
   const newLastDate = !lastDate || activityDay > lastDate ? activityDay : lastDate;
 
   await prisma.gamification.update({
