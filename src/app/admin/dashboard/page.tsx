@@ -60,6 +60,8 @@ export default function AdminDashboard() {
   const [data, setData] = useState<AdminStats | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [streakRecalculating, setStreakRecalculating] = useState(false);
+  const [streakResult, setStreakResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -173,6 +175,41 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-center py-12">No family activity yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Admin Tools */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Admin Tools</h2>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={async () => {
+                if (!token) return;
+                setStreakRecalculating(true);
+                setStreakResult(null);
+                try {
+                  const res = await fetch('/api/admin/recalculate-streaks', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                  });
+                  const data = await res.json();
+                  const count = data.results?.length || 0;
+                  const updated = data.results?.filter((r: { currentStreak: number }) => r.currentStreak > 0).length || 0;
+                  setStreakResult(`Recalculated ${count} children. ${updated} have active streaks.`);
+                } catch {
+                  setStreakResult('Failed to recalculate streaks.');
+                }
+                setStreakRecalculating(false);
+              }}
+              disabled={streakRecalculating}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {streakRecalculating ? 'Recalculating...' : 'Recalculate All Streaks'}
+            </button>
+            {streakResult && (
+              <span className="text-sm text-gray-700 dark:text-gray-300">{streakResult}</span>
             )}
           </div>
         </div>

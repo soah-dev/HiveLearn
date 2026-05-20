@@ -20,6 +20,97 @@ function getYesterdayStr(): string {
 }
 
 /**
+ * Recalculate a child's streak from scratch by looking at all completed activities.
+ * Returns the recalculated values.
+ */
+export async function recalculateStreak(childId: string) {
+  // Gather all activity dates from the three sources
+  const [assignments, practice, offline] = await Promise.all([
+    prisma.assignment.findMany({
+      where: { childId, status: 'reviewed', submittedAt: { not: null } },
+      select: { submittedAt: true },
+    }),
+    prisma.practiceSession.findMany({
+      where: { childId, status: 'completed', completedAt: { not: null } },
+      select: { completedAt: true },
+    }),
+    prisma.offlineWork.findMany({
+      where: { childId, status: 'approved' },
+      select: { activityDate: true, createdAt: true },
+    }),
+  ]);
+
+  // Collect all unique activity days (Central timezone)
+  const daySet = new Set<string>();
+  for (const a of assignments) {
+    if (a.submittedAt) daySet.add(toLocalDateStr(a.submittedAt));
+  }
+  for (const p of practice) {
+    if (p.completedAt) daySet.add(toLocalDateStr(p.completedAt));
+  }
+  for (const o of offline) {
+    daySet.add(toLocalDateStr(o.activityDate || o.createdAt));
+  }
+
+  // Sort days ascending
+  const days = [...daySet].sort();
+
+  if (days.length === 0) {
+    await prisma.gamification.upsert({
+      where: { childId },
+      update: { currentStreak: 0, longestStreak: 0, lastCompletedDate: null },
+      create: { childId },
+    });
+    return { currentStreak: 0, longestStreak: 0, lastCompletedDate: null, activeDays: 0 };
+  }
+
+  // Walk through days and compute streaks
+  let currentStreak = 1;
+  let longestStreak = 1;
+
+  for (let i = 1; i < days.length; i++) {
+    const prev = new Date(days[i - 1] + 'T12:00:00');
+    const curr = new Date(days[i] + 'T12:00:00');
+    const diffMs = curr.getTime() - prev.getTime();
+    const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
+
+    if (diffDays === 1) {
+      currentStreak += 1;
+    } else {
+      currentStreak = 1;
+    }
+    longestStreak = Math.max(longestStreak, currentStreak);
+  }
+
+  // Check if the streak is still active (last day is today or yesterday)
+  const lastDay = days[days.length - 1];
+  const today = toLocalDateStr(new Date());
+  const yesterdayStr = getYesterdayStr();
+
+  if (lastDay !== today && lastDay !== yesterdayStr) {
+    // Streak has lapsed
+    currentStreak = 0;
+  }
+
+  await prisma.gamification.upsert({
+    where: { childId },
+    update: {
+      currentStreak,
+      longestStreak,
+      lastCompletedDate: lastDay,
+    },
+    create: {
+      childId,
+      currentStreak,
+      longestStreak,
+      lastCompletedDate: lastDay,
+    },
+  });
+
+  return { currentStreak, longestStreak, lastCompletedDate: lastDay, activeDays: days.length };
+}
+
+/**
  * Update a child's streak and points.
  * @param childId - The child's user ID
  * @param points - Points to award
