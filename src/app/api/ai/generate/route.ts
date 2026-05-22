@@ -61,21 +61,24 @@ export async function POST(req: NextRequest) {
     ? `on the topic "${topic.trim()}"`
     : `covering a variety of appropriate topics`;
 
-  const prompt = `Generate ${numQuestions} questions for a grade ${grade} student ${topicClause} in ${subject} at ${difficulty} difficulty. Include the following question types: ${questionTypes.join(', ')}.
+  const allowedTypes = questionTypes.join(', ');
+
+  const prompt = `Generate ${numQuestions} questions for a grade ${grade} student ${topicClause} in ${subject} at ${difficulty} difficulty. ONLY use these question types: ${allowedTypes}. Do NOT generate any other question types.
 
 For each question, return a JSON object with:
-- question_type: "multiple_choice" | "true_false" | "fill_in_blank" | "open_ended"
+- question_type: MUST be one of: ${questionTypes.map((t: string) => `"${t}"`).join(' | ')}
 - question_text: the question
 - option_a, option_b, option_c, option_d: options (null for non-MC types)
 - correct_answer: For multiple_choice this MUST be exactly one of "A", "B", "C", or "D" matching which option contains the correct answer. For true_false use "True" or "False". For fill_in_blank use the exact answer text. For open_ended use a grading rubric.
 
 CRITICAL RULES:
+- EVERY question MUST have question_type set to one of: ${allowedTypes}. No other types are allowed.
 - For multiple_choice: The correct_answer MUST be the letter (A/B/C/D) of the option that is correct. Double-check that the option text for that letter actually contains the right answer.
 - All four options (option_a through option_d) must be non-null and non-empty for multiple_choice questions.
 - Do NOT put the answer text in correct_answer for multiple_choice — only the letter.
 - For reading/language arts: If you include a passage, you MUST also include an explicit question after the passage in question_text (e.g. "Read the passage below:\\n\\n[passage]\\n\\nWhat is the main idea of this passage?"). Never leave the question implied — always state what the student is being asked.
 
-Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among the requested types.`;
+Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among: ${allowedTypes}.`;
 
   try {
     let allValid: GeneratedQuestion[] = [];
@@ -114,7 +117,13 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
       }
       const { valid, invalid } = validateQuestions(questions);
 
-      allValid = [...allValid, ...valid];
+      // Filter out questions that don't match the requested types
+      const typeFiltered = valid.filter(q => questionTypes.includes(q.question_type));
+      if (typeFiltered.length < valid.length) {
+        console.warn(`AI generation: ${valid.length - typeFiltered.length} questions discarded for wrong type (requested: ${allowedTypes})`);
+      }
+
+      allValid = [...allValid, ...typeFiltered];
       remaining = numQuestions - allValid.length;
 
       if (invalid.length > 0) {
