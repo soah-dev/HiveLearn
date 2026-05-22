@@ -24,7 +24,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const children = links.filter(l => l.child).map(l => l.child);
+  const children = links.filter(l => l.child).map(l => ({
+    ...l.child,
+    name: l.childName || l.child!.name || l.child!.email,
+  }));
   return NextResponse.json({ children });
 }
 
