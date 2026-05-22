@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (child?.email) {
+    console.log('Attempting to send assignment notification to:', child.email);
     sendAssignmentNotification({
       to: child.email,
       childName: child.name || 'Student',
@@ -62,9 +63,13 @@ export async function POST(req: NextRequest) {
       topic,
       numQuestions,
       difficulty,
+    }).then(() => {
+      console.log('Assignment notification sent successfully to:', child.email);
     }).catch((err) => {
       console.error('Failed to send assignment notification email:', err);
     });
+  } else {
+    console.log('No email found for child:', childId);
   }
 
   return NextResponse.json({ assignment });
