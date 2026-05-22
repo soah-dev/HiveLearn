@@ -47,29 +47,26 @@ export async function POST(req: NextRequest) {
     include: { questions: true },
   });
 
-  // Send email notification to the child (non-blocking)
-  const child = await prisma.user.findUnique({
-    where: { id: childId },
-    select: { email: true, name: true },
-  });
-
-  if (child?.email) {
-    console.log('Attempting to send assignment notification to:', child.email);
-    sendAssignmentNotification({
-      to: child.email,
-      childName: child.name || 'Student',
-      parentName: user.name || 'Your parent',
-      subject,
-      topic,
-      numQuestions,
-      difficulty,
-    }).then(() => {
-      console.log('Assignment notification sent successfully to:', child.email);
-    }).catch((err) => {
-      console.error('Failed to send assignment notification email:', err);
+  // Send email notification to the child
+  try {
+    const child = await prisma.user.findUnique({
+      where: { id: childId },
+      select: { email: true, name: true },
     });
-  } else {
-    console.log('No email found for child:', childId);
+
+    if (child?.email) {
+      await sendAssignmentNotification({
+        to: child.email,
+        childName: child.name || 'Student',
+        parentName: user.name || 'Your parent',
+        subject,
+        topic,
+        numQuestions,
+        difficulty,
+      });
+    }
+  } catch (err) {
+    console.error('Failed to send assignment notification email:', err);
   }
 
   return NextResponse.json({ assignment });
