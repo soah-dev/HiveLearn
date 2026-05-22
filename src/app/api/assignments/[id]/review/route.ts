@@ -4,10 +4,7 @@ import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
 import { checkBadges } from '@/lib/badges';
 import { updateStreakAndPoints } from '@/lib/streak';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+import { generateWithFallback } from '@/lib/gemini';
 
 async function aiReview(assignment: {
   grade: number;
@@ -49,9 +46,8 @@ Then provide:
 
 Return ONLY JSON in this format: { "answers": [{ "question_id": "...", "is_correct": true/false, "ai_score": null or 0-100, "ai_explanation": "..." }], "overall_score": 85, "overall_feedback": "..." }`;
 
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  let jsonStr = response.text() || '';
+  const responseText = await generateWithFallback(prompt);
+  let jsonStr = responseText;
   const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (jsonMatch) jsonStr = jsonMatch[0];
 

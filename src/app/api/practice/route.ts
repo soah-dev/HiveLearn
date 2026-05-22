@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+import { generateWithFallback } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -55,8 +52,8 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
         ? prompt
         : `Generate ${remaining} MORE multiple choice questions for grade ${grade} in ${subject} ${topicClause} at ${difficulty} difficulty. Same format. correct_answer MUST be "A", "B", "C", or "D". Return ONLY a JSON array.`;
 
-      const result = await model.generateContent(genPrompt);
-      let jsonStr = result.response.text() || '';
+      const responseText = await generateWithFallback(genPrompt);
+      let jsonStr = responseText;
       const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
       if (jsonMatch) jsonStr = jsonMatch[0];
       const questions = JSON.parse(jsonStr);

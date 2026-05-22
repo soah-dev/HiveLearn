@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+import { generateWithFallback } from '@/lib/gemini';
 
 interface GeneratedQuestion {
   question_type: string;
@@ -92,9 +89,7 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
         ? prompt
         : `Generate ${remaining} MORE ${subject} questions for grade ${grade} ${topicClause} at ${difficulty} difficulty. Types: ${questionTypes.join(', ')}.\n\nSame format as before. CRITICAL: For multiple_choice, correct_answer MUST be "A", "B", "C", or "D" and that option must contain the correct answer. Return ONLY a JSON array.`;
 
-      const result = await model.generateContent(generatePrompt);
-      const response = result.response;
-      const rawText = response.text() || '';
+      const rawText = await generateWithFallback(generatePrompt);
 
       if (!rawText.trim()) {
         console.error('AI returned empty response for subject:', subject);
