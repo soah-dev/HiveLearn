@@ -94,13 +94,29 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
 
       const result = await model.generateContent(generatePrompt);
       const response = result.response;
-      let jsonStr = response.text() || '';
+      const rawText = response.text() || '';
+
+      if (!rawText.trim()) {
+        console.error('AI returned empty response for subject:', subject);
+        throw new Error('AI returned an empty response. The content may have been filtered.');
+      }
+
+      let jsonStr = rawText;
       const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         jsonStr = jsonMatch[0];
+      } else {
+        console.error('No JSON array found in AI response:', rawText.substring(0, 500));
+        throw new SyntaxError('AI response did not contain a valid question array');
       }
 
-      const questions: GeneratedQuestion[] = JSON.parse(jsonStr);
+      let questions: GeneratedQuestion[];
+      try {
+        questions = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        console.error('JSON parse failed for subject:', subject, 'Raw:', jsonStr.substring(0, 500));
+        throw new SyntaxError('AI returned malformed JSON');
+      }
       const { valid, invalid } = validateQuestions(questions);
 
       allValid = [...allValid, ...valid];
@@ -113,8 +129,33 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
 
     // Return what we have (may be fewer than requested if validation kept failing)
     return NextResponse.json({ questions: allValid.slice(0, numQuestions) });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('AI generation error:', error);
-    return NextResponse.json({ error: 'Failed to generate questions' }, { status: 500 });
+
+    let message = 'Failed to generate questions';
+    let status = 500;
+
+    if (error instanceof SyntaxError) {
+      message = 'AI returned an invalid response format. Please try again.';
+    } else if (error instanceof Error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('503') || msg.includes('service unavailable') || msg.includes('high demand')) {
+        message = 'AI service is temporarily overloaded. Please wait a moment and try again.';
+        status = 503;
+      } else if (msg.includes('rate') || msg.includes('quota') || msg.includes('429')) {
+        message = 'AI rate limit reached. Please wait a moment and try again.';
+        status = 429;
+      } else if (msg.includes('safety') || msg.includes('blocked') || msg.includes('filter')) {
+        message = 'AI content filter blocked the request. Try a different topic or question type.';
+        status = 400;
+      } else if (msg.includes('timeout') || msg.includes('deadline')) {
+        message = 'AI request timed out. Please try again.';
+        status = 504;
+      } else {
+        message = `AI generation failed: ${error.message}`;
+      }
+    }
+
+    return NextResponse.json({ error: message }, { status });
   }
 }
