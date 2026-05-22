@@ -193,7 +193,8 @@ export default function ParentDashboard() {
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const pendingOffline = offlineWork.filter(ow => ow.status === 'pending');
-  const pendingReview = assignments.filter(a => a.status === 'submitted').length;
+  const needsReviewAssignments = assignments.filter(a => a.status === 'submitted');
+  const otherAssignments = assignments.filter(a => a.status !== 'submitted');
   const totalCompleted = assignments.filter(a => a.status === 'reviewed').length;
 
   return (
@@ -217,7 +218,7 @@ export default function ParentDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard title="Children" value={children.length} icon="👨‍👩‍👧‍👦" />
           <StatCard title="Total Assignments" value={assignments.length} icon="📝" />
-          <StatCard title="Pending Review" value={pendingReview} icon="⏳" />
+          <StatCard title="Needs Review" value={needsReviewAssignments.length} icon="⏳" />
           <StatCard title="Completed" value={totalCompleted} icon="✅" />
         </div>
 
@@ -314,43 +315,6 @@ export default function ParentDashboard() {
           </div>
         )}
 
-        {/* Practice Sessions */}
-        {practiceSessions.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Practice Sessions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {practiceSessions.slice(0, 6).map((s, i) => (
-                <div
-                  key={s.id}
-                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 card-hover animate-slide-up"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize">{s.subject.replace('_', ' ')}</span>
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                      s.status === 'completed'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                    }`}>
-                      {s.status === 'completed' ? 'Done' : 'In Progress'}
-                    </span>
-                  </div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">{s.topic || `Grade ${s.grade} ${s.subject.replace('_', ' ')}`}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-2">{s.difficulty} · Grade {s.grade} · {s.child?.name}</p>
-                  {s.status === 'completed' && s.score !== null && (
-                    <div className="flex items-center justify-between">
-                      <span className={`text-lg font-extrabold ${s.score >= 80 ? 'text-green-600' : s.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {s.score}%
-                      </span>
-                      {s.pointsAwarded && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Pending Offline Work */}
         {pendingOffline.length > 0 && (
           <div className="mb-8">
@@ -419,8 +383,36 @@ export default function ParentDashboard() {
           </div>
         )}
 
+        {/* Needs Your Review */}
+        {needsReviewAssignments.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Needs Your Review <span className="text-sm font-normal text-orange-600 dark:text-orange-400">({needsReviewAssignments.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {needsReviewAssignments.map(a => (
+                <AssignmentCard
+                  key={a.id}
+                  id={a.id}
+                  subject={a.subject}
+                  topic={a.topic}
+                  difficulty={a.difficulty}
+                  status={a.status}
+                  score={a.score}
+                  numQuestions={a.numQuestions}
+                  timeLimitMin={a.timeLimitMin}
+                  createdAt={a.createdAt}
+                  childName={a.child?.name || undefined}
+                  role="parent"
+                  flaggedCount={a.questions?.reduce((sum: number, q: { answers?: { id: string }[] }) => sum + (q.answers?.length || 0), 0) || 0}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Recent Assignments */}
-        <div>
+        <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Recent Assignments</h2>
           {assignments.length === 0 ? (
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center">
@@ -429,7 +421,7 @@ export default function ParentDashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {assignments.slice(0, 9).map(a => (
+              {otherAssignments.slice(0, 9).map(a => (
                 <AssignmentCard
                   key={a.id}
                   id={a.id}
@@ -449,6 +441,43 @@ export default function ParentDashboard() {
             </div>
           )}
         </div>
+
+        {/* Practice Sessions */}
+        {practiceSessions.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Practice Sessions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {practiceSessions.slice(0, 6).map((s, i) => (
+                <div
+                  key={s.id}
+                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 card-hover animate-slide-up"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize">{s.subject.replace('_', ' ')}</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                      s.status === 'completed'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                    }`}>
+                      {s.status === 'completed' ? 'Done' : 'In Progress'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">{s.topic || `Grade ${s.grade} ${s.subject.replace('_', ' ')}`}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-2">{s.difficulty} · Grade {s.grade} · {s.child?.name}</p>
+                  {s.status === 'completed' && s.score !== null && (
+                    <div className="flex items-center justify-between">
+                      <span className={`text-lg font-extrabold ${s.score >= 80 ? 'text-green-600' : s.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {s.score}%
+                      </span>
+                      {s.pointsAwarded && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Add Child Modal */}

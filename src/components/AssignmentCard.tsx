@@ -42,8 +42,22 @@ const difficultyStyles: Record<string, string> = {
 const statusStyles: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
   in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  submitted: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  submitted: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
   reviewed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+};
+
+const parentStatusLabels: Record<string, string> = {
+  pending: 'Awaiting Child',
+  in_progress: 'Child Working',
+  submitted: 'Needs Review',
+  reviewed: 'Reviewed',
+};
+
+const childStatusLabels: Record<string, string> = {
+  pending: 'Not Started',
+  in_progress: 'In Progress',
+  submitted: 'Submitted',
+  reviewed: 'Reviewed',
 };
 
 export default function AssignmentCard({
@@ -81,7 +95,7 @@ export default function AssignmentCard({
               {difficulty}
             </span>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusStyles[status]}`}>
-              {status.replace('_', ' ')}
+              {(role === 'parent' ? parentStatusLabels[status] : childStatusLabels[status]) || status.replace('_', ' ')}
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {numQuestions}q
