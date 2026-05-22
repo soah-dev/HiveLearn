@@ -20,15 +20,14 @@
     "firebase-admin": "^10.3.0",
     "katex": "^0.16.45",
     "next": "^16.2.1",
-    "nodemailer": "^8.0.2",
     "prisma": "^6.12.0",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^3.8.0"
+    "recharts": "^3.8.0",
+    "resend": "^6.12.3"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/nodemailer": "^7.0.11",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^10.1.0",

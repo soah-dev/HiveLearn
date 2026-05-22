@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { sendAssignmentNotification } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -45,6 +46,26 @@ export async function POST(req: NextRequest) {
     },
     include: { questions: true },
   });
+
+  // Send email notification to the child (non-blocking)
+  const child = await prisma.user.findUnique({
+    where: { id: childId },
+    select: { email: true, name: true },
+  });
+
+  if (child?.email) {
+    sendAssignmentNotification({
+      to: child.email,
+      childName: child.name || 'Student',
+      parentName: user.name || 'Your parent',
+      subject,
+      topic,
+      numQuestions,
+      difficulty,
+    }).catch((err) => {
+      console.error('Failed to send assignment notification email:', err);
+    });
+  }
 
   return NextResponse.json({ assignment });
 }
