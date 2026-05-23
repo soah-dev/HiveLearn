@@ -72,7 +72,7 @@ export async function sendAssignmentNotification({
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-  const { data, error } = await resend.emails.send({
+  await resend.emails.send({
     from: `HiveExcel <${FROM_EMAIL}>`,
     to,
     subject: `New Assignment: ${subject} - ${topic}`,
@@ -118,10 +118,4 @@ export async function sendAssignmentNotification({
       </div>
     `,
   });
-
-  if (error) {
-    console.error('Resend assignment notification error:', error);
-    throw new Error(error.message);
-  }
-  console.log('Resend assignment notification response:', data);
 }
