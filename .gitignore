@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Firebase credentials
 /FireBase
+
+# legal documents
+/legal

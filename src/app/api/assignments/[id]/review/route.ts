@@ -135,7 +135,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         });
       }
 
-      overallScore = reviewResult.overall_score;
+      // Calculate score from per-question results instead of trusting AI's overall_score
+      const reviewedQuestions = reviewResult.answers as Array<{ is_correct: boolean; ai_score: number | null; question_id: string }>;
+      let totalScore = 0;
+      let scoredCount = 0;
+      for (const ans of reviewedQuestions) {
+        const question = assignment.questions.find(q => q.id === ans.question_id);
+        if (question?.questionType === 'open_ended') {
+          if (ans.ai_score !== null && ans.ai_score !== undefined) {
+            totalScore += ans.ai_score;
+            scoredCount++;
+          }
+        } else {
+          totalScore += ans.is_correct ? 100 : 0;
+          scoredCount++;
+        }
+      }
+      overallScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0;
       overallFeedback = reviewResult.overall_feedback;
       if (flaggedCount > 0) {
         overallFeedback += ` (${flaggedCount} question${flaggedCount > 1 ? 's' : ''} excluded — flagged by student)`;

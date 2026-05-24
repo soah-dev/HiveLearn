@@ -54,13 +54,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
   } else if (dismiss) {
-    // Dismiss flag without changing grade (keep original grading)
+    // Dismiss flag — keep original grading, but re-grade if it was never graded (flagged during submission)
+    const updateData: Record<string, unknown> = {
+      flagResolvedAt: new Date(),
+      parentComment: parentComment || answer.parentComment,
+    };
+
+    if (answer.isCorrect === null && question.questionType !== 'open_ended') {
+      // Question was never graded because it was flagged during submission — grade it now
+      updateData.isCorrect = answer.selectedAnswer?.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
+    }
+
     await prisma.answer.update({
       where: { id: answer.id },
-      data: {
-        flagResolvedAt: new Date(),
-        parentComment: parentComment || answer.parentComment,
-      },
+      data: updateData,
     });
   } else {
     // Override the grade
