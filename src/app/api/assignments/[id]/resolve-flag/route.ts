@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       parentComment: parentComment || answer.parentComment,
     };
 
-    if (answer.isCorrect === null && question.questionType !== 'open_ended') {
+    if (answer.isCorrect === null && question && question.questionType !== 'open_ended') {
       // Question was never graded because it was flagged during submission — grade it now
       updateData.isCorrect = answer.selectedAnswer?.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
     }

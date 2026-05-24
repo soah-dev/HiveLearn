@@ -207,7 +207,13 @@ export default function ChildAssignmentPage() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6 animate-slide-up">
-          <button onClick={() => router.push('/child/dashboard')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline mb-3 inline-block">&larr; Back to Dashboard</button>
+          <div className="flex items-center justify-between mb-3 no-print">
+            <button onClick={() => router.push('/child/dashboard')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline inline-block">&larr; Back to Dashboard</button>
+            <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+              Print
+            </button>
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white capitalize">
@@ -282,7 +288,7 @@ export default function ChildAssignmentPage() {
               return (
                 <div
                   key={q.id}
-                  className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border p-6 animate-slide-up ${
+                  className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border p-6 animate-slide-up print-break-inside-avoid ${
                     (isFlagged || wasFlagged)
                       ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10'
                       : 'border-gray-200/60 dark:border-gray-700/60'
@@ -459,7 +465,7 @@ export default function ChildAssignmentPage() {
 
         {/* Action buttons */}
         {isActive && (
-          <div className="flex gap-3 sticky bottom-4">
+          <div className="flex gap-3 sticky bottom-4 no-print">
             {!assignment.timeLimitMin && (
               <button
                 onClick={saveProgress}

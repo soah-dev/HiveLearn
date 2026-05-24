@@ -123,6 +123,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       overallFeedback = 'All questions were flagged by the student. Please review manually.';
     } else {
       const reviewResult = await aiReview(assignment);
+      const reviewableQuestions = assignment.questions.filter(q => !q.answers[0]?.flagged);
 
       for (const ans of reviewResult.answers) {
         await prisma.answer.updateMany({
