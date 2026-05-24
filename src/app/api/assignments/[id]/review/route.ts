@@ -135,19 +135,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         });
       }
 
-      // Calculate score from per-question results instead of trusting AI's overall_score
-      const reviewedQuestions = reviewResult.answers as Array<{ is_correct: boolean; ai_score: number | null; question_id: string }>;
+      // Fallback-grade any non-flagged, non-open-ended questions the AI didn't return results for
+      const aiReviewedIds = new Set(reviewResult.answers.map((a: { question_id: string }) => a.question_id));
+      for (const q of reviewableQuestions) {
+        if (q.questionType === 'open_ended' || aiReviewedIds.has(q.id)) continue;
+        const childAnswer = q.answers[0]?.selectedAnswer;
+        const isCorrect = childAnswer?.toLowerCase().trim() === q.correctAnswer.toLowerCase().trim();
+        await prisma.answer.updateMany({
+          where: { questionId: q.id, childId: assignment.childId },
+          data: { isCorrect },
+        });
+      }
+
+      // Calculate score from all reviewable questions (AI-reviewed + fallback-graded)
       let totalScore = 0;
       let scoredCount = 0;
-      for (const ans of reviewedQuestions) {
-        const question = assignment.questions.find(q => q.id === ans.question_id);
-        if (question?.questionType === 'open_ended') {
-          if (ans.ai_score !== null && ans.ai_score !== undefined) {
-            totalScore += ans.ai_score;
+      for (const q of reviewableQuestions) {
+        const aiResult = reviewResult.answers.find((a: { question_id: string }) => a.question_id === q.id);
+        if (q.questionType === 'open_ended') {
+          const score = aiResult?.ai_score;
+          if (score !== null && score !== undefined) {
+            totalScore += score;
             scoredCount++;
           }
         } else {
-          totalScore += ans.is_correct ? 100 : 0;
+          const isCorrect = aiResult
+            ? aiResult.is_correct
+            : (q.answers[0]?.selectedAnswer?.toLowerCase().trim() === q.correctAnswer.toLowerCase().trim());
+          totalScore += isCorrect ? 100 : 0;
           scoredCount++;
         }
       }
