@@ -104,7 +104,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const newScore = scoredAnswers.length > 0 ? Math.round(totalScore / scoredAnswers.length) : 0;
   const oldPoints = assignment.pointsAwarded ?? 0;
-  const newPoints = calculatePoints(assignment.difficulty, newScore, assignment.timeLimitMin);
+  const newPoints = calculatePoints(assignment.difficulty, newScore, assignment.timeLimitMin, undefined, undefined, scoredAnswers.length);
   const pointsDelta = newPoints - oldPoints;
 
   // Update assignment score and points

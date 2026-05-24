@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Exclude flagged questions from scoring
   const scoredTotal = session.questions.length - flaggedCount;
   const score = scoredTotal > 0 ? Math.round((correct / scoredTotal) * 100) : 0;
-  const points = calculatePoints(session.difficulty, score, null, user.grade, session.grade);
+  const points = calculatePoints(session.difficulty, score, null, user.grade, session.grade, scoredTotal);
 
   await prisma.practiceSession.update({
     where: { id },

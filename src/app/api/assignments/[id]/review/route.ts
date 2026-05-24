@@ -86,6 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   let overallScore: number;
   let overallFeedback: string;
+  let questionsGraded: number = assignment.questions.length;
 
   if (body.mode === 'parent' || assignment.reviewMode === 'parent') {
     // Parent review mode — any linked parent can review
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (flaggedCount === assignment.questions.length) {
       // All questions flagged — no scoring possible
       overallScore = 0;
+      questionsGraded = 0;
       overallFeedback = 'All questions were flagged by the student. Please review manually.';
     } else {
       const reviewResult = await aiReview(assignment);
@@ -168,6 +170,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         }
       }
       overallScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0;
+      questionsGraded = scoredCount;
       overallFeedback = reviewResult.overall_feedback;
       if (flaggedCount > 0) {
         overallFeedback += ` (${flaggedCount} question${flaggedCount > 1 ? 's' : ''} excluded — flagged by student)`;
@@ -177,7 +180,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Calculate points
   const child = await prisma.user.findUnique({ where: { id: assignment.childId }, select: { grade: true } });
-  const points = calculatePoints(assignment.difficulty, overallScore, assignment.timeLimitMin, child?.grade, assignment.grade);
+  const points = calculatePoints(assignment.difficulty, overallScore, assignment.timeLimitMin, child?.grade, assignment.grade, questionsGraded);
 
   // Update assignment
   await prisma.assignment.update({

@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Approve — calculate points and update streak
-  const points = calculatePoints(entry.difficulty, entry.score, null);
+  const points = calculatePoints(entry.difficulty, entry.score, null, undefined, undefined, entry.numQuestions);
 
   await prisma.offlineWork.update({
     where: { id },

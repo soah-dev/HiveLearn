@@ -3,7 +3,8 @@ export function calculatePoints(
   score: number,
   timeLimitMin: number | null,
   childGrade?: number | null,
-  assignmentGrade?: number | null
+  assignmentGrade?: number | null,
+  questionsGraded: number = 10
 ): number {
   const base = difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30;
 
@@ -22,7 +23,10 @@ export function calculatePoints(
     else if (gap === 1) gradeBonus = 1.15;
   }
 
-  let points = Math.round(base * scoreBonus * gradeBonus * (score / 100));
+  // Question count multiplier — scales linearly based on 10 questions as standard
+  const questionMultiplier = questionsGraded / 10;
+
+  let points = Math.round(base * scoreBonus * gradeBonus * questionMultiplier * (score / 100));
   if (timeLimitMin && score > 0) points += 5;
   return points;
 }
