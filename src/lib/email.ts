@@ -75,7 +75,7 @@ export async function sendAssignmentNotification({
   await resend.emails.send({
     from: `HiveExcel <${FROM_EMAIL}>`,
     to,
-    subject: 'You have a new assignment',
+    subject: `You have a new ${subject} assignment`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 32px;">

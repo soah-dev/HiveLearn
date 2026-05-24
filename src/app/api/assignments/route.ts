@@ -84,14 +84,17 @@ export async function GET(req: NextRequest) {
 
   const where: Record<string, unknown> = {};
 
+  let childNameMap: Map<string, string> | null = null;
+
   if (user.role === 'parent') {
     // Show all assignments for children linked to this parent
     const links = await prisma.parentChild.findMany({
       where: { parentId: user.id, status: 'active' },
-      select: { childId: true },
+      select: { childId: true, childName: true },
     });
     const linkedChildIds = links.map(l => l.childId).filter(Boolean) as string[];
     where.childId = childId ? childId : { in: linkedChildIds };
+    childNameMap = new Map(links.filter(l => l.childId).map(l => [l.childId!, l.childName]));
   } else {
     where.childId = user.id;
   }
@@ -115,6 +118,15 @@ export async function GET(req: NextRequest) {
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  // For parents, prefer the childName set during invite over the user's profile name
+  if (childNameMap) {
+    for (const a of assignments) {
+      if (a.child && childNameMap.has(a.childId)) {
+        a.child.name = childNameMap.get(a.childId) || a.child.name;
+      }
+    }
+  }
 
   return NextResponse.json({ assignments });
 }

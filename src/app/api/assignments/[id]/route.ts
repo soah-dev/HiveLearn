@@ -32,9 +32,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (user.role === 'parent') {
     const link = await prisma.parentChild.findFirst({
       where: { parentId: user.id, childId: assignment.childId, status: 'active' },
+      select: { childName: true },
     });
     if (!link) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // Prefer parent-assigned child name
+    if (assignment.child && link.childName) {
+      assignment.child.name = link.childName;
     }
   }
   if (user.role === 'child' && assignment.childId !== user.id) {

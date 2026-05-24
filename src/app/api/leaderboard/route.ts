@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
   // Find the family (all children linked to same parent(s))
   let siblingIds: string[] = [];
 
+  let childNameMap = new Map<string, string>();
+
   if (user.role === 'child') {
     // Get parent(s)
     const parentLinks = await prisma.parentChild.findMany({
@@ -21,14 +23,22 @@ export async function GET(req: NextRequest) {
     // Get all children of those parents
     const siblingLinks = await prisma.parentChild.findMany({
       where: { parentId: { in: parentIds }, status: 'active' },
+      select: { childId: true, childName: true },
     });
     siblingIds = siblingLinks.map(l => l.childId).filter((id): id is string => id !== null);
+    for (const l of siblingLinks) {
+      if (l.childId && l.childName) childNameMap.set(l.childId, l.childName);
+    }
   } else {
     // Parent viewing
     const childLinks = await prisma.parentChild.findMany({
       where: { parentId: user.id, status: 'active' },
+      select: { childId: true, childName: true },
     });
     siblingIds = childLinks.map(l => l.childId).filter((id): id is string => id !== null);
+    for (const l of childLinks) {
+      if (l.childId && l.childName) childNameMap.set(l.childId, l.childName);
+    }
   }
 
   if (siblingIds.length === 0) {
@@ -66,7 +76,7 @@ export async function GET(req: NextRequest) {
 
   const leaderboard = children.map(c => ({
     id: c.id,
-    name: c.name,
+    name: childNameMap.get(c.id) || c.name,
     image: c.image,
     totalPoints: c.gamification?.totalPoints || 0,
     weeklyPoints: weeklyPoints[c.id] || 0,
