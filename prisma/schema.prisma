@@ -29,6 +29,8 @@ model User {
   offlineWork      OfflineWork[] @relation("ChildOfflineWork")
   reviewedOfflineWork OfflineWork[] @relation("ParentOfflineWork")
   feedback         Feedback[]
+  createdPresets   AssignmentPreset[] @relation("ParentPresets")
+  receivedPresets  AssignmentPreset[] @relation("ChildPresets")
 }
 
 model ParentChild {
@@ -221,4 +223,25 @@ model Feedback {
   createdAt      DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model AssignmentPreset {
+  id              String    @id @default(cuid())
+  parentId        String
+  childId         String
+  grade           Int
+  subject         String
+  topic           String?
+  difficulty      String    @default("medium")
+  numQuestions    Int       @default(5)
+  questionTypes   String    @default("multiple_choice")
+  timeLimitMin    Int?
+  reviewMode      String    @default("ai")
+  daysOfWeek      String    @default("1,2,3,4,5")
+  active          Boolean   @default(true)
+  lastGeneratedAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  parent User @relation("ParentPresets", fields: [parentId], references: [id])
+  child  User @relation("ChildPresets", fields: [childId], references: [id])
 }

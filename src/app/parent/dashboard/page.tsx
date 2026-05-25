@@ -10,6 +10,17 @@ import StatCard from '@/components/StatCard';
 import AssignmentCard from '@/components/AssignmentCard';
 import Link from 'next/link';
 
+interface DuePreset {
+  id: string;
+  childId: string;
+  subject: string;
+  topic: string | null;
+  difficulty: string;
+  numQuestions: number;
+  grade: number;
+  child: { id: string; name: string | null; email: string };
+}
+
 interface Child {
   id: string;
   name: string | null;
@@ -76,6 +87,13 @@ export default function ParentDashboard() {
   const [pendingInvites, setPendingInvites] = useState<Invite[]>([]);
   const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>([]);
   const [offlineWork, setOfflineWork] = useState<OfflineWork[]>([]);
+  const [duePresets, setDuePresets] = useState<DuePreset[]>([]);
+  const [generatingPresets, setGeneratingPresets] = useState<Set<string>>(new Set());
+  const [generatedPresets, setGeneratedPresets] = useState<Set<string>>(new Set());
+  const [presetErrors, setPresetErrors] = useState<Record<string, string>>({});
+  const [reviewingIds, setReviewingIds] = useState<Set<string>>(new Set());
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
+  const [reviewErrors, setReviewErrors] = useState<Record<string, string>>({});
   const [dataLoading, setDataLoading] = useState(true);
   const [reviewingOwId, setReviewingOwId] = useState<string | null>(null);
   const [owComment, setOwComment] = useState('');
@@ -103,13 +121,15 @@ export default function ParentDashboard() {
         apiFetch('/api/parent/invite', token),
         apiFetch('/api/practice', token),
         apiFetch('/api/offline-work', token),
-      ]).then(([childrenData, assignmentsData, invitesData, practiceData, offlineData]) => {
+        apiFetch('/api/presets/due', token),
+      ]).then(([childrenData, assignmentsData, invitesData, practiceData, offlineData, presetsData]) => {
         setChildren(childrenData.children || []);
         setAssignments(assignmentsData.assignments || []);
         const invites = invitesData.invites || [];
         setPendingInvites(invites.filter((i: Invite) => i.status === 'pending'));
         setPracticeSessions(practiceData.sessions || []);
         setOfflineWork(offlineData.entries || []);
+        setDuePresets(presetsData.duePresets || []);
         setDataLoading(false);
       }).catch(() => setDataLoading(false));
     }
@@ -190,10 +210,68 @@ export default function ParentDashboard() {
     setOwProcessing(false);
   };
 
+  const generateFromPreset = async (presetId: string) => {
+    setGeneratingPresets(prev => new Set(prev).add(presetId));
+    setPresetErrors(prev => { const next = { ...prev }; delete next[presetId]; return next; });
+    try {
+      await apiFetch('/api/presets/generate', token, {
+        method: 'POST',
+        body: JSON.stringify({ presetId }),
+      });
+      setGeneratedPresets(prev => new Set(prev).add(presetId));
+      setDuePresets(prev => prev.filter(p => p.id !== presetId));
+      // Refresh assignments
+      const data = await apiFetch('/api/assignments', token);
+      setAssignments(data.assignments || []);
+    } catch (err) {
+      setPresetErrors(prev => ({ ...prev, [presetId]: err instanceof Error ? err.message : 'Failed' }));
+    }
+    setGeneratingPresets(prev => { const next = new Set(prev); next.delete(presetId); return next; });
+  };
+
+  const generateAllPresets = async () => {
+    for (const preset of duePresets) {
+      if (generatedPresets.has(preset.id)) continue;
+      await generateFromPreset(preset.id);
+    }
+  };
+
+  const autoReviewAssignment = async (assignmentId: string) => {
+    setReviewingIds(prev => new Set(prev).add(assignmentId));
+    setReviewErrors(prev => { const next = { ...prev }; delete next[assignmentId]; return next; });
+    try {
+      await apiFetch(`/api/assignments/${assignmentId}/review`, token, {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'ai' }),
+      });
+      setReviewedIds(prev => new Set(prev).add(assignmentId));
+      // Refresh assignments
+      const data = await apiFetch('/api/assignments', token);
+      setAssignments(data.assignments || []);
+    } catch (err) {
+      setReviewErrors(prev => ({ ...prev, [assignmentId]: err instanceof Error ? err.message : 'Failed' }));
+    }
+    setReviewingIds(prev => { const next = new Set(prev); next.delete(assignmentId); return next; });
+  };
+
+  const hasUnresolvedFlags = (a: Assignment) =>
+    (a.questions?.reduce((sum, q) => sum + (q.answers?.length || 0), 0) || 0) > 0;
+
+  const autoReviewAll = async () => {
+    const reviewable = assignments.filter(a =>
+      a.status === 'submitted' && !hasUnresolvedFlags(a) && !reviewedIds.has(a.id)
+    );
+    for (const assignment of reviewable) {
+      await autoReviewAssignment(assignment.id);
+    }
+  };
+
   if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const pendingOffline = offlineWork.filter(ow => ow.status === 'pending');
   const needsReviewAssignments = assignments.filter(a => a.status === 'submitted');
+  const reviewableAssignments = needsReviewAssignments.filter(a => !hasUnresolvedFlags(a));
+  const flaggedAssignments = needsReviewAssignments.filter(a => hasUnresolvedFlags(a));
   const otherAssignments = assignments.filter(a => a.status !== 'submitted');
   const totalCompleted = assignments.filter(a => a.status === 'reviewed').length;
 
@@ -206,12 +284,20 @@ export default function ParentDashboard() {
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Parent Dashboard</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">Manage assignments and track progress</p>
           </div>
-          <Link
-            href="/parent/create"
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
-          >
-            + Create Assignment
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/parent/presets"
+              className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-5 py-3 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
+            >
+              Presets
+            </Link>
+            <Link
+              href="/parent/create"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+            >
+              + Create Assignment
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
@@ -221,6 +307,61 @@ export default function ParentDashboard() {
           <StatCard title="Needs Review" value={needsReviewAssignments.length} icon="⏳" />
           <StatCard title="Completed" value={totalCompleted} icon="✅" />
         </div>
+
+        {/* Due Presets Banner */}
+        {duePresets.length > 0 && (
+          <div className="mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 animate-slide-up">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🔄</span>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white">
+                    {duePresets.length} preset{duePresets.length > 1 ? 's' : ''} ready to generate
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Based on your scheduled presets for today</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href="/parent/presets" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                  Manage
+                </Link>
+                <button
+                  onClick={generateAllPresets}
+                  disabled={generatingPresets.size > 0}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
+                >
+                  {generatingPresets.size > 0 ? 'Generating...' : 'Generate All'}
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {duePresets.map(preset => (
+                <div key={preset.id} className="bg-white/80 dark:bg-gray-800/60 rounded-xl p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                      {preset.subject.replace('_', ' ')}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {preset.numQuestions}q · {preset.difficulty} · {preset.child.name || preset.child.email}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {presetErrors[preset.id] && (
+                      <span className="text-xs text-red-500" title={presetErrors[preset.id]}>Failed</span>
+                    )}
+                    <button
+                      onClick={() => generateFromPreset(preset.id)}
+                      disabled={generatingPresets.has(preset.id)}
+                      className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/60 disabled:opacity-50 transition-all"
+                    >
+                      {generatingPresets.has(preset.id) ? '...' : 'Generate'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Children */}
         <div className="mb-8">
@@ -386,27 +527,63 @@ export default function ParentDashboard() {
         {/* Needs Your Review */}
         {needsReviewAssignments.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Needs Your Review <span className="text-sm font-normal text-orange-600 dark:text-orange-400">({needsReviewAssignments.length})</span>
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Needs Your Review <span className="text-sm font-normal text-orange-600 dark:text-orange-400">({needsReviewAssignments.length})</span>
+              </h2>
+              {reviewableAssignments.length > 0 && (
+                <button
+                  onClick={autoReviewAll}
+                  disabled={reviewingIds.size > 0}
+                  className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50"
+                >
+                  {reviewingIds.size > 0 ? 'Reviewing...' : `Auto-Review All (${reviewableAssignments.length})`}
+                </button>
+              )}
+            </div>
+
+            {flaggedAssignments.length > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                {flaggedAssignments.length} assignment{flaggedAssignments.length > 1 ? 's have' : ' has'} flagged questions that need manual resolution before auto-review.
+              </p>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {needsReviewAssignments.map(a => (
-                <AssignmentCard
-                  key={a.id}
-                  id={a.id}
-                  subject={a.subject}
-                  topic={a.topic}
-                  difficulty={a.difficulty}
-                  status={a.status}
-                  score={a.score}
-                  numQuestions={a.numQuestions}
-                  timeLimitMin={a.timeLimitMin}
-                  createdAt={a.createdAt}
-                  childName={a.child?.name || undefined}
-                  role="parent"
-                  flaggedCount={a.questions?.reduce((sum: number, q: { answers?: { id: string }[] }) => sum + (q.answers?.length || 0), 0) || 0}
-                />
-              ))}
+              {needsReviewAssignments.map(a => {
+                const flagged = hasUnresolvedFlags(a);
+                return (
+                  <div key={a.id} className="relative">
+                    <AssignmentCard
+                      id={a.id}
+                      subject={a.subject}
+                      topic={a.topic}
+                      difficulty={a.difficulty}
+                      status={a.status}
+                      score={a.score}
+                      numQuestions={a.numQuestions}
+                      timeLimitMin={a.timeLimitMin}
+                      createdAt={a.createdAt}
+                      childName={a.child?.name || undefined}
+                      role="parent"
+                      flaggedCount={a.questions?.reduce((sum: number, q: { answers?: { id: string }[] }) => sum + (q.answers?.length || 0), 0) || 0}
+                    />
+                    {!flagged && (
+                      <div className="mt-2">
+                        {reviewErrors[a.id] && (
+                          <p className="text-xs text-red-500 mb-1">{reviewErrors[a.id]}</p>
+                        )}
+                        <button
+                          onClick={() => autoReviewAssignment(a.id)}
+                          disabled={reviewingIds.has(a.id) || reviewedIds.has(a.id)}
+                          className="w-full text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-3 py-2 rounded-xl font-bold hover:bg-orange-100 dark:hover:bg-orange-900/40 disabled:opacity-50 transition-all"
+                        >
+                          {reviewingIds.has(a.id) ? 'Reviewing...' : reviewedIds.has(a.id) ? 'Reviewed' : 'Auto-Review'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
