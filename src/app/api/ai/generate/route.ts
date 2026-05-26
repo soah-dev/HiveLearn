@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { generateWithFallback } from '@/lib/gemini';
+import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
+import prisma from '@/lib/prisma';
 
 interface GeneratedQuestion {
   question_type: string;
@@ -84,6 +85,7 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
     let allValid: GeneratedQuestion[] = [];
     let attempts = 0;
     let remaining = numQuestions;
+    const usageRecords: AiUsageMetadata[] = [];
 
     // Generate with retry for invalid questions (max 2 attempts)
     while (remaining > 0 && attempts < 2) {
@@ -92,7 +94,9 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
         ? prompt
         : `Generate ${remaining} MORE ${subject} questions for grade ${grade} ${topicClause} at ${difficulty} difficulty. Types: ${questionTypes.join(', ')}.\n\nSame format as before. CRITICAL: For multiple_choice, correct_answer MUST be "A", "B", "C", or "D" and that option must contain the correct answer. Return ONLY a JSON array.`;
 
-      const rawText = await generateWithFallback(generatePrompt);
+      const generateResult = await generateWithUsage(generatePrompt);
+      const rawText = generateResult.text;
+      usageRecords.push(generateResult.usage);
 
       if (!rawText.trim()) {
         console.error('AI returned empty response for subject:', subject);
@@ -130,6 +134,28 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
         console.warn(`AI generation: ${invalid.length} invalid questions discarded (attempt ${attempts})`);
       }
     }
+
+    // Log token usage
+    const totalUsage = usageRecords.reduce(
+      (acc, u) => ({
+        promptTokens: acc.promptTokens + u.promptTokens,
+        completionTokens: acc.completionTokens + u.completionTokens,
+        totalTokens: acc.totalTokens + u.totalTokens,
+      }),
+      { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+    );
+    const modelUsed = usageRecords[usageRecords.length - 1]?.model || 'unknown';
+
+    await prisma.aiUsage.create({
+      data: {
+        userId: user.id,
+        type: 'generation',
+        model: modelUsed,
+        promptTokens: totalUsage.promptTokens,
+        completionTokens: totalUsage.completionTokens,
+        totalTokens: totalUsage.totalTokens,
+      },
+    });
 
     // Return what we have (may be fewer than requested if validation kept failing)
     return NextResponse.json({ questions: allValid.slice(0, numQuestions) });

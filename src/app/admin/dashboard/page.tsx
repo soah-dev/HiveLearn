@@ -90,9 +90,17 @@ export default function AdminDashboard() {
     <>
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 animate-slide-up">
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Platform-wide metrics and activity</p>
+        <div className="flex items-center justify-between mb-8 animate-slide-up">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Admin Dashboard</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Platform-wide metrics and activity</p>
+          </div>
+          <a
+            href="/admin/ai-usage"
+            className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-5 py-3 rounded-xl font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
+          >
+            AI Usage
+          </a>
         </div>
 
         {/* Key Metrics */}

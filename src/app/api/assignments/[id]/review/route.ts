@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
 import { checkBadges } from '@/lib/badges';
 import { updateStreakAndPoints } from '@/lib/streak';
-import { generateWithFallback } from '@/lib/gemini';
+import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
 
 async function aiReview(assignment: {
   grade: number;
@@ -18,7 +18,7 @@ async function aiReview(assignment: {
     correctAnswer: string;
     answers: Array<{ selectedAnswer: string | null; flagged: boolean }>;
   }>;
-}) {
+}): Promise<{ answers: Array<{ question_id: string; is_correct: boolean; ai_score: number | null; ai_explanation: string }>; overall_score: number; overall_feedback: string; usage: AiUsageMetadata }> {
   // Only review non-flagged questions
   const reviewableQuestions = assignment.questions.filter(q => !q.answers[0]?.flagged);
 
@@ -46,12 +46,13 @@ Then provide:
 
 Return ONLY JSON in this format: { "answers": [{ "question_id": "...", "is_correct": true/false, "ai_score": null or 0-100, "ai_explanation": "..." }], "overall_score": 85, "overall_feedback": "..." }`;
 
-  const responseText = await generateWithFallback(prompt);
-  let jsonStr = responseText;
+  const generateResult = await generateWithUsage(prompt);
+  let jsonStr = generateResult.text;
   const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (jsonMatch) jsonStr = jsonMatch[0];
 
-  return JSON.parse(jsonStr);
+  const parsed = JSON.parse(jsonStr);
+  return { ...parsed, usage: generateResult.usage };
 }
 
 
@@ -126,6 +127,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     } else {
       const reviewResult = await aiReview(assignment);
       const reviewableQuestions = assignment.questions.filter(q => !q.answers[0]?.flagged);
+
+      // Log token usage
+      await prisma.aiUsage.create({
+        data: {
+          userId: user.id,
+          type: 'review',
+          model: reviewResult.usage.model,
+          promptTokens: reviewResult.usage.promptTokens,
+          completionTokens: reviewResult.usage.completionTokens,
+          totalTokens: reviewResult.usage.totalTokens,
+          assignmentId: id,
+        },
+      });
 
       for (const ans of reviewResult.answers) {
         await prisma.answer.updateMany({
