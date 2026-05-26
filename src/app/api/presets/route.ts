@@ -8,11 +8,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const presets = await prisma.assignmentPreset.findMany({
-    where: { parentId: user.id },
-    include: { child: { select: { id: true, name: true, email: true } } },
-    orderBy: { createdAt: 'desc' },
-  });
+  const [presets, links] = await Promise.all([
+    prisma.assignmentPreset.findMany({
+      where: { parentId: user.id },
+      include: { child: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.parentChild.findMany({
+      where: { parentId: user.id, status: 'active' },
+      select: { childId: true, childName: true },
+    }),
+  ]);
+
+  const childNameMap = new Map(links.filter(l => l.childId).map(l => [l.childId!, l.childName]));
+  for (const p of presets) {
+    if (p.child && childNameMap.has(p.childId)) {
+      p.child.name = childNameMap.get(p.childId) || p.child.name;
+    }
+  }
 
   return NextResponse.json({ presets });
 }
@@ -50,6 +63,11 @@ export async function POST(req: NextRequest) {
     },
     include: { child: { select: { id: true, name: true, email: true } } },
   });
+
+  // Use parent-assigned child name
+  if (preset.child) {
+    preset.child.name = link.childName || preset.child.name;
+  }
 
   return NextResponse.json({ preset });
 }

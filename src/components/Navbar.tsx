@@ -17,7 +17,7 @@ export default function Navbar() {
   const parentLinks = [
     { href: '/parent/dashboard', label: 'Dashboard' },
     { href: '/parent/create', label: 'Create' },
-    { href: '/parent/analytics', label: 'Analytics' },
+    { href: '/parent/analytics', label: 'Reports' },
     { href: '/how-it-works', label: 'How It Works' },
     { href: '/settings', label: 'Settings' },
   ];

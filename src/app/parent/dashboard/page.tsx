@@ -289,7 +289,7 @@ export default function ParentDashboard() {
               href="/parent/presets"
               className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-5 py-3 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
             >
-              Presets
+              Scheduled
             </Link>
             <Link
               href="/parent/create"
