@@ -185,6 +185,27 @@ export default function ChildDashboard() {
           </div>
         )}
 
+        {/* SAT Practice Quick Link */}
+        {user?.satEnabled && (
+          <div className="mb-8 animate-slide-up">
+            <button
+              onClick={() => router.push('/child/sat')}
+              className="w-full text-left bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 p-5 card-hover"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">📝</span>
+                  <div>
+                    <p className="font-bold text-gray-900 dark:text-white">SAT Practice</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Full Digital SAT simulation with adaptive scoring</p>
+                  </div>
+                </div>
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold text-sm">Start Practice →</span>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* Pending Assignments */}
         <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 animate-slide-up">

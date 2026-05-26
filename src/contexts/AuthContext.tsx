@@ -19,6 +19,7 @@ interface AuthUser {
   name: string | null;
   image: string | null;
   role: string | null;
+  satEnabled: boolean;
 }
 
 interface AuthContextType {

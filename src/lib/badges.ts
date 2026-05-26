@@ -70,6 +70,38 @@ export async function checkBadges(childId: string) {
         earned = subjects.size >= 5;
         break;
       }
+      case 'sat_first_test': {
+        const satCount = await prisma.sATSession.count({ where: { childId, status: 'completed' } });
+        earned = satCount >= 1;
+        break;
+      }
+      case 'sat_score_1000': {
+        const sat1000 = await prisma.sATSession.findFirst({ where: { childId, status: 'completed', compositeScore: { gte: 1000 } } });
+        earned = !!sat1000;
+        break;
+      }
+      case 'sat_score_1200': {
+        const sat1200 = await prisma.sATSession.findFirst({ where: { childId, status: 'completed', compositeScore: { gte: 1200 } } });
+        earned = !!sat1200;
+        break;
+      }
+      case 'sat_score_1400': {
+        const sat1400 = await prisma.sATSession.findFirst({ where: { childId, status: 'completed', compositeScore: { gte: 1400 } } });
+        earned = !!sat1400;
+        break;
+      }
+      case 'sat_perfect_section': {
+        const satPerfect = await prisma.sATSession.findFirst({
+          where: { childId, status: 'completed', OR: [{ rwScaledScore: 800 }, { mathScaledScore: 800 }] },
+        });
+        earned = !!satPerfect;
+        break;
+      }
+      case 'sat_marathon': {
+        const satMarathon = await prisma.sATSession.count({ where: { childId, status: 'completed' } });
+        earned = satMarathon >= 5;
+        break;
+      }
     }
 
     if (earned) badgesToAward.push(badge.id);

@@ -29,7 +29,7 @@ function getTodayStr(): string {
  * Allows a 1-day gap (streak freeze) between active days.
  */
 export async function recalculateStreak(childId: string) {
-  const [assignments, practice, offline] = await Promise.all([
+  const [assignments, practice, offline, satSessions] = await Promise.all([
     prisma.assignment.findMany({
       where: { childId, status: 'reviewed', submittedAt: { not: null } },
       select: { submittedAt: true },
@@ -41,6 +41,10 @@ export async function recalculateStreak(childId: string) {
     prisma.offlineWork.findMany({
       where: { childId, status: 'approved' },
       select: { activityDate: true, createdAt: true },
+    }),
+    prisma.sATSession.findMany({
+      where: { childId, status: 'completed', completedAt: { not: null } },
+      select: { completedAt: true },
     }),
   ]);
 
@@ -54,6 +58,9 @@ export async function recalculateStreak(childId: string) {
   }
   for (const o of offline) {
     daySet.add(toLocalDateStr(o.activityDate || o.createdAt));
+  }
+  for (const s of satSessions) {
+    if (s.completedAt) daySet.add(toLocalDateStr(s.completedAt));
   }
 
   const days = [...daySet].sort();

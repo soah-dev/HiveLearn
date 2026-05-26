@@ -25,6 +25,7 @@ export default function Navbar() {
   const childLinks = [
     { href: '/child/dashboard', label: 'Dashboard' },
     { href: '/child/practice', label: 'Practice' },
+    { href: '/child/sat', label: 'SAT Prep' },
     { href: '/child/badges', label: 'Badges' },
     { href: '/child/leaderboard', label: 'Leaderboard' },
     { href: '/how-it-works', label: 'How It Works' },

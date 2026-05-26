@@ -54,6 +54,15 @@ interface AdminStats {
   }>;
 }
 
+interface SATChild {
+  id: string;
+  name: string | null;
+  email: string;
+  satEnabled: boolean;
+  parentName: string | null;
+  parentEmail: string | null;
+}
+
 export default function AdminDashboard() {
   const { user, token, loading } = useAuth();
   const router = useRouter();
@@ -62,6 +71,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [streakRecalculating, setStreakRecalculating] = useState(false);
   const [streakResult, setStreakResult] = useState<string | null>(null);
+  const [satChildren, setSatChildren] = useState<SATChild[]>([]);
+  const [satLoading, setSatLoading] = useState(true);
+  const [satToggling, setSatToggling] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -79,6 +91,9 @@ export default function AdminDashboard() {
             setDataLoading(false);
           }
         });
+      apiFetch('/api/admin/sat-access', token)
+        .then(d => { setSatChildren(d.children || []); setSatLoading(false); })
+        .catch(() => setSatLoading(false));
     }
   }, [user, token, loading, router]);
 
@@ -220,6 +235,67 @@ export default function AdminDashboard() {
               <span className="text-sm text-gray-700 dark:text-gray-300">{streakResult}</span>
             )}
           </div>
+        </div>
+
+        {/* SAT Access Management */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">SAT Access Management</h2>
+          {satLoading ? (
+            <LoadingSpinner size="sm" />
+          ) : satChildren.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">No children registered yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700">
+                    <th className="py-2 pr-4">Child</th>
+                    <th className="py-2 pr-4">Parent</th>
+                    <th className="py-2 pr-4 text-center">SAT Access</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {satChildren.map(child => (
+                    <tr key={child.id} className="border-b border-gray-100 dark:border-gray-700 last:border-0">
+                      <td className="py-3 pr-4">
+                        <p className="font-medium text-gray-900 dark:text-white">{child.name || 'Unnamed'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{child.email}</p>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <p className="text-gray-700 dark:text-gray-300">{child.parentName || '-'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{child.parentEmail || ''}</p>
+                      </td>
+                      <td className="py-3 pr-4 text-center">
+                        <button
+                          onClick={async () => {
+                            if (!token) return;
+                            setSatToggling(child.id);
+                            try {
+                              await fetch('/api/admin/sat-access', {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ childId: child.id, enabled: !child.satEnabled }),
+                              });
+                              setSatChildren(prev => prev.map(c => c.id === child.id ? { ...c, satEnabled: !c.satEnabled } : c));
+                            } catch { /* ignore */ }
+                            setSatToggling(null);
+                          }}
+                          disabled={satToggling === child.id}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            child.satEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                          } ${satToggling === child.id ? 'opacity-50' : ''}`}
+                        >
+                          <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                            child.satEnabled ? 'translate-x-6' : 'translate-x-1'
+                          }`} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Feedback */}

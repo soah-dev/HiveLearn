@@ -32,6 +32,9 @@ model User {
   createdPresets   AssignmentPreset[] @relation("ParentPresets")
   receivedPresets  AssignmentPreset[] @relation("ChildPresets")
   aiUsage          AiUsage[]
+  satEnabled       Boolean   @default(false)
+  satSessions      SATSession[]
+  satAnswers       SATAnswer[]
 }
 
 model ParentChild {
@@ -239,6 +242,74 @@ model AiUsage {
   createdAt        DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model SATSession {
+  id                  String    @id @default(cuid())
+  childId             String
+  status              String    @default("not_started")
+  startedAt           DateTime?
+  completedAt         DateTime?
+  breakStartedAt      DateTime?
+  rwMod2Difficulty    String?
+  mathMod2Difficulty  String?
+  rwScaledScore       Int?
+  mathScaledScore     Int?
+  compositeScore      Int?
+  pointsAwarded       Int?
+  createdAt           DateTime  @default(now())
+
+  child   User         @relation(fields: [childId], references: [id])
+  modules SATModule[]
+}
+
+model SATModule {
+  id           String    @id @default(cuid())
+  sessionId    String
+  section      String
+  moduleNumber Int
+  difficulty   String    @default("standard")
+  numQuestions Int
+  timeLimitMin Int
+  status       String    @default("not_started")
+  startedAt    DateTime?
+  completedAt  DateTime?
+  rawScore     Int?
+
+  session   SATSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questions SATQuestion[]
+}
+
+model SATQuestion {
+  id            String  @id @default(cuid())
+  moduleId      String
+  questionType  String
+  passage       String?
+  questionText  String
+  optionA       String?
+  optionB       String?
+  optionC       String?
+  optionD       String?
+  correctAnswer String
+  domain        String
+  orderIndex    Int
+
+  module  SATModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  answers SATAnswer[]
+}
+
+model SATAnswer {
+  id             String   @id @default(cuid())
+  questionId     String
+  childId        String
+  selectedAnswer String?
+  isCorrect      Boolean?
+  answeredAt     DateTime @default(now())
+
+  question SATQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  child    User        @relation(fields: [childId], references: [id])
+
+  @@unique([questionId, childId])
 }
 
 model AssignmentPreset {

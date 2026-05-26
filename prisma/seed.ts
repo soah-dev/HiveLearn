@@ -17,6 +17,12 @@ const badges = [
   { name: "Hardmode Hero", description: "Complete 10 hard assignments with 80%+", icon: "💪", criteria: "hardmode_hero" },
   { name: "Century Club", description: "Earn 1000 total points", icon: "🏆", criteria: "points_1000" },
   { name: "All-Rounder", description: "Complete assignments in 5 different subjects", icon: "🌟", criteria: "all_rounder" },
+  { name: "SAT Starter", description: "Complete your first SAT practice test", icon: "📝", criteria: "sat_first_test" },
+  { name: "SAT 1000 Club", description: "Score 1000+ on an SAT practice test", icon: "🎯", criteria: "sat_score_1000" },
+  { name: "SAT 1200 Club", description: "Score 1200+ on an SAT practice test", icon: "🌟", criteria: "sat_score_1200" },
+  { name: "SAT 1400 Club", description: "Score 1400+ on an SAT practice test", icon: "🏆", criteria: "sat_score_1400" },
+  { name: "SAT Perfect Section", description: "Score 800 on either section", icon: "💯", criteria: "sat_perfect_section" },
+  { name: "SAT Marathon", description: "Complete 5 full SAT practice tests", icon: "🏃", criteria: "sat_marathon" },
 ];
 
 async function main() {
