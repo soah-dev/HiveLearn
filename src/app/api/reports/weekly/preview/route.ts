@@ -52,8 +52,13 @@ async function getWeekData(childId: string, weekStart: Date, weekEnd: Date, curr
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser(req);
-  if (!user || user.role !== 'parent') {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+  if (!adminEmails.includes(user.email.toLowerCase())) {
+    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   }
 
   const childId = req.nextUrl.searchParams.get('childId');
@@ -61,15 +66,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'childId query param required' }, { status: 400 });
   }
 
-  const link = await prisma.parentChild.findFirst({
-    where: { parentId: user.id, childId, status: 'active' },
-    include: {
-      child: {
-        select: { id: true, name: true, gamification: { select: { currentStreak: true } } },
-      },
-    },
+  const child = await prisma.user.findUnique({
+    where: { id: childId },
+    select: { id: true, name: true, email: true, gamification: { select: { currentStreak: true } } },
   });
-  if (!link || !link.child) {
+  if (!child) {
     return NextResponse.json({ error: 'Child not found' }, { status: 404 });
   }
 
@@ -81,15 +82,15 @@ export async function GET(req: NextRequest) {
   const prevWeekStart = new Date(weekStart);
   prevWeekStart.setDate(prevWeekStart.getDate() - 7);
 
-  const currentStreak = link.child.gamification?.currentStreak ?? 0;
+  const currentStreak = child.gamification?.currentStreak ?? 0;
   const [current, prev] = await Promise.all([
     getWeekData(childId, weekStart, weekEnd, currentStreak),
     getWeekData(childId, prevWeekStart, weekStart, 0),
   ]);
 
   const report: WeeklyReportData = {
-    childName: link.childName || link.child.name || 'Your child',
-    parentName: user.name || 'Parent',
+    childName: child.name || child.email,
+    parentName: user.name || 'Admin',
     parentEmail: user.email,
     childId,
     rows: current.rows,
