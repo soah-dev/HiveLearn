@@ -131,12 +131,16 @@ export function buildWeeklyReportHtml(report: WeeklyReportData): string {
   const { totals, prevTotals } = report;
   const hasActivity = report.rows.length > 0;
 
+  function formatSubject(s: string): string {
+    return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   function delta(current: number, previous: number): string {
     const diff = current - previous;
     if (diff === 0) return '';
     const arrow = diff > 0 ? '&#9650;' : '&#9660;';
     const color = diff > 0 ? '#16a34a' : '#dc2626';
-    return ` <span style="color: ${color}; font-size: 11px;">${arrow} ${Math.abs(diff)}</span>`;
+    return `<span style="color: ${color}; font-size: 11px; font-weight: 500;">${arrow}${Math.abs(diff)}</span>`;
   }
 
   function formatTime(min: number): string {
@@ -146,89 +150,129 @@ export function buildWeeklyReportHtml(report: WeeklyReportData): string {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
+  function scoreColor(score: number | null): string {
+    if (score == null) return '#6b7280';
+    if (score >= 90) return '#16a34a';
+    if (score >= 70) return '#d97706';
+    return '#dc2626';
+  }
+
+  function statCard(value: string, label: string, deltaHtml: string): string {
+    return `
+      <td style="padding: 6px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 8px; text-align: center;">
+          <div style="font-size: 24px; font-weight: 800; color: #1e293b; line-height: 1;">${value}</div>
+          ${deltaHtml ? `<div style="margin-top: 4px;">${deltaHtml}</div>` : ''}
+          <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; font-weight: 600;">${label}</div>
+        </div>
+      </td>`;
+  }
+
   const totalsHtml = `
-    <table style="width: 100%; border-collapse: collapse; margin: 0 0 24px;">
+    <table style="width: 100%; border-collapse: collapse; margin: 0 0 28px;">
       <tr>
-        <td style="padding: 12px; text-align: center; width: 20%;">
-          <div style="font-size: 22px; font-weight: 700; color: #111827;">${totals.activities}${delta(totals.activities, prevTotals.activities)}</div>
-          <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Activities</div>
+        ${statCard(String(totals.activities), 'Activities', delta(totals.activities, prevTotals.activities))}
+        ${statCard(String(totals.totalQuestions), 'Questions', delta(totals.totalQuestions, prevTotals.totalQuestions))}
+        ${statCard(totals.avgScore != null ? `${totals.avgScore}%` : '-', 'Avg Score', totals.avgScore != null && prevTotals.avgScore != null ? delta(totals.avgScore, prevTotals.avgScore) : '')}
+      </tr>
+      <tr>
+        <td style="padding: 6px;" colspan="1">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: 800; color: #1e293b; line-height: 1;">${formatTime(totals.timeSpentMin)}</div>
+            ${delta(totals.timeSpentMin, prevTotals.timeSpentMin) ? `<div style="margin-top: 4px;">${delta(totals.timeSpentMin, prevTotals.timeSpentMin)}</div>` : ''}
+            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; font-weight: 600;">Time Spent</div>
+          </div>
         </td>
-        <td style="padding: 12px; text-align: center; width: 20%;">
-          <div style="font-size: 22px; font-weight: 700; color: #111827;">${totals.totalQuestions}${delta(totals.totalQuestions, prevTotals.totalQuestions)}</div>
-          <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Questions</div>
-        </td>
-        <td style="padding: 12px; text-align: center; width: 20%;">
-          <div style="font-size: 22px; font-weight: 700; color: #111827;">${totals.avgScore != null ? `${totals.avgScore}%` : '-'}${totals.avgScore != null && prevTotals.avgScore != null ? delta(totals.avgScore, prevTotals.avgScore) : ''}</div>
-          <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Avg Score</div>
-        </td>
-        <td style="padding: 12px; text-align: center; width: 20%;">
-          <div style="font-size: 22px; font-weight: 700; color: #111827;">${formatTime(totals.timeSpentMin)}${delta(totals.timeSpentMin, prevTotals.timeSpentMin)}</div>
-          <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Time Spent</div>
-        </td>
-        <td style="padding: 12px; text-align: center; width: 20%;">
-          <div style="font-size: 22px; font-weight: 700; color: #111827;">${totals.streak} day${totals.streak !== 1 ? 's' : ''}</div>
-          <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;">Streak</div>
+        <td style="padding: 6px;" colspan="2">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: 800; color: #1e293b; line-height: 1;">${totals.streak} day${totals.streak !== 1 ? 's' : ''} ${totals.streak >= 7 ? '&#128293;' : ''}</div>
+            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; font-weight: 600;">Streak</div>
+          </div>
         </td>
       </tr>
     </table>`;
 
   const activityRows = report.rows
     .map(
-      (r) => `
-      <tr>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; font-size: 14px;">${r.type}</td>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; font-size: 14px;">${r.subject}</td>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; font-size: 14px; text-transform: capitalize;">${r.difficulty}</td>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; font-size: 14px; text-align: center;">${r.numQuestions}</td>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; font-size: 14px; text-align: center; font-weight: 600;">${r.score != null ? `${r.score}%` : '-'}</td>
+      (r, i) => `
+      <tr style="background: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+        <td style="padding: 12px 14px; color: #475569; font-size: 13px;">
+          <span style="display: inline-block; background: ${r.type === 'Assignment' ? '#eef2ff' : r.type === 'Practice' ? '#f0fdf4' : '#fefce8'}; color: ${r.type === 'Assignment' ? '#4338ca' : r.type === 'Practice' ? '#15803d' : '#a16207'}; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;">${r.type}</span>
+        </td>
+        <td style="padding: 12px 14px; color: #1e293b; font-size: 13px; font-weight: 500;">${formatSubject(r.subject)}</td>
+        <td style="padding: 12px 14px; color: #475569; font-size: 13px; text-transform: capitalize;">${r.difficulty}</td>
+        <td style="padding: 12px 14px; color: #475569; font-size: 13px; text-align: center;">${r.numQuestions}</td>
+        <td style="padding: 12px 14px; font-size: 13px; text-align: center; font-weight: 700; color: ${scoreColor(r.score)};">${r.score != null ? `${r.score}%` : '-'}</td>
       </tr>`
     )
     .join('');
 
   const activityTable = `
-    <table style="width: 100%; border-collapse: collapse;">
-      <thead>
-        <tr style="background: #f9fafb;">
-          <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Type</th>
-          <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Subject</th>
-          <th style="padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Difficulty</th>
-          <th style="padding: 10px 12px; text-align: center; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Questions</th>
-          <th style="padding: 10px 12px; text-align: center; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Score</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${activityRows}
-      </tbody>
-    </table>`;
+    <div style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #4f46e5;">
+            <th style="padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em;">Type</th>
+            <th style="padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em;">Subject</th>
+            <th style="padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em;">Difficulty</th>
+            <th style="padding: 12px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em;">Qs</th>
+            <th style="padding: 12px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.06em;">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${activityRows}
+        </tbody>
+      </table>
+    </div>`;
 
   const quietWeekNudge = `
-    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; text-align: center;">
-      <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.6;">
-        No completed activities this week. Consider assigning something new to keep the momentum going!
+    <div style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; border-radius: 12px; padding: 28px 20px; text-align: center;">
+      <div style="font-size: 32px; margin-bottom: 12px;">&#128218;</div>
+      <p style="color: #92400e; margin: 0 0 4px; font-size: 15px; font-weight: 600;">Quiet week!</p>
+      <p style="color: #a16207; margin: 0; font-size: 13px; line-height: 1.5;">
+        No completed activities this week. Assign something new to keep the momentum going.
       </p>
-      <a href="${appUrl}/parent/create" style="display: inline-block; margin-top: 12px; background: #f59e0b; color: #ffffff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+      <a href="${appUrl}/parent/create" style="display: inline-block; margin-top: 16px; background: #f59e0b; color: #ffffff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px;">
         Create Assignment
       </a>
     </div>`;
 
   return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-      <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px;">
-        <h2 style="color: #111827; margin: 0 0 4px; font-size: 20px;">${report.childName}'s Week</h2>
-        <p style="color: #9ca3af; margin: 0 0 24px; font-size: 13px;">${weekLabel}</p>
-
-        ${totalsHtml}
-
-        ${hasActivity ? activityTable : quietWeekNudge}
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f1f5f9;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 32px 32px 28px; border-radius: 0 0 24px 24px;">
+        <table style="width: 100%;">
+          <tr>
+            <td>
+              <h1 style="color: #ffffff; margin: 0 0 2px; font-size: 22px; font-weight: 800;">${report.childName}'s Week</h1>
+              <p style="color: #c7d2fe; margin: 0; font-size: 13px; font-weight: 500;">${weekLabel}</p>
+            </td>
+            <td style="text-align: right; vertical-align: top;">
+              <span style="color: #e0e7ff; font-size: 16px; font-weight: 800; letter-spacing: -0.02em;">HiveExcel</span>
+            </td>
+          </tr>
+        </table>
       </div>
-      <div style="text-align: center; margin-top: 24px;">
-        <a href="${appUrl}/parent/analytics/${report.childId}" style="color: #4f46e5; font-size: 14px; text-decoration: none; font-weight: 600;">
-          View Full Analytics
-        </a>
-        <span style="color: #d1d5db; margin: 0 12px;">|</span>
-        <a href="${appUrl}/settings" style="color: #9ca3af; font-size: 14px; text-decoration: none;">
-          Email Preferences
-        </a>
+
+      <!-- Body -->
+      <div style="padding: 24px 20px 32px;">
+        ${totalsHtml}
+        ${hasActivity ? activityTable : quietWeekNudge}
+
+        <!-- CTA -->
+        <div style="text-align: center; margin-top: 28px;">
+          <a href="${appUrl}/parent/analytics/${report.childId}" style="display: inline-block; background: #4f46e5; color: #ffffff; padding: 14px 36px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px;">
+            View Full Analytics
+          </a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; padding: 0 20px 32px;">
+        <p style="color: #94a3b8; font-size: 11px; margin: 0; line-height: 1.8;">
+          Sent weekly by HiveExcel &middot;
+          <a href="${appUrl}/settings" style="color: #64748b; text-decoration: underline;">Email Preferences</a>
+        </p>
       </div>
     </div>
   `;
