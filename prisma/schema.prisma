@@ -42,10 +42,11 @@ model ParentChild {
   childEmail  String
   childName   String
   childGrade  Int       @default(6)
-  status      String    @default("pending")
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime  @default(now())
+  status              String    @default("pending")
+  expiresAt           DateTime
+  acceptedAt          DateTime?
+  weeklyReportEnabled Boolean   @default(true)
+  createdAt           DateTime  @default(now())
 
   parent User  @relation("ParentRelation", fields: [parentId], references: [id])
   child  User? @relation("ChildRelation", fields: [childId], references: [id])

@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   const children = links.filter(l => l.child).map(l => ({
     ...l.child,
     name: l.childName || l.child!.name || l.child!.email,
+    weeklyReportEnabled: l.weeklyReportEnabled,
   }));
   return NextResponse.json({ children });
 }
@@ -37,10 +38,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { childId, grade } = await req.json();
+  const { childId, grade, weeklyReportEnabled } = await req.json();
 
-  if (!childId || !grade || grade < 1 || grade > 12) {
-    return NextResponse.json({ error: 'Valid childId and grade (1-12) are required' }, { status: 400 });
+  if (!childId) {
+    return NextResponse.json({ error: 'childId is required' }, { status: 400 });
   }
 
   // Verify parent-child link
@@ -49,11 +50,24 @@ export async function PATCH(req: NextRequest) {
   });
   if (!link) return NextResponse.json({ error: 'Not linked' }, { status: 403 });
 
-  const updated = await prisma.user.update({
-    where: { id: childId },
-    data: { grade },
-    select: { id: true, name: true, grade: true },
-  });
+  // Update grade if provided
+  if (grade !== undefined) {
+    if (!grade || grade < 1 || grade > 12) {
+      return NextResponse.json({ error: 'Grade must be 1-12' }, { status: 400 });
+    }
+    await prisma.user.update({
+      where: { id: childId },
+      data: { grade },
+    });
+  }
 
-  return NextResponse.json({ child: updated });
+  // Update weekly report preference if provided
+  if (typeof weeklyReportEnabled === 'boolean') {
+    await prisma.parentChild.update({
+      where: { id: link.id },
+      data: { weeklyReportEnabled },
+    });
+  }
+
+  return NextResponse.json({ success: true });
 }

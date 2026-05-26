@@ -14,6 +14,7 @@ interface Child {
   email: string;
   grade: number | null;
   image: string | null;
+  weeklyReportEnabled: boolean;
 }
 
 interface LinkedParent {
@@ -32,6 +33,7 @@ export default function SettingsPage() {
   const [editingGrade, setEditingGrade] = useState<Record<string, number>>({});
   const [savingGrade, setSavingGrade] = useState<string | null>(null);
   const [gradeSaved, setGradeSaved] = useState<string | null>(null);
+  const [togglingReport, setTogglingReport] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState('general');
@@ -77,6 +79,37 @@ export default function SettingsPage() {
       alert(err instanceof Error ? err.message : 'Failed to save grade');
     }
     setSavingGrade(null);
+  };
+
+  const toggleWeeklyReport = async (childId: string, enabled: boolean) => {
+    setTogglingReport(childId);
+    try {
+      await apiFetch('/api/parent/children', getToken, {
+        method: 'PATCH',
+        body: JSON.stringify({ childId, weeklyReportEnabled: enabled }),
+      });
+      setChildren(prev => prev.map(c => c.id === childId ? { ...c, weeklyReportEnabled: enabled } : c));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update');
+    }
+    setTogglingReport(null);
+  };
+
+  const previewReport = async (childId: string) => {
+    const freshToken = await getToken();
+    const res = await fetch(`/api/reports/weekly/preview?childId=${childId}`, {
+      headers: { Authorization: `Bearer ${freshToken}` },
+    });
+    if (!res.ok) {
+      alert('No report data available for this child');
+      return;
+    }
+    const html = await res.text();
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
   };
 
   const submitFeedback = async () => {
@@ -199,6 +232,41 @@ export default function SettingsPage() {
                   >
                     {savingGrade === child.id ? '...' : gradeSaved === child.id ? 'Saved!' : 'Save'}
                   </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Weekly Reports (Parent only) */}
+        {user?.role === 'parent' && children.length > 0 && (
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '75ms' }}>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Weekly Email Reports</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Get a summary of each child&apos;s activity every Sunday</p>
+            <div className="space-y-3">
+              {children.map(child => (
+                <div key={child.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {(child.name || 'C')[0].toUpperCase()}
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">{child.name || child.email}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => previewReport(child.id)}
+                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => toggleWeeklyReport(child.id, !child.weeklyReportEnabled)}
+                      disabled={togglingReport === child.id}
+                      className={`relative w-14 h-7 rounded-full transition-colors disabled:opacity-50 ${child.weeklyReportEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${child.weeklyReportEnabled ? 'translate-x-7' : ''}`} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
