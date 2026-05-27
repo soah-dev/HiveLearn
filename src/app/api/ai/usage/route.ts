@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       promptTokens: acc.promptTokens + u.promptTokens,
       completionTokens: acc.completionTokens + u.completionTokens,
       totalTokens: acc.totalTokens + u.totalTokens,
-      generations: acc.generations + (u.type === 'generation' ? 1 : 0),
+      generations: acc.generations + (u.type === 'generation' || u.type === 'sat_generation' ? 1 : 0),
       reviews: acc.reviews + (u.type === 'review' ? 1 : 0),
     }),
     { promptTokens: 0, completionTokens: 0, totalTokens: 0, generations: 0, reviews: 0 }
