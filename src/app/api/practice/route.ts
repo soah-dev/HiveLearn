@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { generateWithFallback } from '@/lib/gemini';
+import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -44,6 +44,7 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
       correct_answer: string;
     }> = [];
     let attempts = 0;
+    const usageRecords: AiUsageMetadata[] = [];
 
     while (validQuestions.length < 10 && attempts < 2) {
       attempts++;
@@ -52,8 +53,9 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
         ? prompt
         : `Generate ${remaining} MORE multiple choice questions for grade ${grade} in ${subject} ${topicClause} at ${difficulty} difficulty. Same format. correct_answer MUST be "A", "B", "C", or "D". Return ONLY a JSON array.`;
 
-      const responseText = await generateWithFallback(genPrompt);
-      let jsonStr = responseText;
+      const generateResult = await generateWithUsage(genPrompt);
+      usageRecords.push(generateResult.usage);
+      let jsonStr = generateResult.text;
       const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
       if (jsonMatch) jsonStr = jsonMatch[0];
       const questions = JSON.parse(jsonStr);
@@ -73,6 +75,28 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
 
     if (validQuestions.length === 0) {
       return NextResponse.json({ error: 'Failed to generate valid questions' }, { status: 500 });
+    }
+
+    // Log AI usage
+    if (usageRecords.length > 0) {
+      const totalUsage = usageRecords.reduce(
+        (acc, u) => ({
+          promptTokens: acc.promptTokens + u.promptTokens,
+          completionTokens: acc.completionTokens + u.completionTokens,
+          totalTokens: acc.totalTokens + u.totalTokens,
+        }),
+        { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+      );
+      await prisma.aiUsage.create({
+        data: {
+          userId: user.id,
+          type: 'generation',
+          model: usageRecords[usageRecords.length - 1]?.model || 'unknown',
+          promptTokens: totalUsage.promptTokens,
+          completionTokens: totalUsage.completionTokens,
+          totalTokens: totalUsage.totalTokens,
+        },
+      });
     }
 
     const session = await prisma.practiceSession.create({

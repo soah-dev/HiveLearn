@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { generateWithFallback } from '@/lib/gemini';
+import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
 import { sendAssignmentNotification } from '@/lib/email';
 
 interface GeneratedQuestion {
@@ -81,7 +81,21 @@ CRITICAL RULES:
 Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level.`;
 
   try {
-    const rawText = await generateWithFallback(prompt);
+    const generateResult = await generateWithUsage(prompt);
+    const rawText = generateResult.text;
+
+    // Log AI usage
+    await prisma.aiUsage.create({
+      data: {
+        userId: user.id,
+        type: 'generation',
+        model: generateResult.usage.model,
+        promptTokens: generateResult.usage.promptTokens,
+        completionTokens: generateResult.usage.completionTokens,
+        totalTokens: generateResult.usage.totalTokens,
+        assignmentId: null,
+      },
+    });
 
     if (!rawText.trim()) {
       throw new Error('AI returned an empty response');
