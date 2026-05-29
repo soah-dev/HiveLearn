@@ -66,6 +66,41 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // If child signed up without an invite token, auto-match pending invites by email
+  if (role === 'child' && !inviteToken) {
+    const pendingInvites = await prisma.parentChild.findMany({
+      where: {
+        childEmail: { equals: user.email, mode: 'insensitive' },
+        status: 'pending',
+        childId: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    for (const invite of pendingInvites) {
+      await prisma.parentChild.update({
+        where: { id: invite.id },
+        data: { childId: user.id, status: 'active', acceptedAt: new Date() },
+      });
+
+      // Set grade from the first matched invite if not already set
+      if (!updatedUser.grade) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { grade: invite.childGrade },
+        });
+      }
+    }
+
+    if (pendingInvites.length > 0) {
+      await prisma.gamification.upsert({
+        where: { childId: user.id },
+        update: {},
+        create: { childId: user.id },
+      });
+    }
+  }
+
   return NextResponse.json({ user: updatedUser });
 }
 
