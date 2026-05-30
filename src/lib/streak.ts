@@ -138,23 +138,24 @@ export async function updateStreakAndPoints(
 
   if (lastDate === activityDay) {
     // Already completed on this activity day — just add points, no streak change
-  } else if (
-    (lastDate === yesterday || lastDate === dayBefore) &&
-    (activityDay === today || activityDay === yesterday)
-  ) {
-    // Last activity was yesterday or day before (freeze), and new activity is recent — continue
-    newStreak += 1;
+  } else if (lastDate && activityDay < lastDate) {
+    // Activity is older than most recent — don't touch streak, just add points
   } else if (!lastDate) {
     // First ever completion
     newStreak = 1;
-  } else if (activityDay === today && lastDate !== today) {
-    // Activity is today but last completion was 3+ days ago — reset
-    newStreak = 1;
-  } else if (activityDay !== today && activityDay !== yesterday) {
-    // Activity date is further in the past — don't break current streak, just add points
-  } else if (lastDate !== yesterday && lastDate !== dayBefore && lastDate !== activityDay) {
-    // Gap too large — reset
-    newStreak = 1;
+  } else {
+    // activityDay > lastDate — this is a new, more recent activity
+    const lastDateObj = new Date(lastDate + 'T12:00:00');
+    const activityDateObj = new Date(activityDay + 'T12:00:00');
+    const gap = Math.round((activityDateObj.getTime() - lastDateObj.getTime()) / (24 * 60 * 60 * 1000));
+
+    if (gap <= 2) {
+      // Consecutive day (1) or 1-day freeze gap (2) — streak continues
+      newStreak += 1;
+    } else {
+      // Gap of 3+ days — reset streak
+      newStreak = 1;
+    }
   }
 
   const newLastDate = !lastDate || activityDay > lastDate ? activityDay : lastDate;

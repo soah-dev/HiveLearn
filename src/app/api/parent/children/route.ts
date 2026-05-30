@@ -24,11 +24,24 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const children = links.filter(l => l.child).map(l => ({
-    ...l.child,
-    name: l.childName || l.child!.name || l.child!.email,
-    weeklyReportEnabled: l.weeklyReportEnabled,
-  }));
+  // Check if streaks are stale (last activity was 3+ days ago)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  const twoDaysAgo = new Date(today + 'T12:00:00');
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
+
+  const children = links.filter(l => l.child).map(l => {
+    const child = { ...l.child };
+    // If last activity was more than 2 days ago, streak has expired
+    if (child.gamification && child.gamification.lastCompletedDate && child.gamification.lastCompletedDate < twoDaysAgoStr) {
+      child.gamification = { ...child.gamification, currentStreak: 0 };
+    }
+    return {
+      ...child,
+      name: l.childName || l.child!.name || l.child!.email,
+      weeklyReportEnabled: l.weeklyReportEnabled,
+    };
+  });
   return NextResponse.json({ children });
 }
 

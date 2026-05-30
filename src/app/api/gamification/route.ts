@@ -28,5 +28,17 @@ export async function GET(req: NextRequest) {
 
   const allBadges = await prisma.badge.findMany();
 
-  return NextResponse.json({ gamification, earnedBadges, allBadges });
+  // Check if streak is stale (last activity was 3+ days ago)
+  let adjustedGamification = gamification;
+  if (gamification?.lastCompletedDate) {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const twoDaysAgo = new Date(today + 'T12:00:00');
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
+    if (gamification.lastCompletedDate < twoDaysAgoStr) {
+      adjustedGamification = { ...gamification, currentStreak: 0 };
+    }
+  }
+
+  return NextResponse.json({ gamification: adjustedGamification, earnedBadges, allBadges });
 }
