@@ -178,13 +178,13 @@ export default function AdminAiUsagePage() {
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Daily Usage</h2>
             <div className="flex items-end gap-1 h-40">
               {usage.daily.map(day => (
-                <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                <div key={day.date} className="flex-1 h-full flex flex-col items-center justify-end gap-1 group relative">
                   <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                     {day.date}: {formatTokens(day.totalTokens)}
                   </div>
                   <div
                     className="w-full bg-gradient-to-t from-indigo-500 to-purple-500 rounded-t-md transition-all duration-300 hover:from-indigo-600 hover:to-purple-600 min-h-[2px]"
-                    style={{ height: `${(day.totalTokens / maxDaily) * 100}%` }}
+                    style={{ height: `${Math.max((day.totalTokens / maxDaily) * 160, 2)}px` }}
                   />
                 </div>
               ))}
