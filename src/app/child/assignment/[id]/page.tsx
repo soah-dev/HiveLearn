@@ -438,7 +438,11 @@ export default function ChildAssignmentPage() {
                       )}
                       {!wasFlagged && q.questionType !== 'open_ended' && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Correct answer: <span className="font-bold text-green-600 dark:text-green-400"><MathText text={q.correctAnswer} /></span>
+                          Correct answer: <span className="font-bold text-green-600 dark:text-green-400">
+                            {q.questionType === 'multiple_choice'
+                              ? <><span>{q.correctAnswer}.</span> <MathText text={(q.correctAnswer === 'A' ? q.optionA : q.correctAnswer === 'B' ? q.optionB : q.correctAnswer === 'C' ? q.optionC : q.optionD) || q.correctAnswer} /></>
+                              : <MathText text={q.correctAnswer} />}
+                          </span>
                         </p>
                       )}
                       {ans?.aiScore !== null && ans?.aiScore !== undefined && (

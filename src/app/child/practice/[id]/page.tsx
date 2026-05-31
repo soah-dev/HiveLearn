@@ -219,7 +219,9 @@ export default function PracticeSessionPage() {
                 {/* After completion: show correct answer */}
                 {isCompleted && myAnswer !== q.correctAnswer && (
                   <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                    Correct answer: <span className="font-bold text-green-600 dark:text-green-400"><MathText text={q.correctAnswer} /></span>
+                    Correct answer: <span className="font-bold text-green-600 dark:text-green-400">
+                      <span>{q.correctAnswer}.</span> <MathText text={(q.correctAnswer === 'A' ? q.optionA : q.correctAnswer === 'B' ? q.optionB : q.correctAnswer === 'C' ? q.optionC : q.optionD) || q.correctAnswer} />
+                    </span>
                   </p>
                 )}
               </div>

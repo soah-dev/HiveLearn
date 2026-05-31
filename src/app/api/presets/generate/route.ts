@@ -77,6 +77,7 @@ CRITICAL RULES:
 - For multiple_choice: The correct_answer MUST be the letter (A/B/C/D) of the option that is correct.
 - All four options (option_a through option_d) must be non-null and non-empty for multiple_choice questions.
 - Do NOT put the answer text in correct_answer for multiple_choice — only the letter.
+- For any math expressions, wrap them in dollar signs for LaTeX rendering: e.g. $\\frac{1}{2}$, $3 \\times 10^2$, $x^2 + y^2 = z^2$. Use $...$ for inline math in question_text, options, and correct_answer.
 
 Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level.`;
 

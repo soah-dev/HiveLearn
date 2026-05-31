@@ -328,9 +328,12 @@ export default function AdminDashboard() {
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{f.message}</p>
                   {f.screenshotUrl && (
-                    <a href={f.screenshotUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-2 inline-block">
-                      View screenshot
-                    </a>
+                    <details className="mt-2">
+                      <summary className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
+                        View screenshot
+                      </summary>
+                      <img src={f.screenshotUrl} alt="Feedback screenshot" className="mt-2 max-w-full rounded-lg border border-gray-200 dark:border-gray-700" />
+                    </details>
                   )}
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(f.createdAt).toLocaleString()}</p>
                 </div>

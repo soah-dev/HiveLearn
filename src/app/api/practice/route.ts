@@ -31,6 +31,7 @@ For each question return:
 CRITICAL RULES:
 - Double-check that correct_answer is the letter whose option actually contains the right answer. Do NOT put answer text in correct_answer — only the letter.
 - For reading/language arts: If you include a passage, you MUST also include an explicit question after the passage in question_text (e.g. "Read the passage below:\\n\\n[passage]\\n\\nWhat is the main idea of this passage?"). Never leave the question implied — always state what the student is being asked.
+- For any math expressions, wrap them in dollar signs for LaTeX rendering: e.g. $\\frac{1}{2}$, $3 \\times 10^2$, $x^2 + y^2 = z^2$. Use $...$ for inline math in question_text, options, and correct_answer.
 
 Return ONLY a JSON array. Ensure questions are age-appropriate and progressively challenging.`;
 
