@@ -138,30 +138,44 @@ export async function getWeeklyReportsToSend(): Promise<WeeklyReportData[]> {
 
   const activeLinks = links.filter(l => l.child);
 
-  const reports = await Promise.all(
-    activeLinks.map(async (link) => {
-      const childId = link.child!.id;
-      const childName = link.childName || link.child!.name || 'Your child';
-      const currentStreak = link.child!.gamification?.currentStreak ?? 0;
+  // Deduplicate: fetch week data once per unique child
+  const uniqueChildren = new Map<string, { streak: number }>();
+  for (const link of activeLinks) {
+    const cid = link.child!.id;
+    if (!uniqueChildren.has(cid)) {
+      uniqueChildren.set(cid, { streak: link.child!.gamification?.currentStreak ?? 0 });
+    }
+  }
 
+  const childDataCache = new Map<string, { current: Awaited<ReturnType<typeof getWeekData>>; prev: Awaited<ReturnType<typeof getWeekData>> }>();
+  await Promise.all(
+    Array.from(uniqueChildren.entries()).map(async ([childId, { streak }]) => {
       const [current, prev] = await Promise.all([
-        getWeekData(childId, weekStart, weekEnd, currentStreak),
+        getWeekData(childId, weekStart, weekEnd, streak),
         getWeekData(childId, prevWeekStart, weekStart, 0),
       ]);
-
-      return {
-        childName,
-        parentName: link.parent.name || 'Parent',
-        parentEmail: link.parent.email,
-        childId,
-        rows: current.rows,
-        totals: current.totals,
-        prevTotals: prev.totals,
-        weekStart,
-        weekEnd,
-      };
+      childDataCache.set(childId, { current, prev });
     })
   );
+
+  // Build reports using cached data
+  const reports = activeLinks.map((link) => {
+    const childId = link.child!.id;
+    const childName = link.childName || link.child!.name || 'Your child';
+    const data = childDataCache.get(childId)!;
+
+    return {
+      childName,
+      parentName: link.parent.name || 'Parent',
+      parentEmail: link.parent.email,
+      childId,
+      rows: data.current.rows,
+      totals: data.current.totals,
+      prevTotals: data.prev.totals,
+      weekStart,
+      weekEnd,
+    };
+  });
 
   return reports;
 }
