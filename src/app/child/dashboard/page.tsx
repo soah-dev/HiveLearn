@@ -337,11 +337,12 @@ export default function ChildDashboard() {
                 <input
                   type="date"
                   value={owActivityDate}
+                  min={new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]}
                   max={new Date().toISOString().split('T')[0]}
                   onChange={e => setOwActivityDate(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                 />
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave blank to use today&apos;s date</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave blank to use today&apos;s date. Must be within the last 7 days.</p>
               </div>
               {owError && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">

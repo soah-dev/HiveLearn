@@ -18,6 +18,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Score must be between 0 and 100' }, { status: 400 });
   }
 
+  // Reject work dated more than 7 days ago (or in the future)
+  if (activityDate) {
+    const activity = new Date(activityDate);
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    if (activity < sevenDaysAgo) {
+      return NextResponse.json({ error: 'Activity date cannot be more than 7 days ago' }, { status: 400 });
+    }
+    if (activity > now) {
+      return NextResponse.json({ error: 'Activity date cannot be in the future' }, { status: 400 });
+    }
+  }
+
   const offlineWork = await prisma.offlineWork.create({
     data: {
       childId: user.id,
