@@ -45,6 +45,7 @@ interface Child {
   id: string;
   name: string | null;
   email: string;
+  grade: number | null;
 }
 
 interface GeneratedQuestion {
@@ -83,12 +84,24 @@ export default function CreateAssignment() {
     if (token) {
       apiFetch('/api/parent/children', token).then(data => {
         setChildren(data.children || []);
-        if (data.children?.length > 0) setChildId(data.children[0].id);
+        if (data.children?.length > 0) {
+          setChildId(data.children[0].id);
+          if (data.children[0].grade) setGrade(data.children[0].grade);
+        }
       });
     }
   }, [user, token, loading, router]);
 
+  // Sync grade to the selected child's grade
+  useEffect(() => {
+    const child = children.find(c => c.id === childId);
+    if (child?.grade) setGrade(child.grade);
+  }, [childId, children]);
+
   const availableTypes = questionTypes.filter(qt => (subjectQuestionTypes[subject] || ['multiple_choice']).includes(qt.value));
+
+  // The selected child's grade is the minimum allowed — can't assign below their grade level
+  const childGrade = children.find(c => c.id === childId)?.grade ?? 1;
 
   // Reset to first available type when subject changes and current selection is no longer valid
   useEffect(() => {
@@ -107,7 +120,7 @@ export default function CreateAssignment() {
       const data = await apiFetch('/api/ai/generate', token, {
         method: 'POST',
         body: JSON.stringify({
-          grade, subject, topic, difficulty, numQuestions, questionTypes: [selectedType],
+          childId, grade, subject, topic, difficulty, numQuestions, questionTypes: [selectedType],
         }),
       });
       setQuestions(data.questions);
@@ -179,7 +192,11 @@ export default function CreateAssignment() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Grade Level</label>
                 <select value={grade} onChange={e => setGrade(Number(e.target.value))} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-                  {[6,7,8,9,10,11,12].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => (
+                    <option key={g} value={g} disabled={g < childGrade}>
+                      Grade {g}{g < childGrade ? ' (below grade level)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 

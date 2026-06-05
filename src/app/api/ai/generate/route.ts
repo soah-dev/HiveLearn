@@ -56,7 +56,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { grade, subject, topic, difficulty, numQuestions, questionTypes } = await req.json();
+  const { childId, grade, subject, topic, difficulty, numQuestions, questionTypes } = await req.json();
+
+  // Enforce grade floor — cannot generate below the child's grade level
+  if (childId) {
+    const link = await prisma.parentChild.findFirst({
+      where: { parentId: user.id, childId, status: 'active' },
+      include: { child: { select: { grade: true } } },
+    });
+    const childGrade = link?.child?.grade ?? 1;
+    if (grade < childGrade) {
+      return NextResponse.json({ error: `Grade cannot be below the child's grade level (Grade ${childGrade})` }, { status: 400 });
+    }
+  }
 
   const topicClause = topic?.trim()
     ? `on the topic "${topic.trim()}"`

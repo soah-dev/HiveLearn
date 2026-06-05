@@ -15,9 +15,16 @@ export async function POST(req: NextRequest) {
   // Verify child is linked to parent
   const link = await prisma.parentChild.findFirst({
     where: { parentId: user.id, childId, status: 'active' },
+    include: { child: { select: { grade: true } } },
   });
   if (!link) {
     return NextResponse.json({ error: 'Child not linked to parent' }, { status: 400 });
+  }
+
+  // Enforce grade floor — cannot assign below the child's grade level
+  const childGrade = link.child?.grade ?? 1;
+  if (grade < childGrade) {
+    return NextResponse.json({ error: `Grade cannot be below the child's grade level (Grade ${childGrade})` }, { status: 400 });
   }
 
   const assignment = await prisma.assignment.create({
