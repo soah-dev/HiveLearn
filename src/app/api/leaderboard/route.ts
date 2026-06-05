@@ -24,23 +24,33 @@ export async function GET(req: NextRequest) {
 
   const childIds = children.map(c => c.id);
 
-  // Weekly points: sum pointsAwarded for assignments reviewed this week
+  // Weekly points: sum points earned this week across every activity that awards points
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   weekStart.setHours(0, 0, 0, 0);
 
-  const weeklyAssignments = await prisma.assignment.findMany({
-    where: {
-      childId: { in: childIds },
-      status: 'reviewed',
-      reviewedAt: { gte: weekStart },
-    },
-    select: { childId: true, pointsAwarded: true },
-  });
+  const [weeklyAssignments, weeklyPractice, weeklyOffline, weeklySat] = await Promise.all([
+    prisma.assignment.findMany({
+      where: { childId: { in: childIds }, status: 'reviewed', reviewedAt: { gte: weekStart } },
+      select: { childId: true, pointsAwarded: true },
+    }),
+    prisma.practiceSession.findMany({
+      where: { childId: { in: childIds }, status: 'completed', completedAt: { gte: weekStart } },
+      select: { childId: true, pointsAwarded: true },
+    }),
+    prisma.offlineWork.findMany({
+      where: { childId: { in: childIds }, status: 'approved', reviewedAt: { gte: weekStart } },
+      select: { childId: true, pointsAwarded: true },
+    }),
+    prisma.sATSession.findMany({
+      where: { childId: { in: childIds }, status: 'completed', completedAt: { gte: weekStart } },
+      select: { childId: true, pointsAwarded: true },
+    }),
+  ]);
 
   const weeklyPoints: Record<string, number> = {};
-  for (const a of weeklyAssignments) {
-    weeklyPoints[a.childId] = (weeklyPoints[a.childId] || 0) + (a.pointsAwarded || 0);
+  for (const r of [...weeklyAssignments, ...weeklyPractice, ...weeklyOffline, ...weeklySat]) {
+    weeklyPoints[r.childId] = (weeklyPoints[r.childId] || 0) + (r.pointsAwarded || 0);
   }
 
   // Mask names for privacy across families: keep the first 3 letters, hide the rest
