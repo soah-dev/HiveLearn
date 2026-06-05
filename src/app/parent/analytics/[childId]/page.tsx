@@ -48,6 +48,14 @@ interface AnalyticsData {
   activityView: ActivityView;
 }
 
+interface LeaderboardEntry {
+  id: string;
+  name: string | null;
+  totalPoints: number;
+  weeklyPoints: number;
+  currentStreak: number;
+}
+
 type DatePreset = 'this_week' | 'last_7' | 'this_month' | 'custom';
 
 export default function AnalyticsPage() {
@@ -62,6 +70,8 @@ export default function AnalyticsPage() {
   const [customTo, setCustomTo] = useState('');
   const [feedPage, setFeedPage] = useState(1);
   const FEED_PAGE_SIZE = 10;
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [lbView, setLbView] = useState<'alltime' | 'weekly'>('weekly');
 
   const getDateRange = useCallback((preset: DatePreset): { from: string; to: string } | null => {
     const now = new Date();
@@ -103,6 +113,14 @@ export default function AnalyticsPage() {
       .catch(() => { setDataLoading(false); setActivityLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datePreset, token, params.childId]);
+
+  // Fetch family leaderboard once
+  useEffect(() => {
+    if (!token) return;
+    apiFetch('/api/leaderboard', token)
+      .then(d => setLeaderboard(d.leaderboard || []))
+      .catch(() => {});
+  }, [token]);
 
   const handleCustomApply = () => {
     if (!customFrom || !customTo || !token || !params.childId) return;
@@ -417,6 +435,78 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+
+        {/* Family Leaderboard */}
+        {leaderboard.length > 0 && (() => {
+          const sorted = [...leaderboard].sort((a, b) =>
+            lbView === 'weekly' ? b.weeklyPoints - a.weeklyPoints : b.totalPoints - a.totalPoints
+          );
+          const medals = ['🥇', '🥈', '🥉'];
+          const podiumGradients = [
+            'from-yellow-50 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30 border-yellow-300 dark:border-yellow-700',
+            'from-gray-50 to-slate-100 dark:from-gray-800/50 dark:to-slate-800/50 border-gray-300 dark:border-gray-600',
+            'from-orange-50 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-300 dark:border-orange-700',
+          ];
+          return (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">Global Leaderboard</h2>
+                <div className="flex bg-gray-100/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-1">
+                  <button
+                    onClick={() => setLbView('alltime')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      lbView === 'alltime' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    All Time
+                  </button>
+                  <button
+                    onClick={() => setLbView('weekly')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      lbView === 'weekly' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    This Week
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {sorted.map((entry, i) => (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 card-hover ${
+                      i < 3
+                        ? `bg-gradient-to-r ${podiumGradients[i]}`
+                        : entry.id === params.childId
+                          ? 'bg-indigo-50/80 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700'
+                          : 'bg-white/80 dark:bg-gray-800/80 border-gray-200/60 dark:border-gray-700/60'
+                    }`}
+                  >
+                    <span className="text-3xl w-10 text-center">
+                      {i < 3 ? <span className="inline-block">{medals[i]}</span> : <span className="text-gray-400 text-lg font-extrabold">{i + 1}</span>}
+                    </span>
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold shadow-sm">
+                      {(entry.name || '?')[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 dark:text-white">
+                        {entry.name || 'Student'}
+                        {entry.id === params.childId && <span className="text-xs text-indigo-500 dark:text-indigo-400 ml-2 font-semibold">(Viewing)</span>}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">🔥 {entry.currentStreak} day streak</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
+                        {lbView === 'weekly' ? entry.weeklyPoints : entry.totalPoints}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold">points</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </main>
     </>
   );

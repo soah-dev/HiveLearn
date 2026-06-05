@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
           email: true,
           image: true,
           grade: true,
+          leaderboardOptOut: true,
           gamification: true,
         },
       },
@@ -51,7 +52,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { childId, grade, weeklyReportEnabled } = await req.json();
+  const { childId, grade, weeklyReportEnabled, leaderboardOptOut } = await req.json();
 
   if (!childId) {
     return NextResponse.json({ error: 'childId is required' }, { status: 400 });
@@ -79,6 +80,14 @@ export async function PATCH(req: NextRequest) {
     await prisma.parentChild.update({
       where: { id: link.id },
       data: { weeklyReportEnabled },
+    });
+  }
+
+  // Update leaderboard opt-out preference if provided
+  if (typeof leaderboardOptOut === 'boolean') {
+    await prisma.user.update({
+      where: { id: childId },
+      data: { leaderboardOptOut },
     });
   }
 

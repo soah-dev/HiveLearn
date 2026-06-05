@@ -16,6 +16,7 @@ model User {
   image         String?
   role          String?
   grade         Int?
+  leaderboardOptOut Boolean @default(false)
   createdAt     DateTime  @default(now())
 
   children      ParentChild[] @relation("ParentRelation")

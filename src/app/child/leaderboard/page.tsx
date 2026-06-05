@@ -10,7 +10,6 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 interface LeaderboardEntry {
   id: string;
   name: string | null;
-  image: string | null;
   totalPoints: number;
   weeklyPoints: number;
   currentStreak: number;
@@ -20,7 +19,7 @@ export default function LeaderboardPage() {
   const { user, token, loading } = useAuth();
   const router = useRouter();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [view, setView] = useState<'alltime' | 'weekly'>('alltime');
+  const [view, setView] = useState<'alltime' | 'weekly'>('weekly');
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -54,8 +53,8 @@ export default function LeaderboardPage() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="text-center mb-8 animate-slide-up">
           <p className="text-5xl mb-2 animate-float">🏆</p>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Family Leaderboard</h1>
-          <p className="text-gray-500 dark:text-gray-400">See how you stack up!</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Leaderboard</h1>
+          <p className="text-gray-500 dark:text-gray-400">See how you stack up against everyone!</p>
         </div>
 
         {/* Toggle */}
@@ -100,13 +99,9 @@ export default function LeaderboardPage() {
                 <span className="text-3xl w-10 text-center">
                   {i < 3 ? <span className="animate-float-slow inline-block">{medals[i]}</span> : <span className="text-gray-400 text-lg font-extrabold">{i + 1}</span>}
                 </span>
-                {entry.image ? (
-                  <img src={entry.image} alt="" className="w-11 h-11 rounded-full ring-2 ring-white dark:ring-gray-700 shadow-sm" />
-                ) : (
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold shadow-sm">
-                    {(entry.name || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold shadow-sm">
+                  {(entry.name || '?')[0].toUpperCase()}
+                </div>
                 <div className="flex-1">
                   <p className="font-bold text-gray-900 dark:text-white">
                     {entry.name || 'Student'}

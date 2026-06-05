@@ -15,6 +15,7 @@ interface Child {
   grade: number | null;
   image: string | null;
   weeklyReportEnabled: boolean;
+  leaderboardOptOut: boolean;
 }
 
 interface LinkedParent {
@@ -34,6 +35,7 @@ export default function SettingsPage() {
   const [savingGrade, setSavingGrade] = useState<string | null>(null);
   const [gradeSaved, setGradeSaved] = useState<string | null>(null);
   const [togglingReport, setTogglingReport] = useState<string | null>(null);
+  const [togglingLeaderboard, setTogglingLeaderboard] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState('general');
@@ -93,6 +95,20 @@ export default function SettingsPage() {
       alert(err instanceof Error ? err.message : 'Failed to update');
     }
     setTogglingReport(null);
+  };
+
+  const toggleLeaderboard = async (childId: string, optOut: boolean) => {
+    setTogglingLeaderboard(childId);
+    try {
+      await apiFetch('/api/parent/children', getToken, {
+        method: 'PATCH',
+        body: JSON.stringify({ childId, leaderboardOptOut: optOut }),
+      });
+      setChildren(prev => prev.map(c => c.id === childId ? { ...c, leaderboardOptOut: optOut } : c));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update');
+    }
+    setTogglingLeaderboard(null);
   };
 
   const submitFeedback = async () => {
@@ -241,6 +257,33 @@ export default function SettingsPage() {
                     className={`relative w-14 h-7 rounded-full transition-colors disabled:opacity-50 ${child.weeklyReportEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
                   >
                     <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${child.weeklyReportEnabled ? 'translate-x-7' : ''}`} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard Visibility (Parent only) */}
+        {user?.role === 'parent' && children.length > 0 && (
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '85ms' }}>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Leaderboard Visibility</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Show your child on the global leaderboard (first name only)</p>
+            <div className="space-y-3">
+              {children.map(child => (
+                <div key={child.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {(child.name || 'C')[0].toUpperCase()}
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">{child.name || child.email}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleLeaderboard(child.id, child.leaderboardOptOut)}
+                    disabled={togglingLeaderboard === child.id}
+                    className={`relative w-14 h-7 rounded-full transition-colors disabled:opacity-50 ${!child.leaderboardOptOut ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${!child.leaderboardOptOut ? 'translate-x-7' : ''}`} />
                   </button>
                 </div>
               ))}
