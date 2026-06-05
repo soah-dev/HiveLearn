@@ -1,8 +1,8 @@
 import prisma from '@/lib/prisma';
 
 /**
- * Streak freeze: students get a 1-day grace period.
- * A gap of 1 missed day keeps the streak alive. Two consecutive misses resets it.
+ * Streak freeze: students get a 2-day grace period (covers weekends).
+ * A gap of up to 2 missed days keeps the streak alive. Three consecutive misses resets it.
  */
 
 /**
@@ -26,7 +26,7 @@ function getTodayStr(): string {
 
 /**
  * Recalculate a child's streak from scratch by looking at all completed activities.
- * Allows a 1-day gap (streak freeze) between active days.
+ * Allows up to a 2-day gap (streak freeze) between active days.
  */
 export async function recalculateStreak(childId: string) {
   const [assignments, practice, offline, satSessions] = await Promise.all([
@@ -74,7 +74,7 @@ export async function recalculateStreak(childId: string) {
     return { currentStreak: 0, longestStreak: 0, lastCompletedDate: null, activeDays: 0 };
   }
 
-  // Walk through days — allow 1-day gap (streak freeze)
+  // Walk through days — allow up to a 2-day gap (streak freeze)
   let currentStreak = 1;
   let longestStreak = 1;
 
@@ -83,8 +83,8 @@ export async function recalculateStreak(childId: string) {
     const curr = new Date(days[i] + 'T12:00:00');
     const diffDays = Math.round((curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000));
 
-    if (diffDays <= 2) {
-      // Consecutive day (1) or 1-day freeze gap (2) — streak continues
+    if (diffDays <= 3) {
+      // Consecutive day (1) or up to a 2-day freeze gap (2-3) — streak continues
       currentStreak += 1;
     } else {
       currentStreak = 1;
@@ -93,13 +93,14 @@ export async function recalculateStreak(childId: string) {
   }
 
   // Check if the streak is still active
-  // With freeze: streak holds if last activity was today, yesterday, or 2 days ago
+  // With freeze: streak holds if last activity was today, or within the last 3 days
   const lastDay = days[days.length - 1];
   const today = getTodayStr();
   const yesterday = subtractDays(today, 1);
   const dayBefore = subtractDays(today, 2);
+  const threeDaysAgo = subtractDays(today, 3);
 
-  if (lastDay !== today && lastDay !== yesterday && lastDay !== dayBefore) {
+  if (lastDay !== today && lastDay !== yesterday && lastDay !== dayBefore && lastDay !== threeDaysAgo) {
     currentStreak = 0;
   }
 
@@ -114,7 +115,7 @@ export async function recalculateStreak(childId: string) {
 
 /**
  * Update a child's streak and points.
- * Allows a 1-day gap (streak freeze) — missing one day doesn't break the streak.
+ * Allows up to a 2-day gap (streak freeze) — missing up to two days doesn't break the streak.
  */
 export async function updateStreakAndPoints(
   childId: string,
@@ -149,11 +150,11 @@ export async function updateStreakAndPoints(
     const activityDateObj = new Date(activityDay + 'T12:00:00');
     const gap = Math.round((activityDateObj.getTime() - lastDateObj.getTime()) / (24 * 60 * 60 * 1000));
 
-    if (gap <= 2) {
-      // Consecutive day (1) or 1-day freeze gap (2) — streak continues
+    if (gap <= 3) {
+      // Consecutive day (1) or up to a 2-day freeze gap (2-3) — streak continues
       newStreak += 1;
     } else {
-      // Gap of 3+ days — reset streak
+      // Gap of 4+ days — reset streak
       newStreak = 1;
     }
   }
