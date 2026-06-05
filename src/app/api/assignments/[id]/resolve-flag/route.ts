@@ -121,6 +121,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   }
 
+  // Keep the points ledger in sync with the re-scored award
+  await prisma.pointsLedger.upsert({
+    where: { sourceType_sourceId: { sourceType: 'assignment', sourceId: assignment.id } },
+    update: { points: newPoints },
+    create: {
+      childId: assignment.childId,
+      points: newPoints,
+      sourceType: 'assignment',
+      sourceId: assignment.id,
+      occurredAt: assignment.submittedAt ?? assignment.createdAt,
+    },
+  });
+
   // Check badges after score change
   await checkBadges(assignment.childId);
 

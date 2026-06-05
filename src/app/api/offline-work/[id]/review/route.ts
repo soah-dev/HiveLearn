@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   // Update streak and points (use activityDate if available)
-  await updateStreakAndPoints(entry.childId, points, entry.activityDate);
+  await updateStreakAndPoints(entry.childId, points, entry.activityDate, { type: 'offline', id: entry.id });
 
   return NextResponse.json({ success: true, status: 'approved', pointsAwarded: points });
 }

@@ -29,28 +29,16 @@ export async function GET(req: NextRequest) {
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   weekStart.setHours(0, 0, 0, 0);
 
-  const [weeklyAssignments, weeklyPractice, weeklyOffline, weeklySat] = await Promise.all([
-    prisma.assignment.findMany({
-      where: { childId: { in: childIds }, status: 'reviewed', reviewedAt: { gte: weekStart } },
-      select: { childId: true, pointsAwarded: true },
-    }),
-    prisma.practiceSession.findMany({
-      where: { childId: { in: childIds }, status: 'completed', completedAt: { gte: weekStart } },
-      select: { childId: true, pointsAwarded: true },
-    }),
-    prisma.offlineWork.findMany({
-      where: { childId: { in: childIds }, status: 'approved', reviewedAt: { gte: weekStart } },
-      select: { childId: true, pointsAwarded: true },
-    }),
-    prisma.sATSession.findMany({
-      where: { childId: { in: childIds }, status: 'completed', completedAt: { gte: weekStart } },
-      select: { childId: true, pointsAwarded: true },
-    }),
-  ]);
+  // Single ledger scan sums every point-earning source by the activity's own date
+  const weeklyLedger = await prisma.pointsLedger.groupBy({
+    by: ['childId'],
+    where: { childId: { in: childIds }, occurredAt: { gte: weekStart } },
+    _sum: { points: true },
+  });
 
   const weeklyPoints: Record<string, number> = {};
-  for (const r of [...weeklyAssignments, ...weeklyPractice, ...weeklyOffline, ...weeklySat]) {
-    weeklyPoints[r.childId] = (weeklyPoints[r.childId] || 0) + (r.pointsAwarded || 0);
+  for (const r of weeklyLedger) {
+    weeklyPoints[r.childId] = r._sum.points || 0;
   }
 
   // Mask names for privacy across families: keep the first 3 letters, hide the rest

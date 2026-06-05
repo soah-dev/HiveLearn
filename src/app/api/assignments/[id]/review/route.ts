@@ -210,7 +210,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   // Update streak and points
-  await updateStreakAndPoints(assignment.childId, points, assignment.submittedAt);
+  await updateStreakAndPoints(assignment.childId, points, assignment.submittedAt, { type: 'assignment', id: assignment.id });
 
   // Check badges
   await checkBadges(assignment.childId);

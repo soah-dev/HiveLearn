@@ -36,6 +36,23 @@ model User {
   satEnabled       Boolean   @default(false)
   satSessions      SATSession[]
   satAnswers       SATAnswer[]
+  pointsLedger     PointsLedger[]
+}
+
+model PointsLedger {
+  id         String   @id @default(cuid())
+  childId    String
+  points     Int
+  sourceType String   // 'assignment' | 'practice' | 'offline' | 'sat'
+  sourceId   String
+  occurredAt DateTime // the activity's own date, used for time-windowed sums
+  createdAt  DateTime @default(now())
+
+  child User @relation(fields: [childId], references: [id])
+
+  @@unique([sourceType, sourceId])
+  @@index([childId, occurredAt])
+  @@index([occurredAt])
 }
 
 model ParentChild {

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     data: { status: 'completed', score, pointsAwarded: points, completedAt: new Date() },
   });
 
-  await updateStreakAndPoints(user.id, points);
+  await updateStreakAndPoints(user.id, points, null, { type: 'practice', id });
 
   return NextResponse.json({ score, pointsAwarded: points, correct, total: scoredTotal, flagged: flaggedCount });
 }

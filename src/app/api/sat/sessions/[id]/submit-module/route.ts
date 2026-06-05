@@ -132,7 +132,7 @@ export async function POST(
   });
 
   // Award points and update streak
-  await updateStreakAndPoints(user.id, points);
+  await updateStreakAndPoints(user.id, points, null, { type: 'sat', id });
 
   // Check badges
   const newBadges = await checkBadges(user.id);

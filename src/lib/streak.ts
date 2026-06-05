@@ -121,6 +121,7 @@ export async function updateStreakAndPoints(
   childId: string,
   points: number,
   activityDate?: Date | null,
+  source?: { type: string; id: string },
 ) {
   const effectiveDate = activityDate || new Date();
   const today = getTodayStr();
@@ -170,4 +171,14 @@ export async function updateStreakAndPoints(
       lastCompletedDate: newLastDate,
     },
   });
+
+  // Record the award in the points ledger for fast time-windowed sums.
+  // One upsertable row per source — keyed on (sourceType, sourceId).
+  if (source) {
+    await prisma.pointsLedger.upsert({
+      where: { sourceType_sourceId: { sourceType: source.type, sourceId: source.id } },
+      update: { points, occurredAt: effectiveDate, childId },
+      create: { childId, points, sourceType: source.type, sourceId: source.id, occurredAt: effectiveDate },
+    });
+  }
 }
