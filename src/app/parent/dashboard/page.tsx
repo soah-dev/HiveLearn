@@ -302,7 +302,7 @@ export default function ParentDashboard() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Children" value={children.length} icon="👨‍👩‍👧‍👦" />
+          <StatCard title="Total Practice" value={practiceSessions.length} icon="🎯" />
           <StatCard title="Total Assignments" value={assignments.length} icon="📝" />
           <StatCard title="Needs Review" value={needsReviewAssignments.length} icon="⏳" />
           <StatCard title="Completed" value={totalCompleted} icon="✅" />
