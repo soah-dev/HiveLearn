@@ -12,21 +12,31 @@ export async function GET(req: NextRequest) {
 
   let children;
   if (scope === 'family') {
-    // In-family ranking: every active child linked to the same parent(s) as the
-    // viewer (siblings + self). Opt-out is ignored — this is the viewer's own family.
-    const links = await prisma.parentChild.findMany({
-      where: { childId: user.id, status: 'active' },
-      select: { parentId: true },
-    });
-    const parentIds = [...new Set(links.map(l => l.parentId))];
-    if (parentIds.length === 0) {
-      return NextResponse.json({ scope, leaderboard: [] });
+    // In-family ranking: every active child in the viewer's family. For a parent
+    // that's their linked children; for a child it's their siblings + self.
+    // Opt-out is ignored — this is the viewer's own family.
+    let familyChildIds: string[];
+    if (user.role === 'parent') {
+      const links = await prisma.parentChild.findMany({
+        where: { parentId: user.id, status: 'active', childId: { not: null } },
+        select: { childId: true },
+      });
+      familyChildIds = [...new Set(links.map(l => l.childId as string))];
+    } else {
+      const links = await prisma.parentChild.findMany({
+        where: { childId: user.id, status: 'active' },
+        select: { parentId: true },
+      });
+      const parentIds = [...new Set(links.map(l => l.parentId))];
+      if (parentIds.length === 0) {
+        return NextResponse.json({ scope, leaderboard: [] });
+      }
+      const siblingLinks = await prisma.parentChild.findMany({
+        where: { parentId: { in: parentIds }, status: 'active', childId: { not: null } },
+        select: { childId: true },
+      });
+      familyChildIds = [...new Set(siblingLinks.map(s => s.childId as string))];
     }
-    const siblingLinks = await prisma.parentChild.findMany({
-      where: { parentId: { in: parentIds }, status: 'active', childId: { not: null } },
-      select: { childId: true },
-    });
-    const familyChildIds = [...new Set(siblingLinks.map(s => s.childId as string))];
     children = await prisma.user.findMany({
       where: { id: { in: familyChildIds }, role: 'child' },
       select: { id: true, name: true, gamification: true },
