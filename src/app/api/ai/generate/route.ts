@@ -74,6 +74,26 @@ export async function POST(req: NextRequest) {
     ? `on the topic "${topic.trim()}"`
     : `covering a variety of appropriate topics`;
 
+  // Per-child exclusion list: pull recent question texts for this child in the
+  // same subject+grade so the model avoids repeating across sessions. Bounded to
+  // keep input-token cost within free-tier limits.
+  let avoidClause = '';
+  if (childId) {
+    const recentAssignments = await prisma.assignment.findMany({
+      where: { childId, subject, grade },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: { questions: { select: { questionText: true } } },
+    });
+    const priorQuestions = recentAssignments
+      .flatMap(a => a.questions.map(q => q.questionText.trim()))
+      .filter(Boolean)
+      .slice(0, 40);
+    if (priorQuestions.length > 0) {
+      avoidClause = `\n\nThe student has recently been asked the following questions. Do NOT repeat or closely paraphrase any of them — generate fresh, distinct questions with different scenarios, numbers, and phrasing:\n${priorQuestions.map(q => `- ${q}`).join('\n')}`;
+    }
+  }
+
   const allowedTypes = questionTypes.join(', ');
 
   const prompt = `Generate ${numQuestions} questions for a grade ${grade} student ${topicClause} in ${subject} at ${difficulty} difficulty. ONLY use these question types: ${allowedTypes}. Do NOT generate any other question types.
@@ -92,7 +112,7 @@ CRITICAL RULES:
 - For reading/language arts: If you include a passage, you MUST also include an explicit question after the passage in question_text (e.g. "Read the passage below:\\n\\n[passage]\\n\\nWhat is the main idea of this passage?"). Never leave the question implied — always state what the student is being asked.
 - For any math expressions, wrap them in dollar signs for LaTeX rendering: e.g. $\\frac{1}{2}$, $3 \\times 10^2$, $x^2 + y^2 = z^2$. Use $...$ for inline math in question_text, options, and correct_answer.
 
-Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among: ${allowedTypes}.`;
+Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among: ${allowedTypes}.${avoidClause}`;
 
   try {
     let allValid: GeneratedQuestion[] = [];
@@ -105,9 +125,10 @@ Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and
       attempts++;
       const generatePrompt = attempts === 1
         ? prompt
-        : `Generate ${remaining} MORE ${subject} questions for grade ${grade} ${topicClause} at ${difficulty} difficulty. Types: ${questionTypes.join(', ')}.\n\nSame format as before. CRITICAL: For multiple_choice, correct_answer MUST be "A", "B", "C", or "D" and that option must contain the correct answer. Return ONLY a JSON array.`;
+        : `Generate ${remaining} MORE ${subject} questions for grade ${grade} ${topicClause} at ${difficulty} difficulty. Types: ${questionTypes.join(', ')}.\n\nSame format as before. CRITICAL: For multiple_choice, correct_answer MUST be "A", "B", "C", or "D" and that option must contain the correct answer. Return ONLY a JSON array.${avoidClause}`;
 
-      const generateResult = await generateWithUsage(generatePrompt);
+      // Higher temperature for more structural/content variety across sessions.
+      const generateResult = await generateWithUsage(generatePrompt, { temperature: 0.95, topP: 0.95 });
       const rawText = generateResult.text;
       usageRecords.push(generateResult.usage);
 
