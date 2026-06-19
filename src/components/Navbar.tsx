@@ -18,7 +18,6 @@ export default function Navbar() {
     { href: '/parent/dashboard', label: 'Dashboard' },
     { href: '/parent/create', label: 'Create' },
     { href: '/parent/analytics', label: 'Reports' },
-    { href: '/parent/leaderboard', label: 'Leaderboard' },
     { href: '/how-it-works', label: 'How It Works' },
     { href: '/settings', label: 'Settings' },
   ];
