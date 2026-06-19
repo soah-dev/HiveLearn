@@ -19,6 +19,7 @@ export default function LeaderboardPage() {
   const { user, token, loading } = useAuth();
   const router = useRouter();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [scope, setScope] = useState<'family' | 'global'>('family');
   const [view, setView] = useState<'alltime' | 'weekly'>('weekly');
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -28,17 +29,21 @@ export default function LeaderboardPage() {
       return;
     }
     if (token) {
-      apiFetch('/api/leaderboard', token)
+      setDataLoading(true);
+      apiFetch(`/api/leaderboard?scope=${scope}`, token)
         .then(data => { setLeaderboard(data.leaderboard || []); setDataLoading(false); })
         .catch(() => setDataLoading(false));
     }
-  }, [user, token, loading, router]);
+  }, [user, token, loading, router, scope]);
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  // Global view is weekly-only; all-time ranking is hidden there.
+  const effectiveView = scope === 'global' ? 'weekly' : view;
 
   const sorted = [...leaderboard].sort((a, b) =>
-    view === 'weekly' ? b.weeklyPoints - a.weeklyPoints : b.totalPoints - a.totalPoints
+    effectiveView === 'weekly' ? b.weeklyPoints - a.weeklyPoints : b.totalPoints - a.totalPoints
   );
+
+  if (loading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const medals = ['🥇', '🥈', '🥉'];
   const podiumGradients = [
@@ -54,30 +59,58 @@ export default function LeaderboardPage() {
         <div className="text-center mb-8 animate-slide-up">
           <p className="text-5xl mb-2 animate-float">🏆</p>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Leaderboard</h1>
-          <p className="text-gray-500 dark:text-gray-400">See how you stack up against everyone!</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {scope === 'family' ? 'See how you stack up against your family!' : 'See how you stack up against everyone!'}
+          </p>
         </div>
 
-        {/* Toggle */}
-        <div className="flex bg-gray-100/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-1 mb-8 max-w-xs mx-auto">
+        {/* Scope toggle */}
+        <div className="flex bg-gray-100/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-1 mb-4 max-w-xs mx-auto">
           <button
-            onClick={() => setView('alltime')}
+            onClick={() => setScope('family')}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
-              view === 'alltime' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+              scope === 'family' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
             }`}
           >
-            All Time
+            Family
           </button>
           <button
-            onClick={() => setView('weekly')}
+            onClick={() => setScope('global')}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
-              view === 'weekly' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+              scope === 'global' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
             }`}
           >
-            This Week
+            Global
           </button>
         </div>
 
-        {sorted.length === 0 ? (
+        {/* Time toggle — all-time ranking only exists for the family view */}
+        {scope === 'family' ? (
+          <div className="flex bg-gray-100/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-1 mb-8 max-w-xs mx-auto">
+            <button
+              onClick={() => setView('alltime')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                view === 'alltime' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              All Time
+            </button>
+            <button
+              onClick={() => setView('weekly')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                view === 'weekly' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              This Week
+            </button>
+          </div>
+        ) : (
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500 font-semibold mb-8">This Week&apos;s points</p>
+        )}
+
+        {dataLoading ? (
+          <div className="py-12"><LoadingSpinner size="lg" /></div>
+        ) : sorted.length === 0 ? (
           <div className="text-center py-12 animate-slide-up">
             <p className="text-5xl mb-3 animate-float">🏅</p>
             <p className="text-gray-500 dark:text-gray-400">No leaderboard data yet. Complete assignments to earn points!</p>
@@ -111,7 +144,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
-                    {view === 'weekly' ? entry.weeklyPoints : entry.totalPoints}
+                    {effectiveView === 'weekly' ? entry.weeklyPoints : entry.totalPoints}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold">points</p>
                 </div>

@@ -8,18 +8,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Global leaderboard across all children on the platform (excluding opted-out)
-  const children = await prisma.user.findMany({
-    where: { role: 'child', leaderboardOptOut: false },
-    select: {
-      id: true,
-      name: true,
-      gamification: true,
-    },
-  });
+  const scope = new URL(req.url).searchParams.get('scope') === 'family' ? 'family' : 'global';
+
+  let children;
+  if (scope === 'family') {
+    // In-family ranking: every active child linked to the same parent(s) as the
+    // viewer (siblings + self). Opt-out is ignored — this is the viewer's own family.
+    const links = await prisma.parentChild.findMany({
+      where: { childId: user.id, status: 'active' },
+      select: { parentId: true },
+    });
+    const parentIds = [...new Set(links.map(l => l.parentId))];
+    if (parentIds.length === 0) {
+      return NextResponse.json({ scope, leaderboard: [] });
+    }
+    const siblingLinks = await prisma.parentChild.findMany({
+      where: { parentId: { in: parentIds }, status: 'active', childId: { not: null } },
+      select: { childId: true },
+    });
+    const familyChildIds = [...new Set(siblingLinks.map(s => s.childId as string))];
+    children = await prisma.user.findMany({
+      where: { id: { in: familyChildIds }, role: 'child' },
+      select: { id: true, name: true, gamification: true },
+    });
+  } else {
+    // Global leaderboard across all children on the platform (excluding opted-out)
+    children = await prisma.user.findMany({
+      where: { role: 'child', leaderboardOptOut: false },
+      select: { id: true, name: true, gamification: true },
+    });
+  }
 
   if (children.length === 0) {
-    return NextResponse.json({ leaderboard: [] });
+    return NextResponse.json({ scope, leaderboard: [] });
   }
 
   const childIds = children.map(c => c.id);
@@ -41,32 +62,34 @@ export async function GET(req: NextRequest) {
     weeklyPoints[r.childId] = r._sum.points || 0;
   }
 
-  // Mask names for privacy across families: keep the first 3 letters, hide the rest
+  // Within a family, show real first names. Across families, mask for privacy:
+  // keep the first 3 letters, hide the rest.
+  const firstName = (name: string | null) => name?.trim().split(/\s+/)[0] || null;
   const maskName = (name: string | null) => {
-    const base = name?.trim().split(/\s+/)[0];
+    const base = firstName(name);
     if (!base) return null;
     const head = base.charAt(0).toUpperCase() + base.slice(1, 3);
     return base.length <= 3 ? head : `${head}•••`;
   };
+  const formatName = scope === 'family' ? firstName : maskName;
 
   const entries = children.map(c => ({
     id: c.id,
-    name: maskName(c.name),
+    name: formatName(c.name),
     totalPoints: c.gamification?.totalPoints || 0,
     weeklyPoints: weeklyPoints[c.id] || 0,
     currentStreak: c.gamification?.currentStreak || 0,
   }));
 
-  // Cap to top 10, but include both all-time and weekly leaders so newcomers
-  // who rank high this week aren't excluded by a low lifetime total
-  const topByTotal = [...entries].sort((a, b) => b.totalPoints - a.totalPoints).slice(0, 10);
-  const topByWeekly = [...entries].sort((a, b) => b.weeklyPoints - a.weeklyPoints).slice(0, 10);
-  const keep = new Map<string, typeof entries[number]>();
-  for (const e of [...topByTotal, ...topByWeekly]) keep.set(e.id, e);
+  let leaderboard;
+  if (scope === 'family') {
+    // Families are small — return everyone, sorted by all-time; the client
+    // re-sorts for the weekly view.
+    leaderboard = entries.sort((a, b) => b.totalPoints - a.totalPoints);
+  } else {
+    // Global view is weekly-only (all-time dropped — unfair to new joiners).
+    leaderboard = entries.sort((a, b) => b.weeklyPoints - a.weeklyPoints).slice(0, 10);
+  }
 
-  const leaderboard = [...keep.values()]
-    .sort((a, b) => b.totalPoints - a.totalPoints)
-    .slice(0, 10);
-
-  return NextResponse.json({ leaderboard });
+  return NextResponse.json({ scope, leaderboard });
 }
