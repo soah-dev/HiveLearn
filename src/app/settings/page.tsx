@@ -43,6 +43,15 @@ export default function SettingsPage() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  const [myFeedback, setMyFeedback] = useState<Array<{
+    id: string;
+    category: string;
+    message: string;
+    status: string;
+    response: string | null;
+    respondedAt: string | null;
+    createdAt: string;
+  }>>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -63,6 +72,11 @@ export default function SettingsPage() {
     if (token && user?.role === 'child') {
       apiFetch('/api/child/parents', getToken)
         .then(data => setLinkedParents(data.parents || []))
+        .catch(() => {});
+    }
+    if (token && user) {
+      apiFetch('/api/feedback', getToken)
+        .then(data => setMyFeedback(data.feedback || []))
         .catch(() => {});
     }
   }, [user, token, loading, router]);
@@ -135,6 +149,9 @@ export default function SettingsPage() {
       setFeedbackMessage('');
       setFeedbackCategory('general');
       setFeedbackFile(null);
+      apiFetch('/api/feedback', getToken)
+        .then(data => setMyFeedback(data.feedback || []))
+        .catch(() => {});
       setTimeout(() => { setFeedbackSuccess(false); setFeedbackOpen(false); }, 2000);
     } catch (err) {
       setFeedbackError(err instanceof Error ? err.message : 'Failed to submit feedback');
@@ -393,6 +410,34 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Your feedback history */}
+        {myFeedback.length > 0 && (
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '175ms' }}>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Your Feedback</h2>
+            <div className="space-y-3">
+              {myFeedback.map(f => (
+                <div key={f.id} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      f.status === 'resolved'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                    }`}>{f.status === 'resolved' ? 'Replied' : 'Awaiting reply'}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(f.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{f.message}</p>
+                  {f.response && (
+                    <div className="mt-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/40">
+                      <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-1">HiveExcel team{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleDateString()}` : ''}</p>
+                      <p className="text-sm text-indigo-900 dark:text-indigo-100 whitespace-pre-wrap">{f.response}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Sign Out */}
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>

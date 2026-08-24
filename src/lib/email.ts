@@ -121,6 +121,50 @@ export async function sendAssignmentNotification({
   });
 }
 
+export async function sendFeedbackReply({
+  to,
+  userName,
+  originalMessage,
+  response,
+}: {
+  to: string;
+  userName: string;
+  originalMessage: string;
+  response: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  await resend.emails.send({
+    from: `HiveExcel <${FROM_EMAIL}>`,
+    to,
+    subject: 'We replied to your feedback',
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">HiveExcel</h1>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px;">
+          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${userName}!</h2>
+          <p style="color: #6b7280; line-height: 1.6;">
+            Thanks for your feedback. Here's our reply:
+          </p>
+          <div style="background: #eef2ff; border-radius: 12px; padding: 16px 20px; margin: 20px 0; color: #3730a3; line-height: 1.6; white-space: pre-wrap;">${response}</div>
+          <p style="color: #9ca3af; font-size: 13px; margin: 20px 0 6px;">Your original message:</p>
+          <div style="background: #f9fafb; border-radius: 12px; padding: 16px 20px; color: #6b7280; line-height: 1.6; white-space: pre-wrap;">${originalMessage}</div>
+          <div style="text-align: center; margin: 32px 0 8px;">
+            <a href="${appUrl}/settings" style="background: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
+              View in HiveExcel
+            </a>
+          </div>
+        </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
+          You're receiving this because you submitted feedback on HiveExcel.
+        </p>
+      </div>
+    `,
+  });
+}
+
 export function buildWeeklyReportHtml(report: WeeklyReportData): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 

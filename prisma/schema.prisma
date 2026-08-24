@@ -238,12 +238,15 @@ model EarnedBadge {
 }
 
 model Feedback {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   userId         String
-  category       String   @default("general")
+  category       String    @default("general")
   message        String
   screenshotUrl  String?
-  createdAt      DateTime @default(now())
+  status         String    @default("open")
+  response       String?
+  respondedAt    DateTime?
+  createdAt      DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id])
 }

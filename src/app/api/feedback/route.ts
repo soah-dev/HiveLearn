@@ -52,3 +52,26 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true, id: feedback.id });
 }
+
+export async function GET(req: NextRequest) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const feedback = await prisma.feedback.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      category: true,
+      message: true,
+      status: true,
+      response: true,
+      respondedAt: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({ feedback });
+}
