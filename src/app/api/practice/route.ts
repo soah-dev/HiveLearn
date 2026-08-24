@@ -9,11 +9,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { grade, subject, topic, difficulty } = await req.json();
+  const { grade, subject, topic, difficulty, numQuestions } = await req.json();
 
   if (!grade || !subject || !difficulty) {
     return NextResponse.json({ error: 'Grade, subject and difficulty are required' }, { status: 400 });
   }
+
+  const count = [5, 10, 15, 20].includes(numQuestions) ? numQuestions : 10;
 
   if (user.grade && grade < user.grade) {
     return NextResponse.json({ error: `You can only practice Grade ${user.grade} and above` }, { status: 400 });
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   const topicClause = topic?.trim() ? `on the topic "${topic.trim()}"` : `covering a variety of appropriate topics`;
 
-  const prompt = `Generate 10 multiple choice questions for a grade ${grade} student ${topicClause} in ${subject} at ${difficulty} difficulty.
+  const prompt = `Generate ${count} multiple choice questions for a grade ${grade} student ${topicClause} in ${subject} at ${difficulty} difficulty.
 
 For each question return:
 - question_text: the question
@@ -47,9 +49,9 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
     let attempts = 0;
     const usageRecords: AiUsageMetadata[] = [];
 
-    while (validQuestions.length < 10 && attempts < 2) {
+    while (validQuestions.length < count && attempts < 2) {
       attempts++;
-      const remaining = 10 - validQuestions.length;
+      const remaining = count - validQuestions.length;
       const genPrompt = attempts === 1
         ? prompt
         : `Generate ${remaining} MORE multiple choice questions for grade ${grade} in ${subject} ${topicClause} at ${difficulty} difficulty. Same format. correct_answer MUST be "A", "B", "C", or "D". Return ONLY a JSON array.`;
@@ -71,8 +73,8 @@ Return ONLY a JSON array. Ensure questions are age-appropriate and progressively
       }
     }
 
-    // Use up to 10 valid questions
-    validQuestions = validQuestions.slice(0, 10);
+    // Use up to `count` valid questions
+    validQuestions = validQuestions.slice(0, count);
 
     if (validQuestions.length === 0) {
       return NextResponse.json({ error: 'Failed to generate valid questions' }, { status: 500 });

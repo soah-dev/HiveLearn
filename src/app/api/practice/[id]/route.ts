@@ -39,3 +39,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   return NextResponse.json({ session });
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthUser(req);
+  if (!user || user.role !== 'child') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const session = await prisma.practiceSession.findUnique({ where: { id } });
+
+  if (!session || session.childId !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  await prisma.practiceSession.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
+}

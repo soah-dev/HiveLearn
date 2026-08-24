@@ -48,8 +48,10 @@ export default function PracticePage() {
   const [subject, setSubject] = useState('math');
   const [topic, setTopic] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
+  const [numQuestions, setNumQuestions] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'child')) {
@@ -69,12 +71,25 @@ export default function PracticePage() {
     try {
       const data = await apiFetch('/api/practice', token, {
         method: 'POST',
-        body: JSON.stringify({ grade, subject, topic: topic.trim() || null, difficulty }),
+        body: JSON.stringify({ grade, subject, topic: topic.trim() || null, difficulty, numQuestions }),
       });
       router.push(`/child/practice/${data.session.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate practice');
       setGenerating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Remove this practice session? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      await apiFetch(`/api/practice/${id}`, token, { method: 'DELETE' });
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove session');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -148,6 +163,17 @@ export default function PracticePage() {
               </div>
             </div>
 
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Number of Questions</label>
+              <div className="flex gap-3">
+                {[5, 10, 15, 20].map(n => (
+                  <button key={n} onClick={() => setNumQuestions(n)} className={`flex-1 py-3 rounded-xl font-bold transition-all ${numQuestions === n ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {error && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
                 {error}
@@ -175,36 +201,48 @@ export default function PracticePage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Past Sessions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sessions.map((s, i) => (
-                <button
+                <div
                   key={s.id}
-                  onClick={() => router.push(`/child/practice/${s.id}`)}
-                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 text-left card-hover animate-slide-up"
+                  className="relative group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 card-hover animate-slide-up"
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{subjectIcons[s.subject] || '📝'}</span>
-                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize">{s.subject.replace('_', ' ')}</span>
-                    </div>
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                      s.status === 'completed'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                    }`}>
-                      {s.status === 'completed' ? 'Done' : 'In Progress'}
-                    </span>
-                  </div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">{s.topic || `Grade ${s.grade} ${s.subject.replace('_', ' ')}`}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">{s.difficulty} · Grade {s.grade}</p>
-                  {s.status === 'completed' && s.score !== null && (
-                    <div className="flex items-center justify-between">
-                      <span className={`text-lg font-extrabold ${s.score >= 80 ? 'text-green-600' : s.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {s.score}%
+                  <button
+                    onClick={() => handleDelete(s.id)}
+                    disabled={deletingId === s.id}
+                    aria-label="Remove session"
+                    className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all disabled:opacity-50"
+                  >
+                    {deletingId === s.id ? <LoadingSpinner size="sm" /> : <span className="text-lg leading-none">&times;</span>}
+                  </button>
+                  <button
+                    onClick={() => router.push(`/child/practice/${s.id}`)}
+                    className="w-full p-5 text-left"
+                  >
+                    <div className="flex items-center justify-between mb-2 pr-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{subjectIcons[s.subject] || '📝'}</span>
+                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize">{s.subject.replace('_', ' ')}</span>
+                      </div>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                        s.status === 'completed'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                      }`}>
+                        {s.status === 'completed' ? 'Done' : 'In Progress'}
                       </span>
-                      {s.pointsAwarded && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
                     </div>
-                  )}
-                </button>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">{s.topic || `Grade ${s.grade} ${s.subject.replace('_', ' ')}`}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">{s.difficulty} · Grade {s.grade}</p>
+                    {s.status === 'completed' && s.score !== null && (
+                      <div className="flex items-center justify-between">
+                        <span className={`text-lg font-extrabold ${s.score >= 80 ? 'text-green-600' : s.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {s.score}%
+                        </span>
+                        {s.pointsAwarded && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
+                      </div>
+                    )}
+                  </button>
+                </div>
               ))}
             </div>
           </div>
