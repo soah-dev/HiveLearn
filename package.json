@@ -2,6 +2,9 @@
   "name": "homework-hub",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -17,7 +20,7 @@
     "@prisma/client": "^6.19.2",
     "date-fns": "^4.1.0",
     "firebase": "^12.10.0",
-    "firebase-admin": "^10.3.0",
+    "firebase-admin": "^14.3.0",
     "katex": "^0.16.45",
     "next": "^16.2.1",
     "prisma": "^6.12.0",
