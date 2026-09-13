@@ -107,10 +107,11 @@ export async function checkBadges(childId: string) {
     if (earned) badgesToAward.push(badge.id);
   }
 
-  // Award badges
-  for (const badgeId of badgesToAward) {
-    await prisma.earnedBadge.create({
-      data: { childId, badgeId },
+  // Award badges in one statement; skipDuplicates guards against a concurrent award
+  if (badgesToAward.length > 0) {
+    await prisma.earnedBadge.createMany({
+      data: badgesToAward.map(badgeId => ({ childId, badgeId })),
+      skipDuplicates: true,
     });
   }
 

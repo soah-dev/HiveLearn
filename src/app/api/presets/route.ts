@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { presetValidationError } from '@/lib/validation';
 
@@ -46,9 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Verify child is linked
-  const link = await prisma.parentChild.findFirst({
-    where: { parentId: user.id, childId, status: 'active' },
-  });
+  const link = await getLinkedChild(user.id, childId);
   if (!link) {
     return NextResponse.json({ error: 'Child not linked to parent' }, { status: 400 });
   }

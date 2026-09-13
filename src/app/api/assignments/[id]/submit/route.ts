@@ -40,6 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const late = isPastTimeLimit(assignment.startedAt, assignment.timeLimitMin, now);
 
   if (!late) {
+    const writes = [];
     for (const ans of answers) {
       const question = assignment.questions.find(q => q.id === ans.questionId);
       if (!question) continue;
@@ -53,40 +54,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         isCorrect = selectedAnswer?.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
       }
 
-      await prisma.answer.upsert({
-        where: {
-          questionId_childId: {
-            questionId: ans.questionId,
-            childId: user.id,
-          },
-        },
-        update: {
-          selectedAnswer,
-          isCorrect,
-          flagged,
-          flagReason: ans.flagReason || null,
-        },
-        create: {
-          questionId: ans.questionId,
-          childId: user.id,
-          selectedAnswer,
-          isCorrect,
-          flagged,
-          flagReason: ans.flagReason || null,
-        },
-      });
+      writes.push(prisma.answer.upsert({
+        where: { questionId_childId: { questionId: ans.questionId, childId: user.id } },
+        update: { selectedAnswer, isCorrect, flagged, flagReason: ans.flagReason || null },
+        create: { questionId: ans.questionId, childId: user.id, selectedAnswer, isCorrect, flagged, flagReason: ans.flagReason || null },
+      }));
     }
+    // One round trip, all-or-nothing
+    if (writes.length > 0) await prisma.$transaction(writes);
   } else {
     // Grade whatever was saved via save-progress before the deadline
     const saved = await prisma.answer.findMany({
       where: { childId: user.id, questionId: { in: assignment.questions.map(q => q.id) } },
     });
+    const writes = [];
     for (const a of saved) {
       const question = assignment.questions.find(q => q.id === a.questionId);
       if (!question || a.flagged || question.questionType === 'open_ended') continue;
       const isCorrect = a.selectedAnswer?.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim();
-      await prisma.answer.update({ where: { id: a.id }, data: { isCorrect } });
+      writes.push(prisma.answer.update({ where: { id: a.id }, data: { isCorrect } }));
     }
+    if (writes.length > 0) await prisma.$transaction(writes);
   }
 
   await prisma.assignment.update({

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -46,7 +45,7 @@ interface AdminStats {
     id: string;
     category: string;
     message: string;
-    screenshotUrl: string | null;
+    hasScreenshot: boolean;
     status: string;
     response: string | null;
     respondedAt: string | null;
@@ -80,6 +79,17 @@ export default function AdminDashboard() {
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyingId, setReplyingId] = useState<string | null>(null);
 
+  const [screenshots, setScreenshots] = useState<Record<string, string>>({});
+  const loadScreenshot = async (id: string) => {
+    if (screenshots[id] || !token) return;
+    try {
+      const data = await apiFetch(`/api/admin/feedback/${id}/screenshot`, token);
+      if (data.screenshotUrl) setScreenshots(prev => ({ ...prev, [id]: data.screenshotUrl }));
+    } catch {
+      // leave the placeholder in place
+    }
+  };
+
   const handleReply = async (id: string) => {
     const response = (replyDrafts[id] || '').trim();
     if (!response) return;
@@ -102,10 +112,6 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
-      return;
-    }
     if (token) {
       apiFetch('/api/admin/stats', token)
         .then(d => { setData(d); setDataLoading(false); })
@@ -123,13 +129,12 @@ export default function AdminDashboard() {
     }
   }, [user, token, loading, router]);
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (error) return <><Navbar /><div className="p-8 text-center text-red-500">{error}</div></>;
-  if (!data) return <><Navbar /><div className="p-8 text-center text-gray-500">No data available</div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (error) return <><div className="p-8 text-center text-red-500">{error}</div></>;
+  if (!data) return <><div className="p-8 text-center text-gray-500">No data available</div></>;
 
   return (
     <>
-      <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>
@@ -360,12 +365,14 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{f.message}</p>
-                  {f.screenshotUrl && (
-                    <details className="mt-2">
+                  {f.hasScreenshot && (
+                    <details className="mt-2" onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) loadScreenshot(f.id); }}>
                       <summary className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
                         View screenshot
                       </summary>
-                      <img src={f.screenshotUrl} alt="Feedback screenshot" className="mt-2 max-w-full rounded-lg border border-gray-200 dark:border-gray-700" />
+                      {screenshots[f.id]
+                        ? <img src={screenshots[f.id]} alt="Feedback screenshot" className="mt-2 max-w-full rounded-lg border border-gray-200 dark:border-gray-700" />
+                        : <p className="mt-2 text-xs text-gray-400">Loading screenshot…</p>}
                     </details>
                   )}
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(f.createdAt).toLocaleString()}</p>

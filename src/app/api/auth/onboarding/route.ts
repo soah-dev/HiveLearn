@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
@@ -127,9 +127,7 @@ async function handleExistingChildInvite(user: { id: string; email: string; role
   }
 
   // Check if already linked to this parent
-  const existingLink = await prisma.parentChild.findFirst({
-    where: { parentId: invite.parentId, childId: user.id, status: 'active' },
-  });
+  const existingLink = await getLinkedChild(invite.parentId, user.id);
   if (existingLink) {
     return NextResponse.json({ error: 'You are already linked to this parent' }, { status: 400 });
   }

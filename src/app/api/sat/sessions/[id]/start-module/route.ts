@@ -101,24 +101,21 @@ export async function POST(
         );
       }
 
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        await prisma.sATQuestion.create({
-          data: {
-            moduleId: targetModule.id,
-            questionType: q.question_type,
-            passage: q.passage || null,
-            questionText: q.question_text,
-            optionA: q.option_a,
-            optionB: q.option_b,
-            optionC: q.option_c,
-            optionD: q.option_d,
-            correctAnswer: q.correct_answer,
-            domain: q.domain,
-            orderIndex: i,
-          },
-        });
-      }
+      await prisma.sATQuestion.createMany({
+        data: questions.map((q, idx) => ({
+          moduleId: targetModule.id,
+          questionType: q.question_type,
+          passage: q.passage || null,
+          questionText: q.question_text,
+          optionA: q.option_a,
+          optionB: q.option_b,
+          optionC: q.option_c,
+          optionD: q.option_d,
+          correctAnswer: q.correct_answer,
+          domain: q.domain,
+          orderIndex: idx,
+        })),
+      });
 
       // Update numQuestions to actual count if shortfall occurred
       if (questions.length !== numQ) {

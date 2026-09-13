@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
 import AssignmentCard from '@/components/AssignmentCard';
@@ -67,14 +66,11 @@ export default function ChildDashboard() {
   const [owScore, setOwScore] = useState(0);
   const [owDifficulty, setOwDifficulty] = useState('medium');
   const [owActivityDate, setOwActivityDate] = useState('');
+  const [owDateBounds, setOwDateBounds] = useState<{ min: string; max: string } | null>(null);
   const [owSubmitting, setOwSubmitting] = useState(false);
   const [owError, setOwError] = useState('');
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'child')) {
-      router.push('/');
-      return;
-    }
     if (token) {
       Promise.all([
         apiFetch('/api/assignments', token),
@@ -129,7 +125,7 @@ export default function ChildDashboard() {
     setOwSubmitting(false);
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const pending = assignments.filter(a => a.status === 'pending' || a.status === 'in_progress');
   const completed = assignments.filter(a => a.status === 'reviewed');
@@ -142,7 +138,6 @@ export default function ChildDashboard() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Hey, {user?.name || 'Student'}! 👋</h1>
@@ -266,7 +261,16 @@ export default function ChildDashboard() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Offline Work</h2>
             <button
-              onClick={() => setShowOfflineForm(!showOfflineForm)}
+              onClick={() => {
+                if (!showOfflineForm) {
+                  const now = Date.now();
+                  setOwDateBounds({
+                    min: new Date(now - 7 * 86400000).toISOString().split('T')[0],
+                    max: new Date(now).toISOString().split('T')[0],
+                  });
+                }
+                setShowOfflineForm(!showOfflineForm);
+              }}
               className="text-sm bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold hover:from-teal-600 hover:to-emerald-600 transition-all shadow-md shadow-teal-500/20"
             >
               + Log Offline Work
@@ -337,8 +341,8 @@ export default function ChildDashboard() {
                 <input
                   type="date"
                   value={owActivityDate}
-                  min={new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]}
-                  max={new Date().toISOString().split('T')[0]}
+                  min={owDateBounds?.min}
+                  max={owDateBounds?.max}
                   onChange={e => setOwActivityDate(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                 />

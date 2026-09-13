@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { startOfWeek, format } from 'date-fns';
 
@@ -12,10 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chil
   const { childId } = await params;
 
   // Verify parent-child link
-  const link = await prisma.parentChild.findFirst({
-    where: { parentId: user.id, childId, status: 'active' },
-  });
-  if (!link) {
+  if (!(await getLinkedChild(user.id, childId))) {
     return NextResponse.json({ error: 'Not linked' }, { status: 403 });
   }
 

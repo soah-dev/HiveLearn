@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { randomBytes } from 'crypto';
 import { sendInviteEmail } from '@/lib/email';
@@ -29,9 +29,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (existingUser) {
-    const existingLink = await prisma.parentChild.findFirst({
-      where: { parentId: user.id, childId: existingUser.id, status: 'active' },
-    });
+    const existingLink = await getLinkedChild(user.id, existingUser.id);
     if (existingLink) {
       return NextResponse.json({ error: 'This child is already linked to your account' }, { status: 400 });
     }

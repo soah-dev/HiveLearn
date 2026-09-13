@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const subjects = [
@@ -83,10 +82,6 @@ export default function PresetsPage() {
   const [daysOfWeek, setDaysOfWeek] = useState('1,2,3,4,5');
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'parent')) {
-      router.push('/');
-      return;
-    }
     if (token) {
       Promise.all([
         apiFetch('/api/parent/children', token),
@@ -161,11 +156,10 @@ export default function PresetsPage() {
     return days.split(',').map(d => dayLabels[Number(d)]).join(', ');
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   return (
     <>
-      <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>

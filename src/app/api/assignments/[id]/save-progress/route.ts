@@ -33,24 +33,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const questionIds = new Set(assignment.questions.map(q => q.id));
 
-  for (const ans of answers) {
-    if (!questionIds.has(ans.questionId)) continue;
-    const selectedAnswer = typeof ans.selectedAnswer === 'string' ? ans.selectedAnswer : null;
-    await prisma.answer.upsert({
-      where: {
-        questionId_childId: {
-          questionId: ans.questionId,
-          childId: user.id,
-        },
-      },
-      update: { selectedAnswer },
-      create: {
-        questionId: ans.questionId,
-        childId: user.id,
-        selectedAnswer,
-      },
+  const writes = answers
+    .filter(ans => questionIds.has(ans.questionId))
+    .map(ans => {
+      const selectedAnswer = typeof ans.selectedAnswer === 'string' ? ans.selectedAnswer : null;
+      return prisma.answer.upsert({
+        where: { questionId_childId: { questionId: ans.questionId, childId: user.id } },
+        update: { selectedAnswer },
+        create: { questionId: ans.questionId, childId: user.id, selectedAnswer },
+      });
     });
-  }
+  if (writes.length > 0) await prisma.$transaction(writes);
 
   // Ensure status is in_progress
   if (assignment.status === 'pending') {

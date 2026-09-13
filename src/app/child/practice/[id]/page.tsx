@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MathText from '@/components/MathText';
 
@@ -45,10 +44,6 @@ export default function PracticeSessionPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'child')) {
-      router.push('/');
-      return;
-    }
     if (token && params.id) {
       apiFetch(`/api/practice/${params.id}`, token)
         .then(data => {
@@ -103,14 +98,13 @@ export default function PracticeSessionPage() {
     setSubmitting(false);
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!session) return <><Navbar /><div className="p-8 text-center text-gray-500">Session not found</div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (!session) return <><div className="p-8 text-center text-gray-500">Session not found</div></>;
 
   const isCompleted = session.status === 'completed';
 
   return (
     <>
-      <Navbar />
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-6 animate-slide-up">
           <div className="flex items-center justify-between mb-3 no-print">

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface LeaderboardEntry {
@@ -21,18 +20,14 @@ export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [scope, setScope] = useState<'family' | 'global'>('family');
   const [view, setView] = useState<'alltime' | 'weekly'>('weekly');
-  const [dataLoading, setDataLoading] = useState(true);
+  const [loadedScope, setLoadedScope] = useState<string | null>(null);
+  const dataLoading = loadedScope !== scope;
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
-      return;
-    }
     if (token) {
-      setDataLoading(true);
       apiFetch(`/api/leaderboard?scope=${scope}`, token)
-        .then(data => { setLeaderboard(data.leaderboard || []); setDataLoading(false); })
-        .catch(() => setDataLoading(false));
+        .then(data => { setLeaderboard(data.leaderboard || []); setLoadedScope(scope); })
+        .catch(() => setLoadedScope(scope));
     }
   }, [user, token, loading, router, scope]);
 
@@ -43,7 +38,7 @@ export default function LeaderboardPage() {
     effectiveView === 'weekly' ? b.weeklyPoints - a.weeklyPoints : b.totalPoints - a.totalPoints
   );
 
-  if (loading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const medals = ['🥇', '🥈', '🥉'];
   const podiumGradients = [
@@ -54,7 +49,6 @@ export default function LeaderboardPage() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="text-center mb-8 animate-slide-up">
           <p className="text-5xl mb-2 animate-float">🏆</p>

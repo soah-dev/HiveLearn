@@ -36,15 +36,16 @@ export async function POST(
     return NextResponse.json({ error: 'Time limit exceeded' }, { status: 400 });
   }
 
-  // Upsert answers
+  // Upsert answers in one transaction
   const list = Array.isArray(answers) ? answers : [];
-  for (const a of list as Array<{ questionId: string; selectedAnswer: string | null }>) {
-    await prisma.sATAnswer.upsert({
+  const writes = (list as Array<{ questionId: string; selectedAnswer: string | null }>).map(a =>
+    prisma.sATAnswer.upsert({
       where: { questionId_childId: { questionId: a.questionId, childId: user.id } },
       update: { selectedAnswer: a.selectedAnswer },
       create: { questionId: a.questionId, childId: user.id, selectedAnswer: a.selectedAnswer },
-    });
-  }
+    })
+  );
+  if (writes.length > 0) await prisma.$transaction(writes);
 
   return NextResponse.json({ success: true });
 }

@@ -57,6 +57,7 @@ export async function POST(
     );
   }
   let rawScore = 0;
+  const writes = [];
 
   for (const q of mod.questions) {
     const selected = answerMap.get(q.id) ?? null;
@@ -72,12 +73,13 @@ export async function POST(
 
     if (isCorrect) rawScore++;
 
-    await prisma.sATAnswer.upsert({
+    writes.push(prisma.sATAnswer.upsert({
       where: { questionId_childId: { questionId: q.id, childId: user.id } },
       update: { selectedAnswer: selected, isCorrect },
       create: { questionId: q.id, childId: user.id, selectedAnswer: selected, isCorrect },
-    });
+    }));
   }
+  if (writes.length > 0) await prisma.$transaction(writes);
 
   // Complete the module
   await prisma.sATModule.update({

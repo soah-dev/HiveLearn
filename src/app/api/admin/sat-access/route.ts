@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-function isAdmin(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-  return adminEmails.includes(email.toLowerCase());
-}
-
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser(req);
-  if (!user || !isAdmin(user.email)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const auth = await requireAdmin(req);
+  if (auth.error) return auth.error;
 
   const children = await prisma.user.findMany({
     where: { role: 'child' },
@@ -42,10 +35,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser(req);
-  if (!user || !isAdmin(user.email)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const auth = await requireAdmin(req);
+  if (auth.error) return auth.error;
 
   const { childId, enabled } = await req.json();
   if (!childId || typeof enabled !== 'boolean') {

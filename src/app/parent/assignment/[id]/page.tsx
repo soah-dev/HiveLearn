@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MathText from '@/components/MathText';
 
@@ -71,10 +70,6 @@ export default function ParentAssignmentPage() {
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'parent')) {
-      router.push('/');
-      return;
-    }
     if (token && params.id) {
       apiFetch(`/api/assignments/${params.id}`, token)
         .then(data => {
@@ -177,15 +172,14 @@ export default function ParentAssignmentPage() {
     setResolveScore(ans?.aiScore ?? undefined);
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!assignment) return <><Navbar /><div className="p-8 text-center text-gray-500">Assignment not found</div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (!assignment) return <><div className="p-8 text-center text-gray-500">Assignment not found</div></>;
 
   const isReviewed = assignment.status === 'reviewed';
   const isSubmitted = assignment.status === 'submitted';
 
   return (
     <>
-      <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6 animate-slide-up">
           <div className="flex items-center justify-between mb-3 no-print">

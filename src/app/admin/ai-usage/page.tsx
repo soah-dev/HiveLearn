@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface UsageData {
@@ -41,35 +40,30 @@ export default function AdminAiUsagePage() {
   const router = useRouter();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [period, setPeriod] = useState<'week' | 'month' | 'all'>('month');
-  const [dataLoading, setDataLoading] = useState(true);
+  const [loadedPeriod, setLoadedPeriod] = useState<string | null>(null);
+  const dataLoading = loadedPeriod !== period;
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
-      return;
-    }
     if (token) {
-      setDataLoading(true);
-      setError('');
       apiFetch(`/api/ai/usage?period=${period}`, token)
         .then(data => {
           setUsage(data);
-          setDataLoading(false);
+          setError('');
+          setLoadedPeriod(period);
         })
         .catch(err => {
           setError(err.message || 'Failed to load usage data');
-          setDataLoading(false);
+          setLoadedPeriod(period);
         });
     }
   }, [user, token, loading, router, period]);
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   if (error) {
     return (
       <>
-        <Navbar />
         <main className="max-w-5xl mx-auto px-4 py-8">
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 text-center">
             <p className="text-red-600 dark:text-red-400 font-bold">{error}</p>
@@ -83,7 +77,6 @@ export default function AdminAiUsagePage() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>

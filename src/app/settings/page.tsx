@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [editingGrade, setEditingGrade] = useState<Record<string, number>>({});
   const [savingGrade, setSavingGrade] = useState<string | null>(null);
   const [gradeSaved, setGradeSaved] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
   const [togglingReport, setTogglingReport] = useState<string | null>(null);
   const [togglingLeaderboard, setTogglingLeaderboard] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -83,6 +84,7 @@ export default function SettingsPage() {
 
   const saveGrade = async (childId: string) => {
     setSavingGrade(childId);
+    setActionError('');
     try {
       await apiFetch('/api/parent/children', getToken, {
         method: 'PATCH',
@@ -92,13 +94,14 @@ export default function SettingsPage() {
       setGradeSaved(childId);
       setTimeout(() => setGradeSaved(null), 2000);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save grade');
+      setActionError(err instanceof Error ? err.message : 'Failed to save grade');
     }
     setSavingGrade(null);
   };
 
   const toggleWeeklyReport = async (childId: string, enabled: boolean) => {
     setTogglingReport(childId);
+    setActionError('');
     try {
       await apiFetch('/api/parent/children', getToken, {
         method: 'PATCH',
@@ -106,13 +109,14 @@ export default function SettingsPage() {
       });
       setChildren(prev => prev.map(c => c.id === childId ? { ...c, weeklyReportEnabled: enabled } : c));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update');
+      setActionError(err instanceof Error ? err.message : 'Failed to update');
     }
     setTogglingReport(null);
   };
 
   const toggleLeaderboard = async (childId: string, optOut: boolean) => {
     setTogglingLeaderboard(childId);
+    setActionError('');
     try {
       await apiFetch('/api/parent/children', getToken, {
         method: 'PATCH',
@@ -120,7 +124,7 @@ export default function SettingsPage() {
       });
       setChildren(prev => prev.map(c => c.id === childId ? { ...c, leaderboardOptOut: optOut } : c));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update');
+      setActionError(err instanceof Error ? err.message : 'Failed to update');
     }
     setTogglingLeaderboard(null);
   };
@@ -168,6 +172,13 @@ export default function SettingsPage() {
       <Navbar />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-8 animate-slide-up">Settings</h1>
+
+        {actionError && (
+          <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-start justify-between gap-3">
+            <span>{actionError}</span>
+            <button onClick={() => setActionError('')} aria-label="Dismiss" className="font-bold">&times;</button>
+          </div>
+        )}
 
         {/* Profile */}
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 card-hover animate-slide-up">

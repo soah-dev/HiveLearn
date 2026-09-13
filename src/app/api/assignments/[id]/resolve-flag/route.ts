@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
 import { checkBadges } from '@/lib/badges';
@@ -27,10 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Any linked parent can resolve flags
-  const parentLink = await prisma.parentChild.findFirst({
-    where: { parentId: user.id, childId: assignment.childId, status: 'active' },
-  });
-  if (!parentLink) {
+  if (!(await getLinkedChild(user.id, assignment.childId))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

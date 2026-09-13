@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
 
@@ -29,16 +28,10 @@ export default function SATHubPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'child')) {
-      router.push('/');
-      return;
-    }
     if (token && user?.satEnabled) {
       apiFetch('/api/sat/sessions', token)
         .then(data => { setSessions(data.sessions || []); setDataLoading(false); })
         .catch(() => setDataLoading(false));
-    } else if (token && !loading) {
-      setDataLoading(false);
     }
   }, [user, token, loading, router]);
 
@@ -58,13 +51,13 @@ export default function SATHubPage() {
     }
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  // Sessions are only fetched when SAT is enabled, so only wait on them in that case
+  if (loading || (user?.satEnabled && dataLoading)) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   // Locked state
   if (!user?.satEnabled) {
     return (
       <>
-        <Navbar />
         <main className="max-w-3xl mx-auto px-4 py-16 text-center">
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-12">
             <p className="text-5xl mb-4">🔒</p>
@@ -89,7 +82,6 @@ export default function SATHubPage() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>

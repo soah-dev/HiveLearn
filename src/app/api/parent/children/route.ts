@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { isStreakActive } from '@/lib/streak';
 
@@ -54,9 +54,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Verify parent-child link
-  const link = await prisma.parentChild.findFirst({
-    where: { parentId: user.id, childId, status: 'active' },
-  });
+  const link = await getLinkedChild(user.id, childId);
   if (!link) return NextResponse.json({ error: 'Not linked' }, { status: 403 });
 
   // Update grade if provided

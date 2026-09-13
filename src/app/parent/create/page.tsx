@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import MathText from '@/components/MathText';
 
 const subjects = [
   { value: 'math', label: 'Math' },
@@ -77,10 +75,6 @@ export default function CreateAssignment() {
   const [step, setStep] = useState<'form' | 'preview'>('form');
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'parent')) {
-      router.push('/');
-      return;
-    }
     if (token) {
       apiFetch('/api/parent/children', token).then(data => {
         setChildren(data.children || []);
@@ -92,24 +86,28 @@ export default function CreateAssignment() {
     }
   }, [user, token, loading, router]);
 
-  // Sync grade to the selected child's grade
-  useEffect(() => {
-    const child = children.find(c => c.id === childId);
-    if (child?.grade) setGrade(child.grade);
-  }, [childId, children]);
-
-  const availableTypes = questionTypes.filter(qt => (subjectQuestionTypes[subject] || ['multiple_choice']).includes(qt.value));
+  const typesForSubject = (s: string) =>
+    questionTypes.filter(qt => (subjectQuestionTypes[s] || ['multiple_choice']).includes(qt.value));
+  const availableTypes = typesForSubject(subject);
 
   // The selected child's grade is the minimum allowed — can't assign below their grade level
   const childGrade = children.find(c => c.id === childId)?.grade ?? 1;
 
-  // Reset to first available type when subject changes and current selection is no longer valid
-  useEffect(() => {
-    const valid = availableTypes.some(qt => qt.value === selectedType);
-    if (!valid && availableTypes.length > 0) {
-      setSelectedType(availableTypes[0].value);
+  // Selecting a child snaps the grade to that child's grade level
+  const handleChildChange = (id: string) => {
+    setChildId(id);
+    const child = children.find(c => c.id === id);
+    if (child?.grade) setGrade(child.grade);
+  };
+
+  // Changing subject resets the question type if the current one isn't offered for it
+  const handleSubjectChange = (s: string) => {
+    setSubject(s);
+    const valid = typesForSubject(s);
+    if (!valid.some(qt => qt.value === selectedType) && valid.length > 0) {
+      setSelectedType(valid[0].value);
     }
-  }, [subject]);
+  };
 
   const handleGenerate = async () => {
     if (!selectedType) { setError('Select a question type'); return; }
@@ -162,11 +160,10 @@ export default function CreateAssignment() {
     setQuestions(prev => prev.map((q, i) => i === index ? { ...q, [field]: value } : q));
   };
 
-  if (loading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   return (
     <>
-      <Navbar />
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Create Assignment</h1>
@@ -182,7 +179,7 @@ export default function CreateAssignment() {
                 {children.length === 0 ? (
                   <p className="text-sm text-red-500">No children linked. Generate an invite code first.</p>
                 ) : (
-                  <select value={childId} onChange={e => setChildId(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+                  <select value={childId} onChange={e => handleChildChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
                     {children.map(c => <option key={c.id} value={c.id}>{c.name || c.email}</option>)}
                   </select>
                 )}
@@ -203,7 +200,7 @@ export default function CreateAssignment() {
               {/* Subject */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Subject</label>
-                <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+                <select value={subject} onChange={e => handleSubjectChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
                   {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>

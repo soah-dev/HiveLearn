@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Child {
@@ -35,13 +34,10 @@ export default function ReportsPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [scope, setScope] = useState<'family' | 'global'>('family');
   const [view, setView] = useState<'alltime' | 'weekly'>('weekly');
-  const [lbLoading, setLbLoading] = useState(false);
+  const [loadedLbScope, setLoadedLbScope] = useState<string | null>(null);
+  const lbLoading = tab === 'leaderboard' && loadedLbScope !== scope;
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'parent')) {
-      router.push('/');
-      return;
-    }
     if (token) {
       apiFetch('/api/parent/children', token)
         .then(data => {
@@ -54,13 +50,12 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!token || tab !== 'leaderboard') return;
-    setLbLoading(true);
     apiFetch(`/api/leaderboard?scope=${scope}`, token)
-      .then(data => { setLeaderboard(data.leaderboard || []); setLbLoading(false); })
-      .catch(() => setLbLoading(false));
+      .then(data => { setLeaderboard(data.leaderboard || []); setLoadedLbScope(scope); })
+      .catch(() => setLoadedLbScope(scope));
   }, [token, tab, scope]);
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   // Global view is weekly-only; all-time ranking is hidden there.
   const effectiveView = scope === 'global' ? 'weekly' : view;
@@ -77,7 +72,6 @@ export default function ReportsPage() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6 animate-slide-up">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Reports</h1>

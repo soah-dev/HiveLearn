@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import SATTimer from '@/components/sat/SATTimer';
 import SATModuleHeader from '@/components/sat/SATModuleHeader';
@@ -98,10 +97,6 @@ export default function SATSessionPage() {
   }, [token, params.id]);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'child')) {
-      router.push('/');
-      return;
-    }
     if (token) fetchSession();
   }, [user, token, loading, router, fetchSession]);
 
@@ -203,8 +198,8 @@ export default function SATSessionPage() {
     setActionLoading(false);
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!session) return <><Navbar /><div className="p-8 text-center text-red-500">{error || 'Session not found'}</div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (!session) return <><div className="p-8 text-center text-red-500">{error || 'Session not found'}</div></>;
 
   // --- STATE MACHINE RENDERING ---
 
@@ -212,7 +207,6 @@ export default function SATSessionPage() {
   if (session.status === 'not_started') {
     return (
       <>
-        <Navbar />
         <main className="max-w-3xl mx-auto px-4 py-8">
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center animate-slide-up">
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-4">Digital SAT Practice Test</h1>
@@ -261,7 +255,6 @@ export default function SATSessionPage() {
 
     return (
       <>
-        <Navbar />
         <main className="max-w-3xl mx-auto px-4 py-8">
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center animate-slide-up">
             <p className="text-5xl mb-4">☕</p>
@@ -301,7 +294,6 @@ export default function SATSessionPage() {
   if (session.status === 'completed') {
     return (
       <>
-        <Navbar />
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="mb-8 animate-slide-up">
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">Test Complete!</h1>
@@ -369,11 +361,10 @@ export default function SATSessionPage() {
       math_mod2: { section: 'math', mod: 2, label: 'Math Module 2' },
     };
     const target = statusToTarget[session.status];
-    if (!target) return <><Navbar /><div className="p-8 text-center text-gray-500">Unknown session state: {session.status}</div></>;
+    if (!target) return <><div className="p-8 text-center text-gray-500">Unknown session state: {session.status}</div></>;
 
     return (
       <>
-        <Navbar />
         <main className="max-w-3xl mx-auto px-4 py-8 text-center">
           <button
             onClick={() => handleStartModule(target.section, target.mod)}
@@ -393,7 +384,6 @@ export default function SATSessionPage() {
     const modNum = activeModule.moduleNumber;
     return (
       <>
-        <Navbar />
         <main className="max-w-3xl mx-auto px-4 py-8 text-center">
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 animate-slide-up">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
@@ -424,14 +414,13 @@ export default function SATSessionPage() {
   // Module is in_progress — quiz UI
   const questions = activeModule.questions;
   const currentQ = questions[currentIndex];
-  if (!currentQ) return <><Navbar /><div className="p-8 text-center text-gray-500">No questions loaded</div></>;
+  if (!currentQ) return <><div className="p-8 text-center text-gray-500">No questions loaded</div></>;
 
   const answeredSet = new Set(questions.map((q, i) => answers[q.id] ? i : -1).filter(i => i >= 0));
   const markedIndexSet = new Set(questions.map((q, i) => markedForReview.has(q.id) ? i : -1).filter(i => i >= 0));
 
   return (
     <>
-      <Navbar />
       <main className="max-w-5xl mx-auto px-4 py-4">
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">

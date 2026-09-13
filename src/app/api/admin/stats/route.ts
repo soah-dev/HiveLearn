@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { format, subDays } from 'date-fns';
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-  if (!adminEmails.includes(user.email.toLowerCase())) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const auth = await requireAdmin(req);
+  if (auth.error) return auth.error;
 
   const now = new Date();
   const thirtyDaysAgo = subDays(now, 30);
@@ -41,6 +34,7 @@ export async function GET(req: NextRequest) {
     offlineBySubject,
     assignmentsByParent,
     allFeedback,
+    feedbackWithScreenshot,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'parent' } }),
@@ -94,9 +88,16 @@ export async function GET(req: NextRequest) {
     // Feedback
     prisma.feedback.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { name: true, email: true, role: true } } },
+      select: {
+        id: true, category: true, message: true, status: true, response: true,
+        respondedAt: true, createdAt: true,
+        user: { select: { name: true, email: true, role: true } },
+      },
     }),
+    // Screenshots are base64 data URLs (up to ~7MB each); load them on demand instead
+    prisma.feedback.findMany({ where: { screenshotUrl: { not: null } }, select: { id: true } }),
   ]);
+  const withScreenshot = new Set(feedbackWithScreenshot.map(f => f.id));
 
   // Signup trend (last 30 days, grouped by day)
   const signupMap: Record<string, number> = {};
@@ -191,7 +192,7 @@ export async function GET(req: NextRequest) {
       id: f.id,
       category: f.category,
       message: f.message,
-      screenshotUrl: f.screenshotUrl,
+      hasScreenshot: withScreenshot.has(f.id),
       status: f.status,
       response: f.response,
       respondedAt: f.respondedAt?.toISOString() ?? null,

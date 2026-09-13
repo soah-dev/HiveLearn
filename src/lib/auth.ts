@@ -33,6 +33,34 @@ export async function getAuthUser(req: NextRequest) {
   return ctx?.user ?? null;
 }
 
+/** Admins are configured by email in ADMIN_EMAILS (comma-separated). */
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const adminEmails = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(email.toLowerCase());
+}
+
+/**
+ * Resolve the request's user and require them to be an admin.
+ * Returns `{ user }` on success, or `{ error }` — a ready-to-return 401/403 response.
+ */
+export async function requireAdmin(req: NextRequest): Promise<
+  | { user: NonNullable<Awaited<ReturnType<typeof getAuthUser>>>; error?: undefined }
+  | { user?: undefined; error: Response }
+> {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  if (!isAdminEmail(user.email)) {
+    return { error: Response.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
+  return { user };
+}
+
 /**
  * Returns the active ParentChild link between a parent and a child, or null
  * when the parent is not linked to that child. Use this before exposing or

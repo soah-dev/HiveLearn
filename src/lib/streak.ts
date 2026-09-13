@@ -151,7 +151,8 @@ export async function updateStreakAndPoints(
   await prisma.gamification.update({
     where: { childId },
     data: {
-      totalPoints: gam.totalPoints + points,
+      // increment is atomic; a read-then-write would lose concurrent awards
+      totalPoints: { increment: points },
       currentStreak: newStreak,
       longestStreak: Math.max(gam.longestStreak, newStreak),
       lastCompletedDate: newLastDate,

@@ -29,7 +29,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Save answers and grade
   let correct = 0;
   let flaggedCount = 0;
-  for (const ans of answers) {
+  const writes = [];
+  const list: Array<{ questionId: string; selectedAnswer?: string | null; flagged?: boolean }> = Array.isArray(answers) ? answers : [];
+  for (const ans of list) {
     const question = session.questions.find(q => q.id === ans.questionId);
     if (!question) continue;
 
@@ -43,12 +45,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       : ans.selectedAnswer?.toUpperCase().trim() === question.correctAnswer.toUpperCase().trim();
     if (isCorrect) correct++;
 
-    await prisma.practiceAnswer.upsert({
+    writes.push(prisma.practiceAnswer.upsert({
       where: { questionId_childId: { questionId: ans.questionId, childId: user.id } },
       update: { selectedAnswer: ans.selectedAnswer, isCorrect, flagged },
       create: { sessionId: id, questionId: ans.questionId, childId: user.id, selectedAnswer: ans.selectedAnswer, isCorrect, flagged },
-    });
+    }));
   }
+  if (writes.length > 0) await prisma.$transaction(writes);
 
   // Exclude flagged questions from scoring
   const scoredTotal = session.questions.length - flaggedCount;

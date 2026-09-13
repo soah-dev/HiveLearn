@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { recalculateStreak } from '@/lib/streak';
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-  if (!adminEmails.includes(user.email.toLowerCase())) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const auth = await requireAdmin(req);
+  if (auth.error) return auth.error;
 
   const body = await req.json().catch(() => ({}));
   const { childId } = body as { childId?: string };

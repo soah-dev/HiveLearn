@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
 import { startOfWeek, startOfMonth, subDays, format } from 'date-fns';
@@ -51,7 +50,7 @@ interface AnalyticsData {
 type DatePreset = 'this_week' | 'last_7' | 'this_month' | 'custom';
 
 export default function AnalyticsPage() {
-  const { user, token, loading } = useAuth();
+  const { token, loading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -82,12 +81,6 @@ export default function AnalyticsPage() {
   }, [customFrom, customTo]);
 
   // Auth guard
-  useEffect(() => {
-    if (!loading && (!user || user.role !== 'parent')) {
-      router.push('/');
-    }
-  }, [user, loading, router]);
-
   // Fetch data (initial + when date range changes)
   useEffect(() => {
     if (!token || !params.childId || datePreset === 'custom') return;
@@ -112,8 +105,8 @@ export default function AnalyticsPage() {
       .catch(() => setActivityLoading(false));
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!data) return <><Navbar /><div className="p-8 text-center text-gray-500">No data available</div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (!data) return <><div className="p-8 text-center text-gray-500">No data available</div></>;
 
   const { activityView } = data;
 
@@ -137,7 +130,6 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
           <button onClick={() => router.back()} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline mb-3 inline-block">&larr; Back</button>

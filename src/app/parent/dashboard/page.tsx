@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
 import AssignmentCard from '@/components/AssignmentCard';
@@ -49,7 +48,7 @@ interface Assignment {
   timeLimitMin: number | null;
   createdAt: string;
   child: { id: string; name: string | null };
-  questions?: Array<{ answers?: Array<{ id: string }> }>;
+  unresolvedFlagCount: number;
 }
 
 interface OfflineWork {
@@ -110,10 +109,6 @@ export default function ParentDashboard() {
   const [inviteActionId, setInviteActionId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'parent')) {
-      router.push('/');
-      return;
-    }
     if (token) {
       Promise.all([
         apiFetch('/api/parent/children', token),
@@ -254,8 +249,7 @@ export default function ParentDashboard() {
     setReviewingIds(prev => { const next = new Set(prev); next.delete(assignmentId); return next; });
   };
 
-  const hasUnresolvedFlags = (a: Assignment) =>
-    (a.questions?.reduce((sum, q) => sum + (q.answers?.length || 0), 0) || 0) > 0;
+  const hasUnresolvedFlags = (a: Assignment) => (a.unresolvedFlagCount || 0) > 0;
 
   const autoReviewAll = async () => {
     const reviewable = assignments.filter(a =>
@@ -266,7 +260,7 @@ export default function ParentDashboard() {
     }
   };
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const pendingOffline = offlineWork.filter(ow => ow.status === 'pending');
   const needsReviewAssignments = assignments.filter(a => a.status === 'submitted');
@@ -277,7 +271,6 @@ export default function ParentDashboard() {
 
   return (
     <>
-      <Navbar />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>
@@ -565,7 +558,7 @@ export default function ParentDashboard() {
                       createdAt={a.createdAt}
                       childName={a.child?.name || undefined}
                       role="parent"
-                      flaggedCount={a.questions?.reduce((sum: number, q: { answers?: { id: string }[] }) => sum + (q.answers?.length || 0), 0) || 0}
+                      flaggedCount={a.unresolvedFlagCount || 0}
                     />
                     {!flagged && (
                       <div className="mt-2">
@@ -612,7 +605,7 @@ export default function ParentDashboard() {
                   createdAt={a.createdAt}
                   childName={a.child?.name || undefined}
                   role="parent"
-                  flaggedCount={a.questions?.reduce((sum: number, q: { answers?: { id: string }[] }) => sum + (q.answers?.length || 0), 0) || 0}
+                  flaggedCount={a.unresolvedFlagCount || 0}
                 />
               ))}
             </div>

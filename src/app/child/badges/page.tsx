@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Badge {
@@ -30,10 +29,6 @@ export default function BadgesPage() {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'child')) {
-      router.push('/');
-      return;
-    }
     if (token) {
       apiFetch('/api/gamification', token)
         .then(data => {
@@ -45,14 +40,13 @@ export default function BadgesPage() {
     }
   }, [user, token, loading, router]);
 
-  if (loading || dataLoading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
 
   const earnedIds = new Set(earnedBadges.map(b => b.badgeId));
   const progress = allBadges.length > 0 ? (earnedBadges.length / allBadges.length) * 100 : 0;
 
   return (
     <>
-      <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="text-center mb-8 animate-slide-up">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Badge Collection</h1>

@@ -6,9 +6,9 @@ HiveExcel is a parent-kid homework collaboration web app. Parents generate assig
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router) with TypeScript
+- **Framework**: Next.js 16 (App Router) with TypeScript
 - **Database**: Prisma ORM v6 + PostgreSQL (Supabase)
-- **Auth**: Firebase Auth (Google sign-in + email/password) + Firebase Admin SDK for server-side token verification
+- **Auth**: Firebase Auth (Google sign-in + email/password) + Firebase Admin SDK v14 for server-side token verification (requires Node 20+)
 - **AI**: Gemini API (@google/generative-ai SDK) for question generation and auto-review
 - **Styling**: Tailwind CSS with class-based dark mode
 - **Charts**: Recharts for progress analytics
@@ -21,7 +21,7 @@ homework-hub/
 ├── prisma/
 │   ├── schema.prisma          # 8 models: User, ParentChild, Assignment, Question, Answer, Gamification, Badge, EarnedBadge
 │   ├── seed.ts                # Seeds 14 badges
-│   └── migrations/            # PostgreSQL migrations (legacy init migration has SQLite syntax — use `prisma db push` for schema changes)
+│   └── migrations/            # PostgreSQL migrations, baselined as 0_init (Sept 2026) — use `prisma migrate dev` / `migrate deploy`
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx         # Root layout with Providers wrapper
@@ -121,9 +121,9 @@ npm install
 # 3. Set up environment variables
 cp .env.local.example .env.local  # or create .env.local manually with values above
 
-# 4. Generate Prisma client and sync schema
+# 4. Generate Prisma client and apply migrations
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 
 # 5. Seed badges
 npx tsx prisma/seed.ts
@@ -136,8 +136,12 @@ npm run dev
 
 - **Prisma v6** (not v7) used because v7 requires adapter-based initialization incompatible with current setup
 - **firebase-admin.ts** uses a Proxy pattern for lazy initialization so the app builds even with placeholder env vars
-- **PostgreSQL** via Supabase (pooled + direct connections). Legacy migrations have SQLite syntax, so use `prisma db push` instead of `prisma migrate dev` for schema changes
-- All API routes use `getAuthUser()` from `src/lib/auth.ts` for consistent auth checking
+- **PostgreSQL** via Supabase (pooled + direct connections). Migrations were baselined to `0_init` from the live schema; use `prisma migrate dev --name <change>` locally and `prisma migrate deploy` in production. The production DB must have `0_init` marked applied once: `npx prisma migrate resolve --applied 0_init`
+- All API routes use `getAuthUser()` from `src/lib/auth.ts` for consistent auth checking; parent→child access goes through `getLinkedChild()`, admin routes through `requireAdmin()` (ADMIN_EMAILS)
+- Route segments `parent/`, `child/`, `admin/` have layouts that render the Navbar and a `RoleGuard`, so pages don't need their own redirect effects
+- Shared Gemini question generation (prompt, validation, retry) lives in `src/lib/question-generation.ts`; per-user daily quotas in `src/lib/ai-quota.ts`
+- Calendar-day logic (streaks, preset schedules) goes through `src/lib/dates.ts` (America/Chicago)
+- Lint: `npm run lint` (ESLint 9 flat config in `eslint.config.mjs`). Tests: `npm test` (Vitest, `tests/`)
 - Question generation and auto-review both call Gemini API (@google/generative-ai SDK)
 - Dark mode uses Tailwind `class` strategy with localStorage persistence
 
