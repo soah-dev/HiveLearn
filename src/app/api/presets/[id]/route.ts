@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { presetValidationError } from '@/lib/validation';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthUser(req);
@@ -18,6 +19,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json();
   const { grade, subject, topic, difficulty, numQuestions, questionTypes, timeLimitMin, reviewMode, daysOfWeek, active } = body;
+
+  const validationError = presetValidationError(body, true);
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
+  }
 
   const updated = await prisma.assignmentPreset.update({
     where: { id },

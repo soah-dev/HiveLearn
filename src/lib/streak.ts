@@ -1,27 +1,22 @@
 import prisma from '@/lib/prisma';
+import { toLocalDateStr, subtractDays, getTodayStr } from '@/lib/dates';
 
 /**
  * Streak freeze: students get a 2-day grace period (covers weekends).
  * A gap of up to 2 missed days keeps the streak alive. Three consecutive misses resets it.
  */
 
+/** Longest gap (in calendar days) between activities that still continues a streak. */
+export const STREAK_MAX_GAP_DAYS = 3;
+
 /**
- * Get a date string in US Central timezone (YYYY-MM-DD).
+ * Whether a streak whose last activity was on `lastCompletedDate` is still alive
+ * as of `today`. This is the single source of truth for both computing and
+ * displaying streaks — activity on day N keeps the streak alive through day N+3.
  */
-function toLocalDateStr(date: Date): string {
-  return date.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-  // en-CA locale formats as YYYY-MM-DD
-}
-
-/** Subtract N days from a YYYY-MM-DD string and return YYYY-MM-DD */
-function subtractDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + 'T12:00:00'); // noon to avoid DST issues
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
-}
-
-function getTodayStr(): string {
-  return toLocalDateStr(new Date());
+export function isStreakActive(lastCompletedDate: string | null | undefined, today: string = getTodayStr()): boolean {
+  if (!lastCompletedDate) return false;
+  return lastCompletedDate >= subtractDays(today, STREAK_MAX_GAP_DAYS);
 }
 
 /**
@@ -83,7 +78,7 @@ export async function recalculateStreak(childId: string) {
     const curr = new Date(days[i] + 'T12:00:00');
     const diffDays = Math.round((curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000));
 
-    if (diffDays <= 3) {
+    if (diffDays <= STREAK_MAX_GAP_DAYS) {
       // Consecutive day (1) or up to a 2-day freeze gap (2-3) — streak continues
       currentStreak += 1;
     } else {
@@ -93,14 +88,8 @@ export async function recalculateStreak(childId: string) {
   }
 
   // Check if the streak is still active
-  // With freeze: streak holds if last activity was today, or within the last 3 days
   const lastDay = days[days.length - 1];
-  const today = getTodayStr();
-  const yesterday = subtractDays(today, 1);
-  const dayBefore = subtractDays(today, 2);
-  const threeDaysAgo = subtractDays(today, 3);
-
-  if (lastDay !== today && lastDay !== yesterday && lastDay !== dayBefore && lastDay !== threeDaysAgo) {
+  if (!isStreakActive(lastDay)) {
     currentStreak = 0;
   }
 
@@ -124,10 +113,7 @@ export async function updateStreakAndPoints(
   source?: { type: string; id: string },
 ) {
   const effectiveDate = activityDate || new Date();
-  const today = getTodayStr();
   const activityDay = toLocalDateStr(effectiveDate);
-  const yesterday = subtractDays(today, 1);
-  const dayBefore = subtractDays(today, 2);
 
   const gam = await prisma.gamification.upsert({
     where: { childId },
@@ -151,7 +137,7 @@ export async function updateStreakAndPoints(
     const activityDateObj = new Date(activityDay + 'T12:00:00');
     const gap = Math.round((activityDateObj.getTime() - lastDateObj.getTime()) / (24 * 60 * 60 * 1000));
 
-    if (gap <= 3) {
+    if (gap <= STREAK_MAX_GAP_DAYS) {
       // Consecutive day (1) or up to a 2-day freeze gap (2-3) — streak continues
       newStreak += 1;
     } else {

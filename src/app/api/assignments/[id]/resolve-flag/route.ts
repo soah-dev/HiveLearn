@@ -104,7 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const newScore = scoredAnswers.length > 0 ? Math.round(totalScore / scoredAnswers.length) : 0;
   const oldPoints = assignment.pointsAwarded ?? 0;
-  const newPoints = calculatePoints(assignment.difficulty, newScore, assignment.timeLimitMin, undefined, undefined, scoredAnswers.length);
+  // Same inputs as the original review, so re-scoring never silently drops the grade-gap bonus
+  const child = await prisma.user.findUnique({ where: { id: assignment.childId }, select: { grade: true } });
+  const newPoints = calculatePoints(assignment.difficulty, newScore, assignment.timeLimitMin, child?.grade, assignment.grade, scoredAnswers.length);
   const pointsDelta = newPoints - oldPoints;
 
   // Update assignment score and points

@@ -1,3 +1,15 @@
+/**
+ * Firebase ID tokens expire after an hour. Pages often capture the token string
+ * once on mount, so a long session would start failing with 401s. AuthProvider
+ * registers a refresher here, and apiFetch retries any 401 with a fresh token
+ * regardless of whether the caller passed a string or a getter.
+ */
+let tokenRefresher: (() => Promise<string | null>) | null = null;
+
+export function registerTokenRefresher(fn: (() => Promise<string | null>) | null) {
+  tokenRefresher = fn;
+}
+
 export async function apiFetch(
   path: string,
   token: string | null | (() => Promise<string | null>),
@@ -14,10 +26,11 @@ export async function apiFetch(
   }
   let res = await fetch(path, { ...options, headers });
 
-  // If 401 and we have a token refresher, retry once with a fresh token
-  if (res.status === 401 && typeof token === 'function') {
-    const freshToken = await token();
-    if (freshToken) {
+  // On 401, retry once with a freshly minted token
+  if (res.status === 401) {
+    const refresher = typeof token === 'function' ? token : tokenRefresher;
+    const freshToken = refresher ? await refresher() : null;
+    if (freshToken && freshToken !== resolvedToken) {
       headers['Authorization'] = `Bearer ${freshToken}`;
       res = await fetch(path, { ...options, headers });
     }

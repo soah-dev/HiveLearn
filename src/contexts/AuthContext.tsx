@@ -1,9 +1,9 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import {
   User as FirebaseUser,
-  onAuthStateChanged,
+  onIdTokenChanged,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -11,6 +11,7 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
+import { registerTokenRefresher } from '@/lib/api';
 
 interface AuthUser {
   id: string;
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastUidRef = useRef<string | null>(null);
 
   const fetchUser = async (idToken: string) => {
     try {
@@ -76,20 +78,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    // Let apiFetch mint a fresh token on 401 no matter how the caller passed it
+    registerTokenRefresher(() => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null)));
+
+    // onIdTokenChanged also fires when the SDK refreshes the hourly token, so
+    // the `token` state stays current for pages that captured it as a string.
+    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
         const idToken = await fbUser.getIdToken();
         setToken(idToken);
-        await fetchUser(idToken);
+        if (lastUidRef.current !== fbUser.uid) {
+          lastUidRef.current = fbUser.uid;
+          await fetchUser(idToken);
+        }
       } else {
+        lastUidRef.current = null;
         setToken(null);
         setUser(null);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      registerTokenRefresher(null);
+    };
   }, []);
 
   const signInWithGoogle = async () => {
@@ -132,8 +146,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async () => {
-    if (token) {
-      await fetchUser(token);
+    const fresh = await getToken();
+    if (fresh) {
+      await fetchUser(fresh);
     }
   };
 

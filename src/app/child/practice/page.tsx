@@ -206,6 +206,7 @@ export default function PracticePage() {
                   className="relative group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 card-hover animate-slide-up"
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
+                  {s.status !== 'completed' && (
                   <button
                     onClick={() => handleDelete(s.id)}
                     disabled={deletingId === s.id}
@@ -214,6 +215,7 @@ export default function PracticePage() {
                   >
                     {deletingId === s.id ? <LoadingSpinner size="sm" /> : <span className="text-lg leading-none">&times;</span>}
                   </button>
+                  )}
                   <button
                     onClick={() => router.push(`/child/practice/${s.id}`)}
                     className="w-full p-5 text-left"

@@ -28,7 +28,7 @@ export interface WeeklyReportData {
   weekEnd: Date;
 }
 
-async function getWeekData(childId: string, weekStart: Date, weekEnd: Date, currentStreak: number) {
+export async function getWeekData(childId: string, weekStart: Date, weekEnd: Date, currentStreak: number) {
   const [assignments, practiceSessions, offlineWork] = await Promise.all([
     prisma.assignment.findMany({
       where: {
@@ -49,7 +49,7 @@ async function getWeekData(childId: string, weekStart: Date, weekEnd: Date, curr
     prisma.offlineWork.findMany({
       where: {
         childId,
-        status: 'reviewed',
+        status: 'approved',
         reviewedAt: { gte: weekStart, lt: weekEnd },
       },
       select: { subject: true, difficulty: true, numQuestions: true, score: true },

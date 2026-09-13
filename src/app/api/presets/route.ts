@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { presetValidationError } from '@/lib/validation';
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -38,6 +39,11 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { childId, grade, subject, topic, difficulty, numQuestions, questionTypes, timeLimitMin, reviewMode, daysOfWeek } = body;
+
+  const validationError = presetValidationError(body, false);
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
+  }
 
   // Verify child is linked
   const link = await prisma.parentChild.findFirst({

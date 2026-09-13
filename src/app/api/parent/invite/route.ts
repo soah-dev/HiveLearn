@@ -3,6 +3,7 @@ import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { randomBytes } from 'crypto';
 import { sendInviteEmail } from '@/lib/email';
+import { intInRange, isEmail } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -10,15 +11,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { childName, childEmail, childGrade } = await req.json();
+  const body = await req.json();
+  const childName = typeof body.childName === 'string' ? body.childName.trim() : '';
+  const childEmail = typeof body.childEmail === 'string' ? body.childEmail.trim().toLowerCase() : '';
+  const childGrade = intInRange(body.childGrade, 1, 12);
 
-  if (!childName || !childEmail || !childGrade) {
-    return NextResponse.json({ error: 'Name, email and grade are required' }, { status: 400 });
+  if (!childName || !childEmail || childGrade === null) {
+    return NextResponse.json({ error: 'Name, email and grade (1-12) are required' }, { status: 400 });
+  }
+  if (!isEmail(childEmail)) {
+    return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
   }
 
   // Check if a user with this email already exists and is linked to this parent
-  const existingUser = await prisma.user.findUnique({
-    where: { email: childEmail },
+  const existingUser = await prisma.user.findFirst({
+    where: { email: { equals: childEmail, mode: 'insensitive' } },
   });
 
   if (existingUser) {
@@ -32,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   // Check for existing pending invite with same email from this parent
   const existingInvite = await prisma.parentChild.findFirst({
-    where: { parentId: user.id, childEmail, status: 'pending' },
+    where: { parentId: user.id, childEmail: { equals: childEmail, mode: 'insensitive' }, status: 'pending' },
   });
 
   if (existingInvite) {

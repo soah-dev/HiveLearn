@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { isStreakActive } from '@/lib/streak';
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -36,17 +37,10 @@ export async function GET(req: NextRequest) {
 
   const allBadges = await prisma.badge.findMany();
 
-  // Check if streak is stale (last activity was 3+ days ago)
-  let adjustedGamification = gamification;
-  if (gamification?.lastCompletedDate) {
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-    const twoDaysAgo = new Date(today + 'T12:00:00');
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
-    if (gamification.lastCompletedDate < twoDaysAgoStr) {
-      adjustedGamification = { ...gamification, currentStreak: 0 };
-    }
-  }
+  // Zero the displayed streak once the freeze window has lapsed (same rule as streak.ts)
+  const adjustedGamification = gamification && !isStreakActive(gamification.lastCompletedDate)
+    ? { ...gamification, currentStreak: 0 }
+    : gamification;
 
   return NextResponse.json({ gamification: adjustedGamification, earnedBadges, allBadges });
 }

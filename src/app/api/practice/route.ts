@@ -3,6 +3,7 @@ import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
 import { checkGenerationQuota, quotaExceededMessage } from '@/lib/ai-quota';
+import { intInRange, isOneOf, DIFFICULTIES } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -10,10 +11,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { grade, subject, topic, difficulty, numQuestions } = await req.json();
+  const body = await req.json();
+  const { subject, topic, difficulty, numQuestions } = body;
+  const grade = intInRange(body.grade, 1, 12);
 
-  if (!grade || !subject || !difficulty) {
-    return NextResponse.json({ error: 'Grade, subject and difficulty are required' }, { status: 400 });
+  if (grade === null || typeof subject !== 'string' || !subject.trim() || !isOneOf(difficulty, DIFFICULTIES)) {
+    return NextResponse.json({ error: 'A grade from 1-12, a subject, and a difficulty of easy, medium or hard are required' }, { status: 400 });
   }
 
   const count = [5, 10, 15, 20].includes(numQuestions) ? numQuestions : 10;

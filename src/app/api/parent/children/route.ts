@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { isStreakActive } from '@/lib/streak';
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -25,16 +26,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  // Check if streaks are stale (last activity was 3+ days ago)
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-  const twoDaysAgo = new Date(today + 'T12:00:00');
-  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-  const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
-
   const children = links.filter(l => l.child).map(l => {
     const child = { ...l.child };
-    // If last activity was more than 2 days ago, streak has expired
-    if (child.gamification && child.gamification.lastCompletedDate && child.gamification.lastCompletedDate < twoDaysAgoStr) {
+    // Zero the displayed streak once the freeze window has lapsed (same rule as streak.ts)
+    if (child.gamification && !isStreakActive(child.gamification.lastCompletedDate)) {
       child.gamification = { ...child.gamification, currentStreak: 0 };
     }
     return {

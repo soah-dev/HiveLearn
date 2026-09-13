@@ -67,6 +67,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
+  // Completed sessions have already awarded points and appear in analytics
+  // and the points ledger; deleting them would leave those out of sync.
+  if (session.status === 'completed') {
+    return NextResponse.json({ error: 'Completed sessions cannot be removed' }, { status: 400 });
+  }
+
   await prisma.practiceSession.delete({ where: { id } });
 
   return NextResponse.json({ success: true });

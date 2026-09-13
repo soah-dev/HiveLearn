@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { intInRange, isOneOf, DIFFICULTIES } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -8,14 +9,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { subject, bookReference, numQuestions, score, difficulty, activityDate } = await req.json();
+  const body = await req.json();
+  const { subject, bookReference, activityDate } = body;
+  const numQuestions = intInRange(body.numQuestions, 1, 200);
+  const score = intInRange(body.score, 0, 100);
+  const difficulty = isOneOf(body.difficulty, DIFFICULTIES) ? body.difficulty : 'medium';
 
-  if (!subject || !numQuestions || score === undefined || score === null) {
-    return NextResponse.json({ error: 'Subject, number of questions, and score are required' }, { status: 400 });
+  if (typeof subject !== 'string' || !subject.trim()) {
+    return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
   }
-
-  if (score < 0 || score > 100) {
-    return NextResponse.json({ error: 'Score must be between 0 and 100' }, { status: 400 });
+  if (numQuestions === null) {
+    return NextResponse.json({ error: 'Number of questions must be a whole number from 1 to 200' }, { status: 400 });
+  }
+  if (score === null) {
+    return NextResponse.json({ error: 'Score must be a whole number between 0 and 100' }, { status: 400 });
   }
 
   // Reject work dated more than 7 days ago (or in the future)
@@ -41,7 +48,7 @@ export async function POST(req: NextRequest) {
       bookReference: bookReference || null,
       numQuestions,
       score,
-      difficulty: difficulty || 'medium',
+      difficulty,
       activityDate: activityDate ? new Date(activityDate) : null,
     },
   });
