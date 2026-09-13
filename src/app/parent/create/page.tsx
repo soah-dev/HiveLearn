@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import MathText from '@/components/MathText';
 
 const subjects = [
   { value: 'math', label: 'Math' },
@@ -283,7 +284,10 @@ export default function CreateAssignment() {
           /* Preview Step */
           <div className="animate-slide-up">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Preview & Edit Questions</h2>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Preview & Edit Questions</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">The preview shows what your child will see. Edit the raw text below it; math wrapped in $...$ renders automatically.</p>
+              </div>
               <button onClick={() => setStep('form')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
                 &larr; Back to form
               </button>
@@ -297,6 +301,26 @@ export default function CreateAssignment() {
                       Q{i + 1} · {q.question_type.replace('_', ' ')}
                     </span>
                   </div>
+                  {/* Rendered preview — exactly how the child page will display it */}
+                  <div className="mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">Preview</p>
+                    <p className="text-gray-900 dark:text-white font-medium"><MathText text={q.question_text} /></p>
+                    {q.question_type === 'multiple_choice' && (
+                      <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+                        {([['A', q.option_a], ['B', q.option_b], ['C', q.option_c], ['D', q.option_d]] as const).map(([letter, val]) => (
+                          <li key={letter} className={q.correct_answer?.toUpperCase().trim() === letter ? 'text-green-700 dark:text-green-400' : ''}>
+                            <span className="font-bold">{letter}.</span> {val ? <MathText text={val} /> : <span className="text-gray-400">(empty)</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {q.question_type !== 'multiple_choice' && q.correct_answer && (
+                      <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+                        {q.question_type === 'open_ended' ? 'Rubric: ' : 'Answer: '}<MathText text={q.correct_answer} />
+                      </p>
+                    )}
+                  </div>
+
                   <textarea
                     value={q.question_text}
                     onChange={e => updateQuestion(i, 'question_text', e.target.value)}
