@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { calculatePoints } from '@/lib/points';
 import { checkBadges } from '@/lib/badges';
@@ -81,6 +81,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
+  // Only a parent linked to this child may trigger a review (AI or manual).
+  // The child must not be able to grade their own work, and unrelated users
+  // must not be able to spend AI quota on someone else's assignment.
+  if (user.role !== 'parent' || !(await getLinkedChild(user.id, assignment.childId))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   if (assignment.status !== 'submitted') {
     return NextResponse.json({ error: 'Assignment not submitted yet' }, { status: 400 });
   }
@@ -90,17 +97,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   let questionsGraded: number = assignment.questions.length;
 
   if (body.mode === 'parent' || assignment.reviewMode === 'parent') {
-    // Parent review mode — any linked parent can review
-    if (user.role !== 'parent') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const parentLink = await prisma.parentChild.findFirst({
-      where: { parentId: user.id, childId: assignment.childId, status: 'active' },
-    });
-    if (!parentLink) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Parent provides per-question feedback and marks
     for (const review of (body.reviews || [])) {
       await prisma.answer.updateMany({

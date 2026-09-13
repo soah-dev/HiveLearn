@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
 import prisma from '@/lib/prisma';
+import { checkGenerationQuota, quotaExceededMessage } from '@/lib/ai-quota';
 
 interface GeneratedQuestion {
   question_type: string;
@@ -57,6 +58,18 @@ export async function POST(req: NextRequest) {
   }
 
   const { childId, grade, subject, topic, difficulty, numQuestions, questionTypes } = await req.json();
+
+  if (!Array.isArray(questionTypes) || questionTypes.length === 0) {
+    return NextResponse.json({ error: 'questionTypes must be a non-empty array' }, { status: 400 });
+  }
+  if (!Number.isInteger(numQuestions) || numQuestions < 1 || numQuestions > 20) {
+    return NextResponse.json({ error: 'numQuestions must be between 1 and 20' }, { status: 400 });
+  }
+
+  const quota = await checkGenerationQuota(user.id, user.role);
+  if (!quota.allowed) {
+    return NextResponse.json({ error: quotaExceededMessage(quota.limit) }, { status: 429 });
+  }
 
   // Enforce grade floor — cannot generate below the child's grade level
   if (childId) {

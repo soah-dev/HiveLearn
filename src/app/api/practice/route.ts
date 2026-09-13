@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
+import { checkGenerationQuota, quotaExceededMessage } from '@/lib/ai-quota';
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -16,6 +17,11 @@ export async function POST(req: NextRequest) {
   }
 
   const count = [5, 10, 15, 20].includes(numQuestions) ? numQuestions : 10;
+
+  const quota = await checkGenerationQuota(user.id, user.role);
+  if (!quota.allowed) {
+    return NextResponse.json({ error: quotaExceededMessage(quota.limit) }, { status: 429 });
+  }
 
   if (user.grade && grade < user.grade) {
     return NextResponse.json({ error: `You can only practice Grade ${user.grade} and above` }, { status: 400 });

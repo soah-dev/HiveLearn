@@ -9,6 +9,16 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
+/** Escape user-controlled text before interpolating it into email HTML. */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function sendInviteEmail({
   to,
   childName,
@@ -33,9 +43,9 @@ export async function sendInviteEmail({
           <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">HiveExcel</h1>
         </div>
         <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px;">
-          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${childName}!</h2>
+          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${esc(childName)}!</h2>
           <p style="color: #6b7280; line-height: 1.6;">
-            <strong>${parentName}</strong> has invited you to join HiveExcel. Click the button below to create your account and get started with your assignments.
+            <strong>${esc(parentName)}</strong> has invited you to join HiveExcel. Click the button below to create your account and get started with your assignments.
           </p>
           <div style="text-align: center; margin: 32px 0;">
             <a href="${inviteLink}" style="background: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
@@ -83,27 +93,27 @@ export async function sendAssignmentNotification({
           <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">HiveExcel</h1>
         </div>
         <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px;">
-          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${childName}!</h2>
+          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${esc(childName)}!</h2>
           <p style="color: #6b7280; line-height: 1.6;">
-            <strong>${parentName}</strong> has assigned you new homework. Here are the details:
+            <strong>${esc(parentName)}</strong> has assigned you new homework. Here are the details:
           </p>
           <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Subject</td>
-                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px;">${subject}</td>
+                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px;">${esc(subject)}</td>
               </tr>
               <tr>
                 <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Topic</td>
-                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px;">${topic}</td>
+                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px;">${esc(topic)}</td>
               </tr>
               <tr>
                 <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Questions</td>
-                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px;">${numQuestions}</td>
+                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px;">${esc(numQuestions)}</td>
               </tr>
               <tr>
                 <td style="color: #6b7280; padding: 6px 0; font-size: 14px;">Difficulty</td>
-                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px; text-transform: capitalize;">${difficulty}</td>
+                <td style="color: #111827; padding: 6px 0; font-weight: 600; text-align: right; font-size: 14px; text-transform: capitalize;">${esc(difficulty)}</td>
               </tr>
             </table>
           </div>
@@ -144,13 +154,13 @@ export async function sendFeedbackReply({
           <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">HiveExcel</h1>
         </div>
         <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px;">
-          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${userName}!</h2>
+          <h2 style="color: #111827; margin: 0 0 8px;">Hi ${esc(userName)}!</h2>
           <p style="color: #6b7280; line-height: 1.6;">
             Thanks for your feedback. Here's our reply:
           </p>
-          <div style="background: #eef2ff; border-radius: 12px; padding: 16px 20px; margin: 20px 0; color: #3730a3; line-height: 1.6; white-space: pre-wrap;">${response}</div>
+          <div style="background: #eef2ff; border-radius: 12px; padding: 16px 20px; margin: 20px 0; color: #3730a3; line-height: 1.6; white-space: pre-wrap;">${esc(response)}</div>
           <p style="color: #9ca3af; font-size: 13px; margin: 20px 0 6px;">Your original message:</p>
-          <div style="background: #f9fafb; border-radius: 12px; padding: 16px 20px; color: #6b7280; line-height: 1.6; white-space: pre-wrap;">${originalMessage}</div>
+          <div style="background: #f9fafb; border-radius: 12px; padding: 16px 20px; color: #6b7280; line-height: 1.6; white-space: pre-wrap;">${esc(originalMessage)}</div>
           <div style="text-align: center; margin: 32px 0 8px;">
             <a href="${appUrl}/settings" style="background: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
               View in HiveExcel
@@ -243,8 +253,8 @@ export function buildWeeklyReportHtml(report: WeeklyReportData): string {
         <td style="padding: 12px 14px; color: #475569; font-size: 13px;">
           <span style="display: inline-block; background: ${r.type === 'Assignment' ? '#eef2ff' : r.type === 'Practice' ? '#f0fdf4' : '#fefce8'}; color: ${r.type === 'Assignment' ? '#4338ca' : r.type === 'Practice' ? '#15803d' : '#a16207'}; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;">${r.type}</span>
         </td>
-        <td style="padding: 12px 14px; color: #1e293b; font-size: 13px; font-weight: 500;">${formatSubject(r.subject)}</td>
-        <td style="padding: 12px 14px; color: #475569; font-size: 13px; text-transform: capitalize;">${r.difficulty}</td>
+        <td style="padding: 12px 14px; color: #1e293b; font-size: 13px; font-weight: 500;">${esc(formatSubject(r.subject))}</td>
+        <td style="padding: 12px 14px; color: #475569; font-size: 13px; text-transform: capitalize;">${esc(r.difficulty)}</td>
         <td style="padding: 12px 14px; color: #475569; font-size: 13px; text-align: center;">${r.numQuestions}</td>
         <td style="padding: 12px 14px; font-size: 13px; text-align: center; font-weight: 700; color: ${scoreColor(r.score)};">${r.score != null ? `${r.score}%` : '-'}</td>
       </tr>`
@@ -288,7 +298,7 @@ export function buildWeeklyReportHtml(report: WeeklyReportData): string {
         <table style="width: 100%;">
           <tr>
             <td>
-              <h1 style="color: #ffffff; margin: 0 0 2px; font-size: 22px; font-weight: 800;">${report.childName}'s Week</h1>
+              <h1 style="color: #ffffff; margin: 0 0 2px; font-size: 22px; font-weight: 800;">${esc(report.childName)}'s Week</h1>
               <p style="color: #c7d2fe; margin: 0; font-size: 13px; font-weight: 500;">${weekLabel}</p>
             </td>
             <td style="text-align: right; vertical-align: top;">

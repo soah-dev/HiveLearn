@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { isStudentProducedCorrect, getScaledScore, getCompositeScore, calculateSATPoints } from '@/lib/sat-scoring';
 import { updateStreakAndPoints } from '@/lib/streak';
 import { checkBadges } from '@/lib/badges';
+import { isPastTimeLimit } from '@/lib/time-limit';
 
 export async function POST(
   req: NextRequest,
@@ -38,12 +39,24 @@ export async function POST(
     return NextResponse.json({ error: 'Module not in progress' }, { status: 400 });
   }
 
-  // Save and grade all answers
+  // Save and grade all answers. If the module's time limit (plus grace) has
+  // passed, ignore the posted answers and grade only what was saved in time.
+  const late = isPastTimeLimit(mod.startedAt, mod.timeLimitMin);
+  let answerMap: Map<string, string | null>;
+  if (late) {
+    const saved = await prisma.sATAnswer.findMany({
+      where: { childId: user.id, questionId: { in: mod.questions.map(q => q.id) } },
+      select: { questionId: true, selectedAnswer: true },
+    });
+    answerMap = new Map(saved.map(a => [a.questionId, a.selectedAnswer]));
+  } else {
+    const list = Array.isArray(answers) ? answers : [];
+    answerMap = new Map(
+      (list as Array<{ questionId: string; selectedAnswer: string | null }>)
+        .map(a => [a.questionId, typeof a.selectedAnswer === 'string' ? a.selectedAnswer : null])
+    );
+  }
   let rawScore = 0;
-  const answerMap = new Map(
-    (answers as Array<{ questionId: string; selectedAnswer: string | null }>)
-      .map(a => [a.questionId, a.selectedAnswer])
-  );
 
   for (const q of mod.questions) {
     const selected = answerMap.get(q.id) ?? null;

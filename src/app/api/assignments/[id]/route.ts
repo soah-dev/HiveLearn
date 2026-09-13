@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,12 +28,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Verify access — any linked parent can view
   if (user.role === 'parent') {
-    const link = await prisma.parentChild.findFirst({
-      where: { parentId: user.id, childId: assignment.childId, status: 'active' },
-      select: { childName: true },
-    });
+    // Any linked parent can view
+    const link = await getLinkedChild(user.id, assignment.childId);
     if (!link) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -41,47 +38,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (assignment.child && link.childName) {
       assignment.child.name = link.childName;
     }
-  }
-  if (user.role === 'child' && assignment.childId !== user.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ assignment });
   }
 
-  return NextResponse.json({ assignment });
-}
-
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getAuthUser(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const body = await req.json();
-
-  const assignment = await prisma.assignment.findUnique({
-    where: { id },
-  });
-
-  if (!assignment) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-
-  if (user.role === 'parent') {
-    const link = await prisma.parentChild.findFirst({
-      where: { parentId: user.id, childId: assignment.childId, status: 'active' },
-    });
-    if (!link) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'child' && assignment.childId === user.id) {
+    // Never send the answer key to the child until the assignment is reviewed
+    if (assignment.status !== 'reviewed') {
+      return NextResponse.json({
+        assignment: {
+          ...assignment,
+          questions: assignment.questions.map(q => ({ ...q, correctAnswer: undefined })),
+        },
+      });
     }
+    return NextResponse.json({ assignment });
   }
 
-  const updated = await prisma.assignment.update({
-    where: { id },
-    data: body,
-    include: {
-      questions: { orderBy: { orderIndex: 'asc' } },
-    },
-  });
-
-  return NextResponse.json({ assignment: updated });
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 }
+
+// NOTE: the former PATCH handler accepted an arbitrary body into
+// prisma.assignment.update with no ownership check. It had no callers and was
+// removed. Add a field-allowlisted, parent-only handler here if editing is needed.

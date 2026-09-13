@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
@@ -8,12 +8,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const childId = user.role === 'child'
-    ? user.id
-    : new URL(req.url).searchParams.get('childId');
-
-  if (!childId) {
-    return NextResponse.json({ error: 'childId required' }, { status: 400 });
+  let childId: string;
+  if (user.role === 'child') {
+    childId = user.id;
+  } else if (user.role === 'parent') {
+    const requested = new URL(req.url).searchParams.get('childId');
+    if (!requested) {
+      return NextResponse.json({ error: 'childId required' }, { status: 400 });
+    }
+    if (!(await getLinkedChild(user.id, requested))) {
+      return NextResponse.json({ error: 'Child not linked to parent' }, { status: 403 });
+    }
+    childId = requested;
+  } else {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const gamification = await prisma.gamification.findUnique({

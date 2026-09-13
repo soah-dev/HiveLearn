@@ -3,6 +3,7 @@ import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { generateWithUsage, AiUsageMetadata } from '@/lib/gemini';
 import { sendAssignmentNotification } from '@/lib/email';
+import { checkGenerationQuota, quotaExceededMessage } from '@/lib/ai-quota';
 
 interface GeneratedQuestion {
   question_type: string;
@@ -56,6 +57,11 @@ export async function POST(req: NextRequest) {
 
   if (!preset) {
     return NextResponse.json({ error: 'Preset not found or inactive' }, { status: 404 });
+  }
+
+  const quota = await checkGenerationQuota(user.id, user.role);
+  if (!quota.allowed) {
+    return NextResponse.json({ error: quotaExceededMessage(quota.limit), presetId: preset.id }, { status: 429 });
   }
 
   const questionTypes = preset.questionTypes.split(',');

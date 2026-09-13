@@ -24,6 +24,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
   }
 
+  // Roles are set once. A child must not be able to promote themselves to parent.
+  if (user.role && user.role !== role) {
+    return NextResponse.json({ error: 'Your account role is already set and cannot be changed' }, { status: 400 });
+  }
+
   const updatedUser = await prisma.user.update({
     where: { id: user.id },
     data: { role },

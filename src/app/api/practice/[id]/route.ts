@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, getLinkedChild } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -31,10 +31,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   if (user.role === 'parent') {
-    const link = await prisma.parentChild.findFirst({
-      where: { parentId: user.id, childId: session.childId, status: 'active' },
-    });
+    const link = await getLinkedChild(user.id, session.childId);
     if (!link) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ session });
+  }
+
+  if (user.role !== 'child') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Never send the answer key to the child while the session is in progress
+  if (session.status !== 'completed') {
+    return NextResponse.json({
+      session: {
+        ...session,
+        questions: session.questions.map(q => ({ ...q, correctAnswer: undefined })),
+      },
+    });
   }
 
   return NextResponse.json({ session });

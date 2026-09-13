@@ -100,6 +100,9 @@ export async function GET(req: NextRequest) {
       select: { childId: true, childName: true },
     });
     const linkedChildIds = links.map(l => l.childId).filter(Boolean) as string[];
+    if (childId && !linkedChildIds.includes(childId)) {
+      return NextResponse.json({ error: 'Child not linked to parent' }, { status: 403 });
+    }
     where.childId = childId ? childId : { in: linkedChildIds };
     childNameMap = new Map(links.filter(l => l.childId).map(l => [l.childId!, l.childName]));
   } else {
@@ -133,6 +136,16 @@ export async function GET(req: NextRequest) {
         a.child.name = childNameMap.get(a.childId) || a.child.name;
       }
     }
+  }
+
+  // Children never receive the answer key for assignments that aren't reviewed yet
+  if (user.role !== 'parent') {
+    const sanitized = assignments.map(a =>
+      a.status === 'reviewed'
+        ? a
+        : { ...a, questions: a.questions.map(q => ({ ...q, correctAnswer: undefined })) }
+    );
+    return NextResponse.json({ assignments: sanitized });
   }
 
   return NextResponse.json({ assignments });

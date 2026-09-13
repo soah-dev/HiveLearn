@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { isPastTimeLimit } from '@/lib/time-limit';
 
 export async function POST(
   req: NextRequest,
@@ -31,8 +32,13 @@ export async function POST(
     return NextResponse.json({ error: 'Module not in progress' }, { status: 400 });
   }
 
+  if (isPastTimeLimit(mod.startedAt, mod.timeLimitMin)) {
+    return NextResponse.json({ error: 'Time limit exceeded' }, { status: 400 });
+  }
+
   // Upsert answers
-  for (const a of answers as Array<{ questionId: string; selectedAnswer: string | null }>) {
+  const list = Array.isArray(answers) ? answers : [];
+  for (const a of list as Array<{ questionId: string; selectedAnswer: string | null }>) {
     await prisma.sATAnswer.upsert({
       where: { questionId_childId: { questionId: a.questionId, childId: user.id } },
       update: { selectedAnswer: a.selectedAnswer },
