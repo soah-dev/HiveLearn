@@ -5,8 +5,8 @@ import prisma from './prisma';
  * successful `AiUsage` rows created since the start of the current UTC day.
  * Override with AI_DAILY_LIMIT_PARENT / AI_DAILY_LIMIT_CHILD.
  */
-const DEFAULT_PARENT_LIMIT = 40;
-const DEFAULT_CHILD_LIMIT = 10;
+const DEFAULT_PARENT_LIMIT = 25;
+const DEFAULT_CHILD_LIMIT = 25;
 
 function readLimit(envName: string, fallback: number): number {
   const raw = process.env[envName];
@@ -37,5 +37,5 @@ export async function checkGenerationQuota(userId: string, role: string | null):
 }
 
 export function quotaExceededMessage(limit: number): string {
-  return `You've reached the daily limit of ${limit} AI generations. Try again tomorrow.`;
+  return `You've reached the daily limit of ${limit} generations. Reach out to support to increase your quota, or try again tomorrow.`;
 }
