@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
 
 const subjects = [
   { value: 'math', label: 'Math' },
@@ -93,18 +95,18 @@ export default function PracticePage() {
   return (
     <>
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Practice</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Generate questions and practice on your own</p>
-          </div>
-          <button
-            onClick={() => { setShowForm(true); setError(''); }}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
-          >
-            + New Session
-          </button>
-        </div>
+        <PageHeader
+          title="Practice"
+          subtitle="Generate questions and practice on your own"
+          actions={
+            <button
+              onClick={() => { setShowForm(true); setError(''); }}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+            >
+              + New Session
+            </button>
+          }
+        />
 
         {/* New Session Form */}
         {showForm && (
@@ -186,10 +188,19 @@ export default function PracticePage() {
 
         {/* Past Sessions */}
         {sessions.length === 0 ? (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-12 text-center animate-slide-up">
-            <p className="text-5xl mb-3 animate-float">🧠</p>
-            <p className="text-gray-500 dark:text-gray-400 font-medium">No practice sessions yet. Start one to begin!</p>
-          </div>
+          <EmptyState
+            icon="🧠"
+            title="No practice sessions yet"
+            description="Pick a subject and difficulty to generate a set of questions. Every session earns points and keeps your streak alive."
+            action={!showForm ? (
+              <button
+                onClick={() => { setShowForm(true); setError(''); }}
+                className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
+              >
+                Start a session
+              </button>
+            ) : undefined}
+          />
         ) : (
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Past Sessions</h2>

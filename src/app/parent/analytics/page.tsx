@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
 
 interface Child {
   id: string;
@@ -73,10 +75,7 @@ export default function ReportsPage() {
   return (
     <>
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6 animate-slide-up">
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Reports</h1>
-          <p className="text-gray-500 dark:text-gray-400">Track progress and see how your children rank</p>
-        </div>
+        <PageHeader title="Reports" subtitle="Track progress and see how your children rank" className="mb-6" />
 
         {/* Pane tabs */}
         <div className="flex bg-gray-100/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-1 mb-8 max-w-sm">
@@ -102,10 +101,7 @@ export default function ReportsPage() {
           <div className="animate-slide-up">
             <p className="text-gray-500 dark:text-gray-400 mb-4">Select a child to view their progress</p>
             {children.length === 0 ? (
-              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-12 text-center">
-                <p className="text-5xl mb-3 animate-float">📊</p>
-                <p className="text-gray-500 dark:text-gray-400">No children linked yet.</p>
-              </div>
+              <EmptyState icon="📊" title="No children linked yet" description="Add a child from your dashboard and their progress reports will appear here." />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {children.map((child, i) => (

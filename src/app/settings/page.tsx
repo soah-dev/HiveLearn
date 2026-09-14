@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
 
 interface Child {
   id: string;
@@ -171,7 +172,7 @@ export default function SettingsPage() {
     <>
       <Navbar />
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-8 animate-slide-up">Settings</h1>
+        <PageHeader title="Settings" subtitle="Your profile, family preferences and appearance" />
 
         {actionError && (
           <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-start justify-between gap-3">

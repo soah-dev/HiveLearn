@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
 
 interface UsageData {
   totals: {
@@ -78,11 +79,11 @@ export default function AdminAiUsagePage() {
   return (
     <>
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">AI Token Usage</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Platform-wide Gemini API consumption</p>
-          </div>
+        <PageHeader
+          back={{ href: '/admin/dashboard', label: 'Back to Admin' }}
+          title="AI Token Usage"
+          subtitle="Platform-wide Gemini API consumption"
+          actions={
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
             {(['week', 'month', 'all'] as const).map(p => (
               <button
@@ -98,7 +99,8 @@ export default function AdminAiUsagePage() {
               </button>
             ))}
           </div>
-        </div>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">

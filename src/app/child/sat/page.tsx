@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
+import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
 
 interface SATSessionSummary {
   id: string;
@@ -83,19 +85,19 @@ export default function SATHubPage() {
   return (
     <>
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">SAT Practice</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Full Digital SAT simulation with adaptive scoring</p>
-          </div>
-          <button
-            onClick={startNewTest}
-            disabled={creating}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20"
-          >
-            {creating ? 'Creating...' : 'Start New Practice Test'}
-          </button>
-        </div>
+        <PageHeader
+          title="SAT Practice"
+          subtitle="Full Digital SAT simulation with adaptive scoring"
+          actions={
+            <button
+              onClick={startNewTest}
+              disabled={creating}
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-5 py-2.5 rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20"
+            >
+              {creating ? 'Creating...' : 'Start New Practice Test'}
+            </button>
+          }
+        />
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
@@ -104,7 +106,7 @@ export default function SATHubPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <StatCard title="Tests Completed" value={completedSessions.length} icon="📝" />
           <StatCard title="Best Score" value={bestScore || '-'} icon="🏆" />
           <StatCard title="Average Score" value={avgScore || '-'} icon="📊" />
@@ -145,10 +147,7 @@ export default function SATHubPage() {
             Past Tests {completedSessions.length > 0 && <span className="text-sm font-normal text-gray-500">({completedSessions.length})</span>}
           </h2>
           {completedSessions.length === 0 ? (
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-12 text-center">
-              <p className="text-5xl mb-3">📚</p>
-              <p className="text-gray-500 dark:text-gray-400">No completed tests yet. Start your first practice test!</p>
-            </div>
+            <EmptyState icon="📚" title="No completed tests yet" description="Start your first practice test to get a scaled score for Reading & Writing and Math." />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {completedSessions.map((s, i) => {

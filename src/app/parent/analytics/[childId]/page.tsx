@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatCard from '@/components/StatCard';
+import PageHeader from '@/components/PageHeader';
 import { startOfWeek, startOfMonth, subDays, format } from 'date-fns';
 import { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -51,7 +52,6 @@ type DatePreset = 'this_week' | 'last_7' | 'this_month' | 'custom';
 
 export default function AnalyticsPage() {
   const { token, loading } = useAuth();
-  const router = useRouter();
   const params = useParams();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -131,10 +131,7 @@ export default function AnalyticsPage() {
   return (
     <>
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 animate-slide-up">
-          <button onClick={() => router.back()} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline mb-3 inline-block">&larr; Back</button>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Progress Analytics</h1>
-        </div>
+        <PageHeader back={{ href: '/parent/analytics', label: 'Back to Reports' }} title="Progress Analytics" />
 
         {/* Activity View */}
         <div className="mb-8">

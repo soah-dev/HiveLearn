@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
 
 const subjects = [
   { value: 'math', label: 'Math' },
@@ -161,25 +163,35 @@ export default function PresetsPage() {
   return (
     <>
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Assignment Presets</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Auto-generate assignments on a schedule</p>
-          </div>
-          <button
-            onClick={() => { setShowForm(true); resetForm(); }}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
-          >
-            + New Preset
-          </button>
-        </div>
+        <PageHeader
+          back={{ href: '/parent/dashboard', label: 'Back to Dashboard' }}
+          title="Scheduled Assignments"
+          subtitle="Presets auto-generate assignments on the days you choose"
+          actions={
+            <button
+              onClick={() => { setShowForm(true); resetForm(); }}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+            >
+              + New Preset
+            </button>
+          }
+        />
 
         {/* Presets List */}
         {presets.length === 0 && !showForm ? (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center">
-            <p className="text-5xl mb-3">🔄</p>
-            <p className="text-gray-500 dark:text-gray-400">No presets yet. Create one to auto-generate assignments on a schedule.</p>
-          </div>
+          <EmptyState
+            icon="🔄"
+            title="No presets yet"
+            description="A preset generates a fresh assignment for a child on the days you pick, so you don't have to create them by hand."
+            action={
+              <button
+                onClick={() => { setShowForm(true); resetForm(); }}
+                className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
+              >
+                Create a preset
+              </button>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {presets.map(preset => (
@@ -200,7 +212,8 @@ export default function PresetsPage() {
                     </button>
                     <button
                       onClick={() => deletePreset(preset.id)}
-                      className="text-red-400 hover:text-red-600 text-sm font-bold"
+                      aria-label="Delete preset"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-lg leading-none transition-colors"
                     >
                       &times;
                     </button>

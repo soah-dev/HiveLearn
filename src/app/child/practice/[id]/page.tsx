@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MathText from '@/components/MathText';
+import QuizProgress from '@/components/QuizProgress';
+import PageHeader from '@/components/PageHeader';
 
 interface PracticeQuestion {
   id: string;
@@ -102,35 +104,33 @@ export default function PracticeSessionPage() {
   if (!session) return <><div className="p-8 text-center text-gray-500">Session not found</div></>;
 
   const isCompleted = session.status === 'completed';
+  const answeredCount = session.questions.filter(q => !!answers[q.id]).length;
 
   return (
     <>
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-6 animate-slide-up">
-          <div className="flex items-center justify-between mb-3 no-print">
-            <button onClick={() => router.push('/child/practice')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline inline-block">&larr; Back to Practice</button>
-            <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-              Print
-            </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white capitalize">
-                {session.subject.replace('_', ' ')}{session.topic ? `: ${session.topic}` : ''}
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400">Grade {session.grade} · {session.difficulty} · 10 questions</p>
-            </div>
-            {isCompleted && session.score !== null && (
-              <div className="text-right">
-                <p className={`text-4xl font-extrabold ${session.score >= 80 ? 'text-green-600' : session.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {session.score}%
-                </p>
-                {session.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">+{session.pointsAwarded} pts</p>}
-              </div>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          back={{ href: '/child/practice', label: 'Back to Practice' }}
+          title={<span className="capitalize">{session.subject.replace('_', ' ')}{session.topic ? `: ${session.topic}` : ''}</span>}
+          subtitle={`Grade ${session.grade} · ${session.difficulty} · ${session.questions.length} questions`}
+          className="mb-6"
+          actions={
+            <>
+              {isCompleted && session.score !== null && (
+                <div className="text-left sm:text-right mr-auto sm:mr-0">
+                  <p className={`text-4xl font-extrabold leading-none ${session.score >= 80 ? 'text-green-600' : session.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    {session.score}%
+                  </p>
+                  {session.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-1">+{session.pointsAwarded} pts</p>}
+                </div>
+              )}
+              <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                Print
+              </button>
+            </>
+          }
+        />
 
         {/* Result banner */}
         {result && (
@@ -152,8 +152,16 @@ export default function PracticeSessionPage() {
                 className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up print-break-inside-avoid"
                 style={{ animationDelay: `${i * 30}ms` }}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. <MathText text={q.questionText} /></p>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <p className="text-gray-900 dark:text-white font-bold">
+                    <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 mr-2 rounded-lg text-xs font-extrabold align-middle bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                      {i + 1}
+                    </span>
+                    <MathText text={q.questionText} />
+                  </p>
+                  {!isCompleted && myAnswer && (
+                    <span className="text-xs font-bold text-green-600 dark:text-green-400 flex-shrink-0 mt-1" aria-label="Answered">✓</span>
+                  )}
                   {isCompleted && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
                     <span className={`text-xl ml-2 flex-shrink-0 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
                       {ans.isCorrect ? '✓' : '✗'}
@@ -230,13 +238,18 @@ export default function PracticeSessionPage() {
         )}
 
         {!isCompleted && (
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="no-print w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
-          >
-            {submitting ? 'Submitting...' : 'Submit Practice'}
-          </button>
+          <div className="sticky bottom-0 -mx-4 px-4 pb-4 pt-6 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent dark:from-gray-900 dark:via-gray-900/95 no-print">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-xl shadow-gray-900/10 p-4 space-y-3">
+              <QuizProgress answered={answeredCount} total={session.questions.length} />
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
+              >
+                {submitting ? 'Submitting...' : answeredCount < session.questions.length ? `Submit (${answeredCount}/${session.questions.length})` : 'Submit Practice'}
+              </button>
+            </div>
+          </div>
         )}
 
         {isCompleted && (

@@ -88,6 +88,26 @@ body {
   background: linear-gradient(135deg, #172554, #1e3a5f);
 }
 
+/* Keyboard focus: one consistent ring everywhere instead of per-element rules */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+.dark :focus-visible {
+  outline-color: #818cf8;
+}
+
+/* Respect the OS "reduce motion" setting: keep state changes, drop decoration */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

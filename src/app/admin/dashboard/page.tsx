@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -136,18 +137,18 @@ export default function AdminDashboard() {
   return (
     <>
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Admin Dashboard</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Platform-wide metrics and activity</p>
-          </div>
-          <a
-            href="/admin/ai-usage"
-            className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-5 py-3 rounded-xl font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
-          >
-            AI Usage
-          </a>
-        </div>
+        <PageHeader
+          title="Admin Dashboard"
+          subtitle="Platform-wide metrics and activity"
+          actions={
+            <a
+              href="/admin/ai-usage"
+              className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
+            >
+              AI Usage
+            </a>
+          }
+        />
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">

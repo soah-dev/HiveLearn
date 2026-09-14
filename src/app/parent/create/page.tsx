@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MathText from '@/components/MathText';
+import PageHeader from '@/components/PageHeader';
+import Link from 'next/link';
 
 const subjects = [
   { value: 'math', label: 'Math' },
@@ -166,10 +168,10 @@ export default function CreateAssignment() {
   return (
     <>
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-8 animate-slide-up">
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Create Assignment</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Generate questions for your child</p>
-        </div>
+        <PageHeader
+          title="Create Assignment"
+          subtitle={step === 'form' ? 'Step 1 of 2 · Choose what to generate' : 'Step 2 of 2 · Review, edit, then send to your child'}
+        />
 
         {step === 'form' ? (
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200/60 dark:border-gray-700/60 p-8 animate-slide-up">
@@ -178,7 +180,9 @@ export default function CreateAssignment() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Assign to</label>
                 {children.length === 0 ? (
-                  <p className="text-sm text-red-500">No children linked. Generate an invite code first.</p>
+                  <p className="text-sm text-red-500">
+                    No children linked yet. <Link href="/parent/dashboard" className="font-bold underline">Add a child</Link> from your dashboard first.
+                  </p>
                 ) : (
                   <select value={childId} onChange={e => handleChildChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
                     {children.map(c => <option key={c.id} value={c.id}>{c.name || c.email}</option>)}
@@ -283,12 +287,12 @@ export default function CreateAssignment() {
         ) : (
           /* Preview Step */
           <div className="animate-slide-up">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Preview & Edit Questions</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">The preview shows what your child will see. Edit the raw text below it; math wrapped in $...$ renders automatically.</p>
               </div>
-              <button onClick={() => setStep('form')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
+              <button onClick={() => setStep('form')} className="self-start text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex-shrink-0">
                 &larr; Back to form
               </button>
             </div>
@@ -358,8 +362,8 @@ export default function CreateAssignment() {
               </div>
             )}
 
-            <div className="flex gap-3">
-              <button onClick={handleGenerate} disabled={generating} className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sticky bottom-4">
+              <button onClick={handleGenerate} disabled={generating} className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all shadow-lg">
                 {generating ? 'Regenerating...' : 'Regenerate'}
               </button>
               <button onClick={handlePublish} disabled={publishing} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25">

@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import MathText from '@/components/MathText';
+import QuizProgress, { Countdown } from '@/components/QuizProgress';
+import PageHeader from '@/components/PageHeader';
 
 interface Question {
   id: string;
@@ -181,12 +183,6 @@ export default function ChildAssignmentPage() {
     setSaving(false);
   };
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
   if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
   if (!assignment) return <><div className="p-8 text-center text-gray-500">Assignment not found</div></>;
 
@@ -195,47 +191,33 @@ export default function ChildAssignmentPage() {
   const isPending = assignment.status === 'pending';
   const isActive = assignment.status === 'in_progress';
   const canAnswer = isPending || isActive;
+  const answeredCount = assignment.questions.filter(q => !!answers[q.id]).length;
 
   return (
     <>
       <main className="max-w-3xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6 animate-slide-up">
-          <div className="flex items-center justify-between mb-3 no-print">
-            <button onClick={() => router.push('/child/dashboard')} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline inline-block">&larr; Back to Dashboard</button>
-            <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-              Print
-            </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white capitalize">
-                {assignment.subject.replace('_', ' ')}: {assignment.topic}
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Grade {assignment.grade} | {assignment.difficulty} | {assignment.numQuestions} questions
-              </p>
-            </div>
-            {isReviewed && assignment.score !== null && (
-              <div className="text-right">
-                <p className={`text-4xl font-extrabold ${assignment.score >= 80 ? 'text-green-600' : assignment.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {assignment.score}%
-                </p>
-                {assignment.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">+{assignment.pointsAwarded} pts</p>}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Timer */}
-        {timeLeft !== null && canAnswer && (
-          <div className={`mb-6 p-4 rounded-2xl text-center font-mono text-2xl font-extrabold ${
-            timeLeft < 60 ? 'bg-red-50 dark:bg-red-900/30 text-red-600 border-2 border-red-200 dark:border-red-800' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 border-2 border-indigo-200 dark:border-indigo-800'
-          } animate-slide-up`}>
-            ⏱ {formatTime(timeLeft)}
-          </div>
-        )}
+        <PageHeader
+          back={{ href: '/child/dashboard', label: 'Back to Dashboard' }}
+          title={<span className="capitalize">{assignment.subject.replace('_', ' ')}: {assignment.topic}</span>}
+          subtitle={`Grade ${assignment.grade} · ${assignment.difficulty} · ${assignment.numQuestions} questions${assignment.timeLimitMin ? ` · ${assignment.timeLimitMin} min limit` : ''}`}
+          className="mb-6"
+          actions={(isReviewed || isActive) ? (
+            <>
+              {isReviewed && assignment.score !== null && (
+                <div className="text-left sm:text-right mr-auto sm:mr-0">
+                  <p className={`text-4xl font-extrabold leading-none ${assignment.score >= 80 ? 'text-green-600' : assignment.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    {assignment.score}%
+                  </p>
+                  {assignment.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-1">+{assignment.pointsAwarded} pts</p>}
+                </div>
+              )}
+              <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                Print
+              </button>
+            </>
+          ) : undefined}
+        />
 
         {/* Start button for pending */}
         {isPending && (
@@ -244,9 +226,10 @@ export default function ChildAssignmentPage() {
               <p className="text-5xl mb-4 animate-float">📝</p>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Ready to begin?</h2>
               <p className="text-gray-500 dark:text-gray-400 mb-6">
-                {assignment.numQuestions} questions | {assignment.difficulty}
-                {assignment.timeLimitMin && ` | ${assignment.timeLimitMin} min time limit`}
+                {assignment.numQuestions} questions · {assignment.difficulty}
+                {assignment.timeLimitMin && ` · ${assignment.timeLimitMin} min time limit`}
               </p>
+              {timeLeft !== null && <Countdown seconds={timeLeft} className="mb-6" />}
               <button onClick={startAssignment} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
                 Start Assignment
               </button>
@@ -289,8 +272,16 @@ export default function ChildAssignmentPage() {
                   }`}
                   style={{ animationDelay: `${i * 30}ms` }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <p className="text-gray-900 dark:text-white font-bold">Q{i + 1}. <MathText text={q.questionText} /></p>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <p className="text-gray-900 dark:text-white font-bold">
+                      <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 mr-2 rounded-lg text-xs font-extrabold align-middle bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                        {i + 1}
+                      </span>
+                      <MathText text={q.questionText} />
+                    </p>
+                    {canAnswer && myAnswer && !isFlagged && (
+                      <span className="text-xs font-bold text-green-600 dark:text-green-400 flex-shrink-0 mt-1" aria-label="Answered">✓</span>
+                    )}
                     {isReviewed && wasFlagged && !ans.flagResolvedAt && (
                       <span className="text-sm font-bold text-amber-600 dark:text-amber-400 ml-2 flex-shrink-0">Pending review</span>
                     )}
@@ -461,33 +452,39 @@ export default function ChildAssignmentPage() {
           </div>
         )}
 
-        {/* Action buttons */}
-        {isActive && (
-          <div className="flex gap-3 sticky bottom-4 no-print">
-            {!assignment.timeLimitMin && (
-              <button
-                onClick={saveProgress}
-                disabled={saving}
-                className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-              >
-                {saving ? 'Saving...' : 'Save Progress'}
-              </button>
-            )}
-            <button
-              onClick={() => handleSubmit()}
-              disabled={submitting}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
-            >
-              {submitting ? 'Submitting...' : 'Submit Assignment'}
-            </button>
-          </div>
-        )}
-
         {error && (
-          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
+          <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
             {error}
           </div>
         )}
+
+        {/* Sticky action bar: progress, timer and submit always in view */}
+        {isActive && (
+          <div className="sticky bottom-0 -mx-4 px-4 pb-4 pt-6 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent dark:from-gray-900 dark:via-gray-900/95 no-print">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-xl shadow-gray-900/10 p-4 space-y-3">
+              <QuizProgress answered={answeredCount} total={assignment.questions.length} timeLeft={timeLeft} />
+              <div className="flex gap-3">
+                {!assignment.timeLimitMin && (
+                  <button
+                    onClick={saveProgress}
+                    disabled={saving}
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                  >
+                    {saving ? 'Saving...' : 'Save Progress'}
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSubmit()}
+                  disabled={submitting}
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
+                >
+                  {submitting ? 'Submitting...' : answeredCount < assignment.questions.length ? `Submit (${answeredCount}/${assignment.questions.length})` : 'Submit Assignment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </>
   );
