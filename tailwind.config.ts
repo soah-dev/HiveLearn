@@ -1,57 +1,64 @@
 import type { Config } from "tailwindcss";
 
+// Every colour is a CSS variable (RGB channels) defined in globals.css, so
+// light/dark are swapped in one place and components never need `dark:` variants.
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   darkMode: 'class',
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // ToastProvider renders markup, so its classes must be scanned too
+    "./src/contexts/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        // Surfaces
+        canvas: token('canvas'),
+        surface: token('surface'),
+        muted: token('muted'),
+        line: { DEFAULT: token('line'), strong: token('line-strong') },
+        // Text
+        ink: { DEFAULT: token('ink'), muted: token('ink-muted'), subtle: token('ink-subtle') },
+        // Brand
+        honey: {
+          DEFAULT: token('honey'),
+          hover: token('honey-hover'),
+          soft: token('honey-soft'),
+          line: token('honey-line'),
+          ink: token('honey-ink'),
+          text: token('honey-text'),
+        },
+        // Status (reserved meaning: never decorative)
+        good: { DEFAULT: token('good'), soft: token('good-soft'), text: token('good-text') },
+        warn: { DEFAULT: token('warn'), soft: token('warn-soft'), text: token('warn-text') },
+        bad: { DEFAULT: token('bad'), soft: token('bad-soft'), text: token('bad-text') },
+        info: { DEFAULT: token('info'), soft: token('info-soft'), text: token('info-text') },
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      boxShadow: {
+        card: '0 1px 2px rgb(var(--shadow) / 0.06)',
+        pop: '0 16px 40px -16px rgb(var(--shadow) / 0.35), 0 4px 12px -6px rgb(var(--shadow) / 0.18)',
       },
       animation: {
-        'float': 'float 3s ease-in-out infinite',
-        'float-slow': 'float 5s ease-in-out infinite',
-        'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
-        'slide-up': 'slide-up 0.4s ease-out',
-        'slide-in': 'slide-in 0.3s ease-out',
-        'bounce-in': 'bounce-in 0.5s ease-out',
-        'shimmer': 'shimmer 2s linear infinite',
-        'wiggle': 'wiggle 1s ease-in-out infinite',
+        enter: 'enter 0.18s ease-out',
+        'sheet-up': 'sheet-up 0.22s ease-out',
       },
       keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-8px)' },
-        },
-        'pulse-soft': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.7' },
-        },
-        'slide-up': {
-          '0%': { transform: 'translateY(16px)', opacity: '0' },
+        enter: {
+          '0%': { transform: 'translateY(6px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
-        'slide-in': {
-          '0%': { transform: 'translateX(-16px)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-        'bounce-in': {
-          '0%': { transform: 'scale(0.8)', opacity: '0' },
-          '60%': { transform: 'scale(1.05)' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        wiggle: {
-          '0%, 100%': { transform: 'rotate(-3deg)' },
-          '50%': { transform: 'rotate(3deg)' },
+        'sheet-up': {
+          '0%': { transform: 'translateY(24px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
         },
       },
     },

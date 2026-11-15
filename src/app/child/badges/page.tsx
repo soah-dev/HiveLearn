@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import PageHeader from '@/components/PageHeader';
+import Page, { PageLoader } from '@/components/ui/Page';
+import Card, { SectionHeader } from '@/components/ui/Card';
+import BadgeMedal from '@/components/ui/BadgeMedal';
 
 interface Badge {
   id: string;
@@ -40,68 +44,70 @@ export default function BadgesPage() {
     }
   }, [user, token, loading, router]);
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <PageLoader />;
 
   const earnedIds = new Set(earnedBadges.map(b => b.badgeId));
+  const locked = allBadges.filter(b => !earnedIds.has(b.id));
   const progress = allBadges.length > 0 ? (earnedBadges.length / allBadges.length) * 100 : 0;
 
   return (
-    <>
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center mb-8 animate-slide-up">
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Badge Collection</h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            <span className="font-bold text-indigo-600 dark:text-indigo-400">{earnedBadges.length}</span> of {allBadges.length} badges earned
+    <Page width="medium">
+      <PageHeader title="Badges" subtitle="Every badge is a cell in your hive. Fill them in as you learn." />
+
+      {/* Progress */}
+      <Card className="mb-8">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-ink">
+            <span className="text-2xl font-semibold tracking-tight">{earnedBadges.length}</span>
+            <span className="text-ink-muted"> of {allBadges.length} earned</span>
           </p>
+          <p className="text-sm font-medium tabular-nums text-ink-muted">{Math.round(progress)}%</p>
         </div>
-
-        {/* Progress bar */}
-        <div className="mb-10 max-w-md mx-auto">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-4 rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-center text-xs font-semibold text-gray-400 mt-2">{Math.round(progress)}% complete</p>
+        <div
+          className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={allBadges.length}
+          aria-valuenow={earnedBadges.length}
+          aria-label="Badges earned"
+        >
+          <div className="h-full rounded-full bg-honey transition-[width] duration-700 ease-out" style={{ width: `${progress}%` }} />
         </div>
+      </Card>
 
-        {/* Earned Badges */}
-        {earnedBadges.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Earned</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {earnedBadges.map((eb, i) => (
-                <div
-                  key={eb.id}
-                  className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-2xl border-2 border-indigo-300 dark:border-indigo-600 p-5 text-center card-hover animate-slide-up"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  <p className="text-5xl mb-2 animate-float">{eb.badge.icon}</p>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">{eb.badge.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{eb.badge.description}</p>
-                  <p className="text-xs text-indigo-500 dark:text-indigo-400 font-semibold mt-2">{new Date(eb.earnedAt).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Locked Badges */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Locked</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {allBadges.filter(b => !earnedIds.has(b.id)).map(badge => (
-              <div key={badge.id} className="bg-gray-100/50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 text-center group hover:border-gray-300 dark:hover:border-gray-600 transition-all">
-                <p className="text-5xl mb-2 grayscale opacity-40 group-hover:opacity-60 transition-opacity">{badge.icon}</p>
-                <p className="font-bold text-gray-400 dark:text-gray-500 text-sm">{badge.name}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">{badge.description}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 font-semibold">🔒 Locked</p>
-              </div>
+      {earnedBadges.length > 0 && (
+        <section className="mb-10" aria-labelledby="earned-heading">
+          <SectionHeader id="earned-heading" title="Earned" count={earnedBadges.length} />
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {earnedBadges.map(eb => (
+              <li key={eb.id} className="rounded-2xl border border-line bg-surface p-4 text-center">
+                <BadgeMedal criteria={eb.badge.criteria} earned size={76} />
+                <p className="mt-3 font-display text-sm font-semibold text-ink">{eb.badge.name}</p>
+                <p className="mt-1 text-xs text-ink-muted">{eb.badge.description}</p>
+                <p className="mt-2 text-xs font-medium text-honey-text">{new Date(eb.earnedAt).toLocaleDateString()}</p>
+              </li>
             ))}
-          </div>
-        </div>
-      </main>
-    </>
+          </ul>
+        </section>
+      )}
+
+      {locked.length > 0 && (
+        <section aria-labelledby="locked-heading">
+          <SectionHeader id="locked-heading" title="Still to earn" count={locked.length} />
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {locked.map(badge => (
+              <li key={badge.id} className="rounded-2xl border border-dashed border-line-strong p-4 text-center">
+                <BadgeMedal criteria={badge.criteria} earned={false} size={76} />
+                <p className="mt-3 font-display text-sm font-semibold text-ink-muted">{badge.name}</p>
+                <p className="mt-1 text-xs text-ink-subtle">{badge.description}</p>
+                <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ink-subtle">
+                  <Lock className="h-3 w-3" aria-hidden="true" /> Locked
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </Page>
   );
 }

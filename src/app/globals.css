@@ -2,100 +2,119 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens. Values are RGB channels so Tailwind can apply opacity
+ * (`bg-honey/20`). Names are mapped to utilities in tailwind.config.ts.
+ * Text/background pairs are checked for WCAG AA contrast in both themes.
+ */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  color-scheme: light;
+
+  /* Surfaces */
+  --canvas: 250 247 240;       /* page background: warm cream */
+  --surface: 255 255 255;      /* cards, sheets, inputs */
+  --muted: 243 238 227;        /* quiet fills: chips, hover, inset panels */
+  --line: 231 223 207;         /* hairline borders */
+  --line-strong: 211 200 178;  /* control borders */
+
+  /* Text */
+  --ink: 28 24 20;
+  --ink-muted: 95 87 75;
+  --ink-subtle: 113 104 90;
+
+  /* Brand: honey */
+  --honey: 245 181 10;         /* fills (always paired with --honey-ink text) */
+  --honey-hover: 232 168 0;
+  --honey-soft: 252 239 199;   /* tinted backgrounds */
+  --honey-line: 240 212 138;   /* tinted borders */
+  --honey-ink: 28 24 20;       /* text on a honey fill */
+  --honey-text: 138 90 0;      /* honey-coloured text on canvas/surface */
+
+  /* Status */
+  --good: 46 125 79;
+  --good-soft: 227 243 232;
+  --good-text: 31 107 63;
+  --warn: 217 102 11;
+  --warn-soft: 252 233 216;
+  --warn-text: 168 72 10;
+  --bad: 200 55 45;
+  --bad-soft: 251 230 227;
+  --bad-text: 163 41 32;
+  --info: 47 111 176;
+  --info-soft: 228 238 247;
+  --info-text: 36 91 143;
+
+  /* Chart series: validated colour-blind-safe as a set (all pairs) on --surface */
+  --chart-1: 184 122 0;
+  --chart-2: 59 111 212;
+  --chart-3: 194 71 127;
+
+  --shadow: 60 45 20;
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
+  color-scheme: dark;
+
+  --canvas: 20 17 13;
+  --surface: 29 25 20;
+  --muted: 38 33 26;
+  --line: 52 45 35;
+  --line-strong: 74 65 51;
+
+  --ink: 245 240 230;
+  --ink-muted: 185 175 158;
+  --ink-subtle: 149 139 122;
+
+  --honey: 245 181 10;
+  --honey-hover: 255 198 46;
+  --honey-soft: 58 46 14;
+  --honey-line: 107 84 23;
+  --honey-ink: 28 24 20;
+  --honey-text: 247 201 72;
+
+  --good: 63 160 106;
+  --good-soft: 22 48 31;
+  --good-text: 122 211 160;
+  --warn: 232 131 58;
+  --warn-soft: 58 35 19;
+  --warn-text: 244 165 107;
+  --bad: 224 88 77;
+  --bad-soft: 59 26 23;
+  --bad-text: 244 147 138;
+  --info: 91 155 216;
+  --info-soft: 23 40 56;
+  --info-text: 143 192 238;
+
+  --chart-1: 201 133 0;
+  --chart-2: 57 135 229;
+  --chart-3: 213 81 129;
+
+  --shadow: 0 0 0;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: rgb(var(--ink));
+  background: rgb(var(--canvas));
 }
 
-/* Gradient text utility */
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.dark .gradient-text {
-  background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Card hover effect */
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.15);
-}
-.dark .card-hover:hover {
-  box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.25);
-}
-
-/* Gradient backgrounds for stat cards */
-.stat-gradient-purple {
-  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-}
-.dark .stat-gradient-purple {
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
-}
-
-.stat-gradient-green {
-  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-}
-.dark .stat-gradient-green {
-  background: linear-gradient(135deg, #022c22, #064e3b);
-}
-
-.stat-gradient-amber {
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-}
-.dark .stat-gradient-amber {
-  background: linear-gradient(135deg, #451a03, #78350f);
-}
-
-.stat-gradient-rose {
-  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
-}
-.dark .stat-gradient-rose {
-  background: linear-gradient(135deg, #4c0519, #881337);
-}
-
-.stat-gradient-teal {
-  background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
-}
-.dark .stat-gradient-teal {
-  background: linear-gradient(135deg, #042f2e, #134e4a);
-}
-
-.stat-gradient-blue {
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-}
-.dark .stat-gradient-blue {
-  background: linear-gradient(135deg, #172554, #1e3a5f);
-}
-
-/* Keyboard focus: one consistent ring everywhere instead of per-element rules */
+/* Keyboard focus: one high-contrast ring everywhere instead of per-element rules */
 :focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid rgb(var(--ink));
   outline-offset: 2px;
-  border-radius: 0.5rem;
 }
-.dark :focus-visible {
-  outline-color: #818cf8;
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
+
+/* Honeycomb backdrop. The pattern is a mask, so its colour follows the tokens. */
+.honeycomb {
+  background-color: rgb(var(--honey) / 0.22);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0 28 8v16L14 32 0 24V8ZM14 32v16' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0 28 8v16L14 32 0 24V8ZM14 32v16' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
+  -webkit-mask-size: 42px 72px;
+  mask-size: 42px 72px;
 }
 
 /* Respect the OS "reduce motion" setting: keep state changes, drop decoration */
@@ -111,23 +130,34 @@ body {
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgb(var(--line-strong));
   border-radius: 3px;
 }
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
-}
 
-/* Print styles */
+/* Print: always the light palette, no app chrome */
 @media print {
+  :root, .dark {
+    color-scheme: light;
+    --canvas: 255 255 255;
+    --surface: 255 255 255;
+    --muted: 245 245 245;
+    --line: 209 213 219;
+    --line-strong: 156 163 175;
+    --ink: 0 0 0;
+    --ink-muted: 60 60 60;
+    --ink-subtle: 90 90 90;
+    --honey-soft: 245 245 245;
+    --honey-line: 156 163 175;
+    --honey-text: 0 0 0;
+  }
+
   body {
-    background: white !important;
-    color: black !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -136,43 +166,14 @@ body {
     display: none !important;
   }
 
+  .app-shell {
+    padding: 0 !important;
+  }
+
   main {
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
-  }
-
-  .dark {
-    background: white !important;
-    color: black !important;
-  }
-
-  /* Force light text colors to dark for readability */
-  .dark .text-white,
-  .dark .text-gray-100,
-  .dark .text-gray-200,
-  .dark .text-gray-300 {
-    color: #111 !important;
-  }
-
-  .dark .text-gray-400 {
-    color: #555 !important;
-  }
-
-  /* Ensure borders and backgrounds are visible */
-  [class*="dark:bg-gray-800"],
-  [class*="dark:bg-gray-700"],
-  [class*="dark:bg-gray-900"] {
-    background: white !important;
-  }
-
-  [class*="border"] {
-    border-color: #d1d5db !important;
-  }
-
-  /* Remove backdrop blur and shadows for clean print */
-  [class*="backdrop-blur"] {
-    backdrop-filter: none !important;
   }
 
   [class*="shadow"] {

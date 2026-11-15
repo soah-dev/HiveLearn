@@ -5,9 +5,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import Navbar from '@/components/Navbar';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { GRADES } from '@/lib/subjects';
 import PageHeader from '@/components/PageHeader';
+import Page, { PageLoader } from '@/components/ui/Page';
+import Card, { ListCard, SectionHeader } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Avatar from '@/components/ui/Avatar';
+import Pill from '@/components/ui/Pill';
+import Switch from '@/components/ui/Switch';
+import { Field, Select, Textarea } from '@/components/ui/Field';
 
 interface Child {
   id: string;
@@ -164,303 +171,210 @@ export default function SettingsPage() {
     setFeedbackSubmitting(false);
   };
 
-  if (loading) return <><Navbar /><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading) return <PageLoader />;
 
   const childGrade = (user as { grade?: number | null })?.grade;
 
   return (
-    <>
-      <Navbar />
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <PageHeader title="Settings" subtitle="Your profile, family preferences and appearance" />
+    <Page width="narrow">
+      <PageHeader title="Settings" subtitle="Your profile, family preferences and appearance" />
 
-        {actionError && (
-          <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-start justify-between gap-3">
-            <span>{actionError}</span>
-            <button onClick={() => setActionError('')} aria-label="Dismiss" className="font-bold">&times;</button>
-          </div>
-        )}
+      {actionError && <Alert className="mb-6" onDismiss={() => setActionError('')}>{actionError}</Alert>}
 
+      <div className="space-y-8">
         {/* Profile */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 card-hover animate-slide-up">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Profile</h2>
-          <div className="flex items-center gap-4">
-            {user?.image ? (
-              <img src={user.image} alt="" className="w-16 h-16 rounded-full ring-3 ring-indigo-200 dark:ring-indigo-800 shadow-md" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                {(user?.name || '?')[0].toUpperCase()}
-              </div>
-            )}
-            <div>
-              <p className="font-bold text-gray-900 dark:text-white text-lg">{user?.name}</p>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">{user?.email}</p>
-              <div className="flex gap-2 mt-2">
-                <span className="inline-block px-3 py-0.5 bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold capitalize">
-                  {user?.role}
-                </span>
-                {user?.role === 'child' && (
-                  <span className="inline-block px-3 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
-                    {childGrade ? `Grade ${childGrade}` : 'Grade not set'}
-                  </span>
-                )}
-              </div>
+        <Card className="flex items-center gap-4">
+          <Avatar name={user?.name} image={user?.image} size="lg" />
+          <div className="min-w-0">
+            <p className="truncate font-display text-lg font-semibold text-ink">{user?.name}</p>
+            <p className="truncate text-sm text-ink-muted">{user?.email}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Pill tone="honey" className="capitalize">{user?.role}</Pill>
+              {user?.role === 'child' && <Pill>{childGrade ? `Grade ${childGrade}` : 'Grade not set'}</Pill>}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Linked Parents (Child only) */}
         {user?.role === 'child' && linkedParents.length > 0 && (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '50ms' }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Linked Parents</h2>
-            <div className="space-y-3">
+          <section aria-labelledby="parents-heading">
+            <SectionHeader id="parents-heading" title="Linked parents" />
+            <ListCard>
               {linkedParents.map(parent => (
-                <div key={parent.id} className="flex items-center gap-3">
-                  {parent.image ? (
-                    <img src={parent.image} alt="" className="w-9 h-9 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-800" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {(parent.name || 'P')[0].toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">{parent.name || 'Parent'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{parent.email}</p>
+                <li key={parent.id} className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+                  <Avatar name={parent.name || 'P'} image={parent.image} />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-ink">{parent.name || 'Parent'}</p>
+                    <p className="truncate text-xs text-ink-muted">{parent.email}</p>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
-          </div>
+            </ListCard>
+          </section>
         )}
 
-        {/* Children grade management (Parent only) */}
+        {/* Per-child preferences (Parent only): grade, weekly report, leaderboard */}
         {user?.role === 'parent' && children.length > 0 && (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '50ms' }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Children&apos;s Grade Levels</h2>
-            <div className="space-y-4">
-              {children.map(child => (
-                <div key={child.id} className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {(child.name || 'C')[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">{child.name || child.email}</p>
-                  </div>
-                  <select
-                    value={editingGrade[child.id] ?? child.grade ?? 1}
-                    onChange={e => setEditingGrade(prev => ({ ...prev, [child.id]: Number(e.target.value) }))}
-                    className="px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  >
-                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>Grade {g}</option>)}
-                  </select>
-                  <button
-                    onClick={() => saveGrade(child.id)}
-                    disabled={savingGrade === child.id}
-                    className="text-sm bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 transition-all shadow-sm"
-                  >
-                    {savingGrade === child.id ? '...' : gradeSaved === child.id ? 'Saved!' : 'Save'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Weekly Reports (Parent only) */}
-        {user?.role === 'parent' && children.length > 0 && (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '75ms' }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Weekly Email Reports</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Get a summary of each child&apos;s activity every Sunday</p>
-            <div className="space-y-3">
-              {children.map(child => (
-                <div key={child.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {(child.name || 'C')[0].toUpperCase()}
+          <section aria-labelledby="children-heading">
+            <SectionHeader id="children-heading" title="Your children" description="Grade level, weekly reports and leaderboard visibility." />
+            <ListCard>
+              {children.map(child => {
+                const label = child.name || child.email;
+                return (
+                  <li key={child.id} className="p-4 sm:p-5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={label} image={child.image} />
+                      <p className="min-w-0 flex-1 truncate font-semibold text-ink">{label}</p>
                     </div>
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">{child.name || child.email}</p>
-                  </div>
-                  <button
-                    onClick={() => toggleWeeklyReport(child.id, !child.weeklyReportEnabled)}
-                    disabled={togglingReport === child.id}
-                    className={`relative w-14 h-7 rounded-full transition-colors disabled:opacity-50 ${child.weeklyReportEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${child.weeklyReportEnabled ? 'translate-x-7' : ''}`} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Leaderboard Visibility (Parent only) */}
-        {user?.role === 'parent' && children.length > 0 && (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '85ms' }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Leaderboard Visibility</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Show your child on the global leaderboard (first name only)</p>
-            <div className="space-y-3">
-              {children.map(child => (
-                <div key={child.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {(child.name || 'C')[0].toUpperCase()}
+                    <div className="mt-4 space-y-4 sm:pl-[52px]">
+                      <div className="flex items-center justify-between gap-3">
+                        <label htmlFor={`grade-${child.id}`} className="text-sm font-medium text-ink">Grade level</label>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            id={`grade-${child.id}`}
+                            controlSize="sm"
+                            wrapperClassName="w-32"
+                            value={editingGrade[child.id] ?? child.grade ?? 1}
+                            onChange={e => setEditingGrade(prev => ({ ...prev, [child.id]: Number(e.target.value) }))}
+                          >
+                            {GRADES.map(g => <option key={g} value={g}>Grade {g}</option>)}
+                          </Select>
+                          <Button variant="secondary" size="sm" onClick={() => saveGrade(child.id)} loading={savingGrade === child.id}>
+                            {gradeSaved === child.id ? 'Saved' : 'Save'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-ink">Weekly email report</p>
+                          <p className="text-xs text-ink-subtle">A summary of their activity every Sunday</p>
+                        </div>
+                        <Switch
+                          label={`Weekly email report for ${label}`}
+                          checked={child.weeklyReportEnabled}
+                          onChange={enabled => toggleWeeklyReport(child.id, enabled)}
+                          disabled={togglingReport === child.id}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-ink">Global leaderboard</p>
+                          <p className="text-xs text-ink-subtle">Show them on the global leaderboard (first name only)</p>
+                        </div>
+                        <Switch
+                          label={`Show ${label} on the global leaderboard`}
+                          checked={!child.leaderboardOptOut}
+                          onChange={visible => toggleLeaderboard(child.id, !visible)}
+                          disabled={togglingLeaderboard === child.id}
+                        />
+                      </div>
                     </div>
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">{child.name || child.email}</p>
-                  </div>
-                  <button
-                    onClick={() => toggleLeaderboard(child.id, child.leaderboardOptOut)}
-                    disabled={togglingLeaderboard === child.id}
-                    className={`relative w-14 h-7 rounded-full transition-colors disabled:opacity-50 ${!child.leaderboardOptOut ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${!child.leaderboardOptOut ? 'translate-x-7' : ''}`} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+                  </li>
+                );
+              })}
+            </ListCard>
+          </section>
         )}
 
         {/* Dark Mode */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Dark Mode</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Toggle dark/light theme</p>
-            </div>
-            <button
-              onClick={toggleDarkMode}
-              className={`relative w-14 h-7 rounded-full transition-colors ${darkMode ? 'bg-indigo-600' : 'bg-gray-300'}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${darkMode ? 'translate-x-7' : ''}`} />
-            </button>
+        <Card className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="font-display text-base font-semibold text-ink">Dark mode</h2>
+            <p className="text-sm text-ink-muted">Toggle dark/light theme</p>
           </div>
-        </div>
+          <Switch label="Dark mode" checked={darkMode} onChange={toggleDarkMode} />
+        </Card>
 
         {/* Feedback */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '150ms' }}>
+        <Card>
           {!feedbackOpen ? (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Feedback</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Help us improve HiveExcel</p>
+                <h2 className="font-display text-base font-semibold text-ink">Feedback</h2>
+                <p className="text-sm text-ink-muted">Help us improve HiveExcel</p>
               </div>
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm"
-              >
-                Send Feedback
-              </button>
+              <Button variant="secondary" onClick={() => setFeedbackOpen(true)}>Send feedback</Button>
             </div>
           ) : (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Send Feedback</h2>
+              <h2 className="font-display text-base font-semibold text-ink">Send feedback</h2>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                <select
-                  value={feedbackCategory}
-                  onChange={e => setFeedbackCategory(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                >
+              <Field label="Category" htmlFor="feedback-category">
+                <Select id="feedback-category" value={feedbackCategory} onChange={e => setFeedbackCategory(e.target.value)}>
                   <option value="general">General Feedback</option>
                   <option value="bug">Bug Report</option>
                   <option value="feature_request">Feature Request</option>
-                </select>
-              </div>
+                </Select>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Message</label>
-                <textarea
+              <Field label="Message" htmlFor="feedback-message">
+                <Textarea
+                  id="feedback-message"
                   value={feedbackMessage}
                   onChange={e => setFeedbackMessage(e.target.value)}
                   rows={4}
                   placeholder="Tell us what's on your mind..."
-                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Screenshot (optional)</label>
+              <Field label="Screenshot" htmlFor="feedback-file" optional>
                 <input
+                  id="feedback-file"
                   type="file"
                   accept="image/*"
                   onChange={e => setFeedbackFile(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-600 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/50 transition-all"
+                  className="w-full text-sm text-ink-muted file:mr-3 file:h-9 file:cursor-pointer file:rounded-lg file:border-0 file:bg-muted file:px-3 file:text-sm file:font-semibold file:text-ink hover:file:bg-line"
                 />
                 {feedbackFile && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{feedbackFile.name} ({(feedbackFile.size / 1024).toFixed(0)} KB)</p>
+                  <p className="mt-1 text-xs text-ink-subtle">{feedbackFile.name} ({(feedbackFile.size / 1024).toFixed(0)} KB)</p>
                 )}
-              </div>
+              </Field>
 
-              {feedbackError && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-                  {feedbackError}
-                </div>
-              )}
+              {feedbackError && <Alert>{feedbackError}</Alert>}
+              {feedbackSuccess && <Alert tone="good">Thank you! Your feedback has been submitted.</Alert>}
 
-              {feedbackSuccess && (
-                <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-600 dark:text-green-400">
-                  Thank you! Your feedback has been submitted.
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setFeedbackOpen(false); setFeedbackError(''); }}
-                  className="flex-1 py-3 rounded-xl font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={feedbackSubmitting || !feedbackMessage.trim()}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
-                >
-                  {feedbackSubmitting ? 'Submitting...' : 'Submit'}
-                </button>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="ghost" onClick={() => { setFeedbackOpen(false); setFeedbackError(''); }}>Cancel</Button>
+                <Button onClick={submitFeedback} loading={feedbackSubmitting} disabled={!feedbackMessage.trim()}>
+                  {feedbackSubmitting ? 'Submitting…' : 'Submit'}
+                </Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Your feedback history */}
         {myFeedback.length > 0 && (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-6 animate-slide-up" style={{ animationDelay: '175ms' }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Your Feedback</h2>
-            <div className="space-y-3">
+          <section aria-labelledby="feedback-heading">
+            <SectionHeader id="feedback-heading" title="Your feedback" />
+            <ListCard>
               {myFeedback.map(f => (
-                <div key={f.id} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      f.status === 'resolved'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                    }`}>{f.status === 'resolved' ? 'Replied' : 'Awaiting reply'}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(f.createdAt).toLocaleDateString()}</span>
+                <li key={f.id} className="p-4 sm:p-5">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <Pill tone={f.status === 'resolved' ? 'good' : 'neutral'}>{f.status === 'resolved' ? 'Replied' : 'Awaiting reply'}</Pill>
+                    <span className="text-xs text-ink-subtle">{new Date(f.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{f.message}</p>
+                  <p className="whitespace-pre-wrap text-sm text-ink">{f.message}</p>
                   {f.response && (
-                    <div className="mt-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/40">
-                      <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-1">HiveExcel team{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleDateString()}` : ''}</p>
-                      <p className="text-sm text-indigo-900 dark:text-indigo-100 whitespace-pre-wrap">{f.response}</p>
+                    <div className="mt-3 rounded-xl bg-honey-soft p-3.5">
+                      <p className="mb-1 text-xs font-semibold text-honey-text">HiveExcel team{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleDateString()}` : ''}</p>
+                      <p className="whitespace-pre-wrap text-sm text-ink">{f.response}</p>
                     </div>
                   )}
-                </div>
+                </li>
               ))}
-            </div>
-          </div>
+            </ListCard>
+          </section>
         )}
 
         {/* Sign Out */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up" style={{ animationDelay: '200ms' }}>
-          <button
-            onClick={async () => { await signOut(); router.push('/'); }}
-            className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 py-3.5 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all border border-red-200/50 dark:border-red-800/50"
-          >
-            Sign Out
-          </button>
-        </div>
-      </main>
-    </>
+        <Button variant="danger" size="lg" block onClick={async () => { await signOut(); router.push('/'); }}>
+          Sign out
+        </Button>
+      </div>
+    </Page>
   );
 }

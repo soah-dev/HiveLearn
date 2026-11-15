@@ -1,30 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Brain, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { DIFFICULTIES, GRADES, SUBJECTS, subjectLabel } from '@/lib/subjects';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
-
-const subjects = [
-  { value: 'math', label: 'Math' },
-  { value: 'reading', label: 'Reading' },
-  { value: 'science', label: 'Science' },
-  { value: 'history', label: 'History' },
-  { value: 'english', label: 'English' },
-  { value: 'geography', label: 'Geography' },
-  { value: 'art', label: 'Art' },
-  { value: 'music', label: 'Music' },
-  { value: 'computer_science', label: 'Computer Science' },
-  { value: 'foreign_languages', label: 'Foreign Languages' },
-];
-
-const subjectIcons: Record<string, string> = {
-  math: '🧮', reading: '📚', science: '🔬', history: '🏛️', english: '✍️',
-  geography: '🌍', art: '🎨', music: '🎵', computer_science: '💻', foreign_languages: '🌐',
-};
+import Modal from '@/components/Modal';
+import Page, { PageLoader } from '@/components/ui/Page';
+import { ListCard, SectionHeader } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Pill, { Score } from '@/components/ui/Pill';
+import Spinner from '@/components/ui/Spinner';
+import SubjectIcon from '@/components/ui/SubjectIcon';
+import DifficultyMeter from '@/components/ui/DifficultyMeter';
+import { Chips } from '@/components/ui/Choice';
+import { Field, Input, Select } from '@/components/ui/Field';
 
 interface PracticeSession {
   id: string;
@@ -37,6 +32,8 @@ interface PracticeSession {
   pointsAwarded: number | null;
   createdAt: string;
 }
+
+const questionCounts = [5, 10, 15, 20].map(n => ({ value: n, label: String(n) }));
 
 export default function PracticePage() {
   const { user, token, loading } = useAuth();
@@ -90,171 +87,123 @@ export default function PracticePage() {
     }
   };
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || dataLoading) return <PageLoader />;
+
+  const openForm = () => { setShowForm(true); setError(''); };
 
   return (
-    <>
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <PageHeader
-          title="Practice"
-          subtitle="Generate questions and practice on your own"
-          actions={
-            <button
-              onClick={() => { setShowForm(true); setError(''); }}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
-            >
-              + New Session
-            </button>
-          }
+    <Page width="medium">
+      <PageHeader
+        title="Practice"
+        subtitle="Generate questions and practice on your own"
+        actions={
+          <Button onClick={openForm} icon={<Plus className="h-4 w-4" aria-hidden="true" />}>New session</Button>
+        }
+      />
+
+      {/* Errors from removing a session; generation errors show inside the dialog */}
+      {error && !showForm && <Alert className="mb-6" onDismiss={() => setError('')}>{error}</Alert>}
+
+      {sessions.length === 0 ? (
+        <EmptyState
+          icon={Brain}
+          title="No practice sessions yet"
+          description="Pick a subject and difficulty to generate a set of questions. Every session earns points and keeps your streak alive."
+          action={<Button onClick={openForm}>Start a session</Button>}
         />
-
-        {/* New Session Form */}
-        {showForm && (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-8 animate-slide-up">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Practice Session</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Grade Level</label>
-                <select value={grade} onChange={e => setGrade(Number(e.target.value))} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => (
-                    <option key={g} value={g} disabled={g < childGrade}>
-                      Grade {g}{g < childGrade ? ' (below your grade)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Subject</label>
-                <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-                  {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">
-                Topic <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={topic}
-                onChange={e => setTopic(e.target.value)}
-                placeholder="e.g., Fractions, The Solar System, Grammar..."
-                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Difficulty</label>
-              <div className="flex gap-3">
-                {['easy', 'medium', 'hard'].map(d => (
-                  <button key={d} onClick={() => setDifficulty(d)} className={`flex-1 py-3 rounded-xl font-bold capitalize transition-all ${difficulty === d ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Number of Questions</label>
-              <div className="flex gap-3">
-                {[5, 10, 15, 20].map(n => (
-                  <button key={n} onClick={() => setNumQuestions(n)} className={`flex-1 py-3 rounded-xl font-bold transition-all ${numQuestions === n ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleStart}
-              disabled={generating}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
-            >
-              {generating ? <><LoadingSpinner size="sm" /> Generating questions...</> : 'Start Practice'}
-            </button>
-          </div>
-        )}
-
-        {/* Past Sessions */}
-        {sessions.length === 0 ? (
-          <EmptyState
-            icon="🧠"
-            title="No practice sessions yet"
-            description="Pick a subject and difficulty to generate a set of questions. Every session earns points and keeps your streak alive."
-            action={!showForm ? (
-              <button
-                onClick={() => { setShowForm(true); setError(''); }}
-                className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
-              >
-                Start a session
-              </button>
-            ) : undefined}
-          />
-        ) : (
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Past Sessions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sessions.map((s, i) => (
-                <div
-                  key={s.id}
-                  className="relative group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 card-hover animate-slide-up"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  {s.status !== 'completed' && (
-                  <button
-                    onClick={() => handleDelete(s.id)}
-                    disabled={deletingId === s.id}
-                    aria-label="Remove session"
-                    className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all disabled:opacity-50"
-                  >
-                    {deletingId === s.id ? <LoadingSpinner size="sm" /> : <span className="text-lg leading-none">&times;</span>}
-                  </button>
-                  )}
-                  <button
-                    onClick={() => router.push(`/child/practice/${s.id}`)}
-                    className="w-full p-5 text-left"
-                  >
-                    <div className="flex items-center justify-between mb-2 pr-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{subjectIcons[s.subject] || '📝'}</span>
-                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize">{s.subject.replace('_', ' ')}</span>
-                      </div>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                        s.status === 'completed'
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                      }`}>
-                        {s.status === 'completed' ? 'Done' : 'In Progress'}
-                      </span>
+      ) : (
+        <section aria-labelledby="sessions-heading">
+          <SectionHeader id="sessions-heading" title="Past sessions" count={sessions.length} />
+          <ListCard>
+            {sessions.map(s => {
+              const done = s.status === 'completed';
+              return (
+                <li key={s.id} className="flex items-center gap-1 pr-2 sm:pr-3">
+                  <Link href={`/child/practice/${s.id}`} className="group flex min-w-0 flex-1 items-center gap-3.5 py-3.5 pl-4 sm:pl-5">
+                    <SubjectIcon subject={s.subject} />
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-semibold text-ink group-hover:underline sm:truncate">
+                        {s.topic || `Grade ${s.grade} ${subjectLabel(s.subject)}`}
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+                        <span>{subjectLabel(s.subject)}</span>
+                        <DifficultyMeter difficulty={s.difficulty} />
+                        <span>Grade {s.grade}</span>
+                        <span className="text-ink-subtle">{new Date(s.createdAt).toLocaleDateString()}</span>
+                      </p>
                     </div>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">{s.topic || `Grade ${s.grade} ${s.subject.replace('_', ' ')}`}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">{s.difficulty} · Grade {s.grade}</p>
-                    {s.status === 'completed' && s.score !== null && (
-                      <div className="flex items-center justify-between">
-                        <span className={`text-lg font-extrabold ${s.score >= 80 ? 'text-green-600' : s.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {s.score}%
-                        </span>
-                        {s.pointsAwarded && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
-                      </div>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {done && s.pointsAwarded ? <span className="hidden text-xs font-semibold text-honey-text sm:inline">+{s.pointsAwarded} pts</span> : null}
+                      {done && s.score !== null ? (
+                        <Score value={s.score} className="text-base" />
+                      ) : (
+                        <Pill tone={done ? 'good' : 'honey'}>{done ? 'Done' : 'In progress'}</Pill>
+                      )}
+                      {done && <ChevronRight className="h-4 w-4 text-ink-subtle" aria-hidden="true" />}
+                    </div>
+                  </Link>
+                  {!done && (
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      disabled={deletingId === s.id}
+                      aria-label="Remove session"
+                      title="Remove session"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-bad-soft hover:text-bad-text disabled:opacity-50"
+                    >
+                      {deletingId === s.id ? <Spinner /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ListCard>
+        </section>
+      )}
+
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="New practice session" size="lg">
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Grade level" htmlFor="practice-grade">
+              <Select id="practice-grade" value={grade} onChange={e => setGrade(Number(e.target.value))}>
+                {GRADES.map(g => (
+                  <option key={g} value={g} disabled={g < childGrade}>
+                    Grade {g}{g < childGrade ? ' (below your grade)' : ''}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Subject" htmlFor="practice-subject">
+              <Select id="practice-subject" value={subject} onChange={e => setSubject(e.target.value)}>
+                {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </Select>
+            </Field>
           </div>
-        )}
-      </main>
-    </>
+
+          <Field label="Topic" htmlFor="practice-topic" optional>
+            <Input
+              id="practice-topic"
+              type="text"
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="e.g., Fractions, The Solar System, Grammar..."
+            />
+          </Field>
+
+          <Field label="Difficulty">
+            <Chips label="Difficulty" block value={difficulty} onChange={setDifficulty} options={DIFFICULTIES} />
+          </Field>
+
+          <Field label="Number of questions">
+            <Chips label="Number of questions" block value={numQuestions} onChange={setNumQuestions} options={questionCounts} />
+          </Field>
+
+          {error && <Alert>{error}</Alert>}
+
+          <Button size="lg" block onClick={handleStart} loading={generating}>
+            {generating ? 'Generating questions…' : 'Start practice'}
+          </Button>
+        </div>
+      </Modal>
+    </Page>
   );
 }

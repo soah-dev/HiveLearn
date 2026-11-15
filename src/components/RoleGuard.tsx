@@ -3,7 +3,7 @@
 import { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { PageLoader } from '@/components/ui/Page';
 
 interface RoleGuardProps {
   /** Role required to view this segment; omit to only require a signed-in user. */
@@ -30,11 +30,7 @@ export default function RoleGuard({ role, children }: RoleGuardProps) {
   }, [loading, allowed, user, router]);
 
   if (loading || !allowed) {
-    return (
-      <div className="p-8">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return <>{children}</>;

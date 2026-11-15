@@ -14,8 +14,8 @@ const ThemeContext = createContext<ThemeContextType>({ darkMode: false, toggleDa
 export function ThemeProvider({ children }: { children: ReactNode }) {
   // The inline script in app/layout.tsx applies the saved theme to <html>
   // before first paint, so on the client the DOM class is the source of truth.
-  // Nothing theme-dependent renders during SSR (Navbar renders null while auth
-  // loads), so initializing from the DOM here causes no hydration mismatch.
+  // Nothing theme-dependent renders during SSR (AppShell renders no chrome while
+  // auth loads), so initializing from the DOM here causes no hydration mismatch.
   const [darkMode, setDarkMode] = useState<boolean>(() =>
     typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
   );

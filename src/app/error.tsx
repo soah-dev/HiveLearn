@@ -2,6 +2,9 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { TriangleAlert } from 'lucide-react';
+import Hexagon from '@/components/ui/Hexagon';
+import Button, { buttonClass } from '@/components/ui/Button';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -9,20 +12,18 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   }, [error]);
 
   return (
-    <main className="min-h-[60vh] flex items-center justify-center p-6">
-      <div className="max-w-md w-full text-center bg-white/80 dark:bg-gray-800/80 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8">
-        <p className="text-5xl mb-4">😵</p>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+    <main className="flex min-h-[70vh] items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-8 text-center">
+        <Hexagon size={56} tone="warn" className="mb-4">
+          <TriangleAlert className="h-6 w-6" aria-hidden="true" />
+        </Hexagon>
+        <h1 className="font-display text-xl font-bold text-ink">Something went wrong</h1>
+        <p className="mt-2 text-sm text-ink-muted">
           The page hit an unexpected error. You can try again, or head back to your dashboard.
         </p>
-        <div className="flex gap-3 justify-center">
-          <button onClick={reset} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
-            Try again
-          </button>
-          <Link href="/" className="px-5 py-2.5 rounded-xl font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            Home
-          </Link>
+        <div className="mt-6 flex justify-center gap-3">
+          <Button onClick={reset}>Try again</Button>
+          <Link href="/" className={buttonClass({ variant: 'secondary' })}>Home</Link>
         </div>
       </div>
     </main>

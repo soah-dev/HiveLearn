@@ -4,8 +4,19 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { subjectLabel } from '@/lib/subjects';
 import MathText from '@/components/MathText';
+import PageHeader from '@/components/PageHeader';
+import AnswerOption, { AnswerState } from '@/components/quiz/AnswerOption';
+import QuestionCard, { QuestionNote, ResultMark } from '@/components/quiz/QuestionCard';
+import Page, { PageLoader, PageMessage } from '@/components/ui/Page';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Pill, { scoreTone, toneTextClass } from '@/components/ui/Pill';
+import PrintButton from '@/components/ui/PrintButton';
+import { Segmented } from '@/components/ui/Choice';
+import { Field, Input, Textarea } from '@/components/ui/Field';
 
 interface Question {
   id: string;
@@ -172,307 +183,261 @@ export default function ParentAssignmentPage() {
     setResolveScore(ans?.aiScore ?? undefined);
   };
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!assignment) return <><div className="p-8 text-center text-gray-500">Assignment not found</div></>;
+  if (loading || dataLoading) return <PageLoader />;
+  if (!assignment) return <PageMessage>Assignment not found</PageMessage>;
 
   const isReviewed = assignment.status === 'reviewed';
   const isSubmitted = assignment.status === 'submitted';
 
   return (
-    <>
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6 animate-slide-up">
-          <div className="flex items-center justify-between mb-3 no-print">
-            <button onClick={() => router.back()} className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline inline-block">&larr; Back</button>
-            <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-              Print
-            </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white capitalize">{assignment.subject.replace('_', ' ')}: {assignment.topic}</h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Grade {assignment.grade} | {assignment.difficulty} | {assignment.numQuestions} questions
-                {assignment.timeLimitMin && ` | ${assignment.timeLimitMin} min`}
-                {assignment.child?.name && ` | ${assignment.child.name}`}
+    <Page width="medium">
+      <PageHeader
+        back={{ onClick: () => router.back(), label: 'Back' }}
+        title={`${subjectLabel(assignment.subject)}: ${assignment.topic}`}
+        subtitle={[
+          assignment.child?.name,
+          `Grade ${assignment.grade}`,
+          assignment.difficulty,
+          `${assignment.numQuestions} questions`,
+          assignment.timeLimitMin ? `${assignment.timeLimitMin} min` : null,
+        ].filter(Boolean).join(' · ')}
+        actions={<PrintButton />}
+      />
+
+      {/* Result: score, points and overall feedback together */}
+      {isReviewed && (assignment.score !== null || assignment.aiFeedback) && (
+        <Card className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+          {assignment.score !== null && (
+            <div className="shrink-0 sm:text-center">
+              <p className={`text-5xl font-semibold leading-none tracking-tight ${toneTextClass(scoreTone(assignment.score))}`}>
+                {assignment.score}%
               </p>
+              {assignment.pointsAwarded ? <Pill tone="honey" className="mt-2">+{assignment.pointsAwarded} pts</Pill> : null}
             </div>
-            {isReviewed && assignment.score !== null && (
-              <div className="text-right">
-                <p className={`text-4xl font-extrabold ${assignment.score >= 80 ? 'text-green-600' : assignment.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {assignment.score}%
-                </p>
-                {assignment.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">+{assignment.pointsAwarded} pts</p>}
-              </div>
-            )}
-          </div>
-        </div>
+          )}
+          {assignment.aiFeedback && (
+            <div className="min-w-0 sm:border-l sm:border-line sm:pl-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">Feedback</p>
+              <p className="mt-1 text-sm leading-relaxed text-ink"><MathText text={assignment.aiFeedback} /></p>
+            </div>
+          )}
+        </Card>
+      )}
 
-        {/* Feedback banner */}
-        {isReviewed && assignment.aiFeedback && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl animate-slide-up">
-            <p className="text-sm font-bold text-indigo-800 dark:text-indigo-200">Feedback</p>
-            <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">{assignment.aiFeedback}</p>
-          </div>
-        )}
+      {/* Questions */}
+      <div className="mb-8 space-y-4">
+        {assignment.questions.map((q, i) => {
+          const ans = q.answers[0];
+          const unresolvedFlag = !!ans?.flagged && !ans.flagResolvedAt;
 
-        {/* Questions */}
-        <div className="space-y-4 mb-8">
-          {assignment.questions.map((q, i) => {
-            const ans = q.answers[0];
-            return (
-              <div
-                key={q.id}
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up print-break-inside-avoid"
-                style={{ animationDelay: `${i * 30}ms` }}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-full">{q.questionType.replace('_', ' ')}</span>
-                    <p className="text-gray-900 dark:text-white font-bold mt-2">Q{i + 1}. <MathText text={q.questionText} /></p>
-                  </div>
-                  {ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
-                    <span className={`text-lg ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
-                      {ans.isCorrect ? '✓' : '✗'}
-                    </span>
-                  )}
+          // The child's pick is green/red once graded; the right answer is revealed after review
+          const optionState = (key: string): AnswerState => {
+            if (ans?.selectedAnswer === key) {
+              if (ans.isCorrect === true) return 'correct';
+              return ans.isCorrect === false ? 'wrong' : 'selected';
+            }
+            return q.correctAnswer === key && isReviewed ? 'correct' : 'dim';
+          };
+
+          return (
+            <QuestionCard
+              key={q.id}
+              number={i + 1}
+              question={q.questionText}
+              meta={q.questionType.replace(/_/g, ' ')}
+              status={ans?.isCorrect !== null && ans?.isCorrect !== undefined ? <ResultMark correct={ans.isCorrect} /> : undefined}
+              flagged={unresolvedFlag}
+            >
+              {/* Show options for MC */}
+              {q.questionType === 'multiple_choice' && (
+                <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {[
+                    { key: 'A', val: q.optionA },
+                    { key: 'B', val: q.optionB },
+                    { key: 'C', val: q.optionC },
+                    { key: 'D', val: q.optionD },
+                  ].map(opt => (
+                    <AnswerOption key={opt.key} letter={opt.key} state={optionState(opt.key)}>
+                      {opt.val && <MathText text={opt.val} />}
+                    </AnswerOption>
+                  ))}
                 </div>
+              )}
 
-                {/* Show options for MC */}
-                {q.questionType === 'multiple_choice' && (
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    {[
-                      { key: 'A', val: q.optionA },
-                      { key: 'B', val: q.optionB },
-                      { key: 'C', val: q.optionC },
-                      { key: 'D', val: q.optionD },
-                    ].map(opt => (
-                      <div key={opt.key} className={`px-3 py-2.5 rounded-xl text-sm border-2 ${
-                        ans?.selectedAnswer === opt.key
-                          ? ans?.isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-red-500 bg-red-50 dark:bg-red-900/30'
-                          : q.correctAnswer === opt.key && isReviewed ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-gray-200/60 dark:border-gray-600/60'
-                      }`}>
-                        <span className="font-bold">{opt.key}.</span> {opt.val && <MathText text={opt.val} />}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* Child's answer */}
+              {ans && (
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                  <dt className="text-ink-muted">Answer</dt>
+                  <dd className="font-semibold text-ink">{ans.selectedAnswer ? <MathText text={ans.selectedAnswer} /> : '(no answer)'}</dd>
+                  <dt className="text-ink-muted">Correct</dt>
+                  <dd className="font-semibold text-ink"><MathText text={q.correctAnswer} /></dd>
+                </dl>
+              )}
 
-                {/* Child's answer */}
-                {ans && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Answer: <span className="font-bold text-gray-900 dark:text-white">{ans.selectedAnswer ? <MathText text={ans.selectedAnswer} /> : '(no answer)'}</span>
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Correct: <span className="font-bold text-gray-900 dark:text-white"><MathText text={q.correctAnswer} /></span>
-                    </p>
-                  </div>
-                )}
-
+              <div className="mt-3 space-y-2 empty:hidden">
                 {/* AI explanation */}
-                {ans?.aiExplanation && (
-                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">{ans.aiExplanation}</p>
-                  </div>
-                )}
-
-                {/* Parent review inputs (for submitted, parent-review mode) */}
-                {isSubmitted && reviewType === 'parent' && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={reviews[q.id]?.isCorrect ?? false}
-                          onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: e.target.checked, comment: prev[q.id]?.comment || '' } }))}
-                          className="rounded"
-                        />
-                        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Mark correct</span>
-                      </label>
-                      {q.questionType === 'open_ended' && (
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          placeholder="Score (0-100)"
-                          value={reviews[q.id]?.score ?? ''}
-                          onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: prev[q.id]?.isCorrect ?? false, comment: prev[q.id]?.comment || '', score: Number(e.target.value) } }))}
-                          className="w-32 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                        />
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Comment for this question..."
-                      value={reviews[q.id]?.comment || ''}
-                      onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: prev[q.id]?.isCorrect ?? false, comment: e.target.value } }))}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-                )}
+                {ans?.aiExplanation && <QuestionNote label="Explanation"><MathText text={ans.aiExplanation} /></QuestionNote>}
 
                 {/* Parent comment display */}
-                {ans?.parentComment && (
-                  <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 font-bold">Parent comment</p>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">{ans.parentComment}</p>
-                  </div>
-                )}
+                {ans?.parentComment && <QuestionNote label="Parent comment">{ans.parentComment}</QuestionNote>}
 
                 {/* Flagged question indicator */}
-                {ans?.flagged && !ans.flagResolvedAt && (
-                  <div className="mt-3 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-2xl">
-                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Child flagged this question</p>
-                    {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Reason: &ldquo;{ans.flagReason}&rdquo;</p>}
+                {unresolvedFlag && (
+                  <div className="rounded-xl border border-warn/40 bg-warn-soft p-4">
+                    <p className="text-sm font-semibold text-warn-text">Child flagged this question</p>
+                    {ans.flagReason && <p className="mt-1 text-sm text-warn-text">Reason: &ldquo;{ans.flagReason}&rdquo;</p>}
 
                     {resolvingId === q.id ? (
-                      <div className="mt-3 space-y-3 pt-3 border-t border-amber-200 dark:border-amber-700">
-                        <label className="flex items-center gap-2">
+                      <div className="no-print mt-3 space-y-3 border-t border-warn/30 pt-3">
+                        <label className="flex items-center gap-2 text-sm font-medium text-ink">
                           <input
                             type="checkbox"
                             checked={resolveCorrect}
                             onChange={e => setResolveCorrect(e.target.checked)}
-                            className="rounded"
+                            className="h-4 w-4 accent-honey"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Mark as correct</span>
+                          Mark as correct
                         </label>
                         {q.questionType === 'open_ended' && (
-                          <input
+                          <Input
+                            controlSize="sm"
                             type="number"
                             min={0}
                             max={100}
+                            aria-label="Override score"
                             placeholder="Override score (0-100)"
                             value={resolveScore ?? ''}
                             onChange={e => setResolveScore(e.target.value ? Number(e.target.value) : undefined)}
-                            className="w-40 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                            className="max-w-[12rem]"
                           />
                         )}
-                        <input
+                        <Input
+                          controlSize="sm"
                           type="text"
+                          aria-label="Comment"
                           placeholder="Comment (optional)"
                           value={resolveComment}
                           onChange={e => setResolveComment(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                         />
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => handleResolveFlag(q.id, 'override')}
-                            disabled={resolving}
-                            className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 disabled:opacity-50 transition-all"
-                          >
-                            {resolving ? 'Saving...' : 'Override & Include'}
-                          </button>
-                          <button
-                            onClick={() => handleResolveFlag(q.id, 'exclude')}
-                            disabled={resolving}
-                            className="px-4 py-2 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-all"
-                          >
-                            Exclude from Score
-                          </button>
-                          <button
-                            onClick={() => handleResolveFlag(q.id, 'dismiss')}
-                            disabled={resolving}
-                            className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 transition-all"
-                          >
-                            Dismiss Flag
-                          </button>
-                          <button
-                            onClick={() => setResolvingId(null)}
-                            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 font-medium"
-                          >
-                            Cancel
-                          </button>
+                          <Button size="sm" onClick={() => handleResolveFlag(q.id, 'override')} disabled={resolving}>
+                            {resolving ? 'Saving…' : 'Override & include'}
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => handleResolveFlag(q.id, 'exclude')} disabled={resolving}>
+                            Exclude from score
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => handleResolveFlag(q.id, 'dismiss')} disabled={resolving}>
+                            Dismiss flag
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setResolvingId(null)}>Cancel</Button>
                         </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => openResolve(q)}
-                        className="mt-3 px-5 py-2 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 transition-all shadow-sm"
-                      >
-                        Review Flag
-                      </button>
+                      <Button size="sm" className="no-print mt-3" onClick={() => openResolve(q)}>Review flag</Button>
                     )}
                   </div>
                 )}
                 {ans?.flagged && ans.flagResolvedAt && (
-                  <div className="mt-3 p-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                    <p className="text-xs font-bold text-green-600 dark:text-green-400">
-                      Flag resolved {ans.isCorrect === null ? '(excluded from scoring)' : ''}
-                    </p>
-                  </div>
+                  <QuestionNote tone="good">
+                    Flag resolved {ans.isCorrect === null ? '(excluded from scoring)' : ''}
+                  </QuestionNote>
                 )}
               </div>
-            );
-          })}
-        </div>
 
-        {/* Review actions */}
-        {isSubmitted && (
-          <div className="no-print bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">Review this assignment</h3>
+              {/* Parent review inputs (for submitted, parent-review mode) */}
+              {isSubmitted && reviewType === 'parent' && (
+                <div className="no-print mt-4 space-y-3 border-t border-line pt-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm font-medium text-ink">
+                      <input
+                        type="checkbox"
+                        checked={reviews[q.id]?.isCorrect ?? false}
+                        onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: e.target.checked, comment: prev[q.id]?.comment || '' } }))}
+                        className="h-4 w-4 accent-honey"
+                      />
+                      Mark correct
+                    </label>
+                    {q.questionType === 'open_ended' && (
+                      <Input
+                        controlSize="sm"
+                        type="number"
+                        min={0}
+                        max={100}
+                        aria-label="Score"
+                        placeholder="Score (0-100)"
+                        value={reviews[q.id]?.score ?? ''}
+                        onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: prev[q.id]?.isCorrect ?? false, comment: prev[q.id]?.comment || '', score: Number(e.target.value) } }))}
+                        className="max-w-[9rem]"
+                      />
+                    )}
+                  </div>
+                  <Input
+                    controlSize="sm"
+                    type="text"
+                    aria-label="Comment for this question"
+                    placeholder="Comment for this question..."
+                    value={reviews[q.id]?.comment || ''}
+                    onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: prev[q.id]?.isCorrect ?? false, comment: e.target.value } }))}
+                  />
+                </div>
+              )}
+            </QuestionCard>
+          );
+        })}
+      </div>
 
-            {/* Review type toggle */}
-            <div className="flex gap-3 mb-6">
-              <button
-                onClick={() => setReviewType('ai')}
-                className={`flex-1 py-3 rounded-xl font-bold transition-all ${reviewType === 'ai' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-              >
-                Auto-Review
-              </button>
-              <button
-                onClick={() => setReviewType('parent')}
-                className={`flex-1 py-3 rounded-xl font-bold transition-all ${reviewType === 'parent' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-              >
-                Review Manually
-              </button>
+      {/* Review actions */}
+      {isSubmitted && (
+        <Card className="no-print">
+          <h3 className="font-display text-lg font-semibold text-ink">Review this assignment</h3>
+
+          {/* Review type toggle */}
+          <Segmented
+            block
+            className="mt-4"
+            label="Review method"
+            value={reviewType}
+            onChange={setReviewType}
+            options={[{ value: 'ai', label: 'Auto-review' }, { value: 'parent', label: 'Review manually' }]}
+          />
+
+          {reviewType === 'parent' && (
+            <div className="mt-5 space-y-4">
+              <Field label="Overall score (0-100)" htmlFor="overall-score">
+                <Input
+                  id="overall-score"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={overallScore}
+                  onChange={e => setOverallScore(Number(e.target.value))}
+                  className="max-w-[8rem]"
+                />
+              </Field>
+              <Field label="Overall comment" htmlFor="overall-comment">
+                <Textarea
+                  id="overall-comment"
+                  value={parentComment}
+                  onChange={e => setParentComment(e.target.value)}
+                  rows={3}
+                  placeholder="Great job! Here are some areas to focus on..."
+                />
+              </Field>
             </div>
+          )}
 
-            {reviewType === 'parent' && (
-              <div className="space-y-4 mb-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Overall Score (0-100)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={overallScore}
-                    onChange={e => setOverallScore(Number(e.target.value))}
-                    className="w-32 px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Overall Comment</label>
-                  <textarea
-                    value={parentComment}
-                    onChange={e => setParentComment(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    placeholder="Great job! Here are some areas to focus on..."
-                  />
-                </div>
-              </div>
-            )}
+          {error && <Alert className="mt-4">{error}</Alert>}
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
+          <Button size="lg" block className="mt-5" onClick={reviewType === 'ai' ? handleAIReview : handleParentReview} loading={reviewing}>
+            {reviewing
+              ? reviewType === 'ai' ? 'Reviewing…' : 'Submitting review…'
+              : reviewType === 'ai' ? 'Run auto-review' : 'Submit manual review'}
+          </Button>
+        </Card>
+      )}
 
-            <button
-              onClick={reviewType === 'ai' ? handleAIReview : handleParentReview}
-              disabled={reviewing}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
-            >
-              {reviewing
-                ? reviewType === 'ai' ? 'Reviewing...' : 'Submitting review...'
-                : reviewType === 'ai' ? 'Run Auto-Review' : 'Submit Manual Review'}
-            </button>
-          </div>
-        )}
-      </main>
-    </>
+      {/* Errors from resolving a flag on an assignment that is already reviewed */}
+      {error && !isSubmitted && <Alert className="mt-4">{error}</Alert>}
+    </Page>
   );
 }

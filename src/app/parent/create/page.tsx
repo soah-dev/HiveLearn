@@ -1,26 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { DIFFICULTIES, GRADES, SUBJECTS } from '@/lib/subjects';
 import MathText from '@/components/MathText';
 import PageHeader from '@/components/PageHeader';
 import Link from 'next/link';
-
-const subjects = [
-  { value: 'math', label: 'Math' },
-  { value: 'reading', label: 'Reading' },
-  { value: 'science', label: 'Science' },
-  { value: 'history', label: 'History' },
-  { value: 'english', label: 'English' },
-  { value: 'geography', label: 'Geography' },
-  { value: 'art', label: 'Art' },
-  { value: 'music', label: 'Music' },
-  { value: 'computer_science', label: 'Computer Science' },
-  { value: 'foreign_languages', label: 'Foreign Languages' },
-];
+import Page, { PageLoader } from '@/components/ui/Page';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Pill from '@/components/ui/Pill';
+import Hexagon from '@/components/ui/Hexagon';
+import { Chips } from '@/components/ui/Choice';
+import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 
 const questionTypes = [
   { value: 'multiple_choice', label: 'Multiple Choice' },
@@ -41,6 +37,13 @@ const subjectQuestionTypes: Record<string, string[]> = {
   computer_science: ['multiple_choice', 'fill_in_blank', 'true_false'],
   foreign_languages: ['multiple_choice', 'fill_in_blank', 'open_ended'],
 };
+
+const questionCounts = [5, 10, 15, 20].map(n => ({ value: n, label: String(n) }));
+
+const steps = [
+  { key: 'form', label: 'Choose' },
+  { key: 'preview', label: 'Review & send' },
+] as const;
 
 interface Child {
   id: string;
@@ -163,216 +166,195 @@ export default function CreateAssignment() {
     setQuestions(prev => prev.map((q, i) => i === index ? { ...q, [field]: value } : q));
   };
 
-  if (loading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading) return <PageLoader />;
+
+  const stepIndex = steps.findIndex(st => st.key === step);
 
   return (
-    <>
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <PageHeader
-          title="Create Assignment"
-          subtitle={step === 'form' ? 'Step 1 of 2 · Choose what to generate' : 'Step 2 of 2 · Review, edit, then send to your child'}
-        />
+    <Page width="narrow">
+      <PageHeader
+        title="Create assignment"
+        subtitle={step === 'form' ? 'Choose what to generate.' : 'Review, edit, then send to your child.'}
+      />
 
-        {step === 'form' ? (
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200/60 dark:border-gray-700/60 p-8 animate-slide-up">
-            <div className="space-y-6">
+      {/* Where you are in the two steps */}
+      <ol className="mb-6 flex items-center gap-3 text-sm">
+        {steps.map((st, i) => (
+          <li key={st.key} className="flex items-center gap-2" aria-current={i === stepIndex ? 'step' : undefined}>
+            {i > 0 && <span className="mr-1 h-px w-6 bg-line-strong sm:w-10" aria-hidden="true" />}
+            <Hexagon size={28} tone={i <= stepIndex ? 'honey' : 'muted'}>
+              {i < stepIndex
+                ? <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                : <span className="text-xs font-bold">{i + 1}</span>}
+            </Hexagon>
+            <span className={i === stepIndex ? 'font-semibold text-ink' : 'text-ink-muted'}>{st.label}</span>
+          </li>
+        ))}
+      </ol>
+
+      {step === 'form' ? (
+        <Card>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               {/* Child Selection */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Assign to</label>
+              <Field label="Assign to" htmlFor="create-child">
                 {children.length === 0 ? (
-                  <p className="text-sm text-red-500">
-                    No children linked yet. <Link href="/parent/dashboard" className="font-bold underline">Add a child</Link> from your dashboard first.
-                  </p>
+                  <Alert tone="warn">
+                    No children linked yet. <Link href="/parent/dashboard" className="font-semibold underline">Add a child</Link> from your dashboard first.
+                  </Alert>
                 ) : (
-                  <select value={childId} onChange={e => handleChildChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+                  <Select id="create-child" value={childId} onChange={e => handleChildChange(e.target.value)}>
                     {children.map(c => <option key={c.id} value={c.id}>{c.name || c.email}</option>)}
-                  </select>
+                  </Select>
                 )}
-              </div>
+              </Field>
 
               {/* Grade */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Grade Level</label>
-                <select value={grade} onChange={e => setGrade(Number(e.target.value))} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => (
+              <Field label="Grade level" htmlFor="create-grade">
+                <Select id="create-grade" value={grade} onChange={e => setGrade(Number(e.target.value))}>
+                  {GRADES.map(g => (
                     <option key={g} value={g} disabled={g < childGrade}>
                       Grade {g}{g < childGrade ? ' (below grade level)' : ''}
                     </option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </Field>
 
               {/* Subject */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Subject</label>
-                <select value={subject} onChange={e => handleSubjectChange(e.target.value)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
-                  {subjects.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
-
-              {/* Topic */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                  Topic <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={topic}
-                  onChange={e => setTopic(e.target.value)}
-                  placeholder="e.g., Pythagorean Theorem, Photosynthesis, World War II"
-                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
-              </div>
-
-              {/* Difficulty */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Difficulty</label>
-                <div className="flex gap-3">
-                  {['easy', 'medium', 'hard'].map(d => (
-                    <button key={d} onClick={() => setDifficulty(d)} className={`flex-1 py-3 rounded-xl font-bold capitalize transition-all ${difficulty === d ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Question Type */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Question Type</label>
-                <div className="flex flex-wrap gap-2">
-                  {availableTypes.map(qt => (
-                    <button key={qt.value} onClick={() => setSelectedType(qt.value)} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedType === qt.value ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                      {qt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Number of Questions */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Number of Questions</label>
-                <div className="flex gap-3">
-                  {[5, 10, 15, 20].map(n => (
-                    <button key={n} onClick={() => setNumQuestions(n)} className={`flex-1 py-3 rounded-xl font-bold transition-all ${numQuestions === n ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <Field label="Subject" htmlFor="create-subject">
+                <Select id="create-subject" value={subject} onChange={e => handleSubjectChange(e.target.value)}>
+                  {SUBJECTS.map(sub => <option key={sub.value} value={sub.value}>{sub.label}</option>)}
+                </Select>
+              </Field>
 
               {/* Time Limit */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Time Limit</label>
-                <select value={timeLimitMin ?? ''} onChange={e => setTimeLimitMin(e.target.value ? Number(e.target.value) : null)} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+              <Field label="Time limit" htmlFor="create-time">
+                <Select id="create-time" value={timeLimitMin ?? ''} onChange={e => setTimeLimitMin(e.target.value ? Number(e.target.value) : null)}>
                   <option value="">No time limit</option>
                   {[10, 15, 20, 30, 45, 60].map(t => <option key={t} value={t}>{t} minutes</option>)}
-                </select>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 animate-slide-up">
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={handleGenerate}
-                disabled={generating || children.length === 0}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 flex items-center justify-center gap-2"
-              >
-                {generating ? <><LoadingSpinner size="sm" /> Generating questions...</> : 'Generate Questions'}
-              </button>
+                </Select>
+              </Field>
             </div>
+
+            {/* Topic */}
+            <Field label="Topic" htmlFor="create-topic" optional>
+              <Input
+                id="create-topic"
+                type="text"
+                value={topic}
+                onChange={e => setTopic(e.target.value)}
+                placeholder="e.g., Pythagorean Theorem, Photosynthesis, World War II"
+              />
+            </Field>
+
+            {/* Difficulty */}
+            <Field label="Difficulty">
+              <Chips label="Difficulty" block value={difficulty} onChange={setDifficulty} options={DIFFICULTIES} />
+            </Field>
+
+            {/* Question Type */}
+            <Field label="Question type">
+              <Chips label="Question type" value={selectedType} onChange={setSelectedType} options={availableTypes} />
+            </Field>
+
+            {/* Number of Questions */}
+            <Field label="Number of questions">
+              <Chips label="Number of questions" block value={numQuestions} onChange={setNumQuestions} options={questionCounts} />
+            </Field>
+
+            {error && <Alert>{error}</Alert>}
+
+            <Button size="lg" block onClick={handleGenerate} loading={generating} disabled={children.length === 0}>
+              {generating ? 'Generating questions…' : 'Generate questions'}
+            </Button>
           </div>
-        ) : (
-          /* Preview Step */
-          <div className="animate-slide-up">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Preview & Edit Questions</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">The preview shows what your child will see. Edit the raw text below it; math wrapped in $...$ renders automatically.</p>
-              </div>
-              <button onClick={() => setStep('form')} className="self-start text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex-shrink-0">
-                &larr; Back to form
-              </button>
+        </Card>
+      ) : (
+        /* Preview Step */
+        <div>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-ink">Preview &amp; edit questions</h2>
+              <p className="mt-1 text-sm text-ink-muted">The preview shows what your child will see. Edit the raw text below it; math wrapped in $...$ renders automatically.</p>
             </div>
+            <Button variant="ghost" size="sm" className="shrink-0 self-start" onClick={() => setStep('form')} icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}>
+              Back to form
+            </Button>
+          </div>
 
-            <div className="space-y-4 mb-6">
-              {questions.map((q, i) => (
-                <div key={i} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-full">
-                      Q{i + 1} · {q.question_type.replace('_', ' ')}
-                    </span>
-                  </div>
-                  {/* Rendered preview — exactly how the child page will display it */}
-                  <div className="mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">Preview</p>
-                    <p className="text-gray-900 dark:text-white font-medium"><MathText text={q.question_text} /></p>
-                    {q.question_type === 'multiple_choice' && (
-                      <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                        {([['A', q.option_a], ['B', q.option_b], ['C', q.option_c], ['D', q.option_d]] as const).map(([letter, val]) => (
-                          <li key={letter} className={q.correct_answer?.toUpperCase().trim() === letter ? 'text-green-700 dark:text-green-400' : ''}>
-                            <span className="font-bold">{letter}.</span> {val ? <MathText text={val} /> : <span className="text-gray-400">(empty)</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {q.question_type !== 'multiple_choice' && q.correct_answer && (
-                      <p className="mt-2 text-sm text-green-700 dark:text-green-400">
-                        {q.question_type === 'open_ended' ? 'Rubric: ' : 'Answer: '}<MathText text={q.correct_answer} />
-                      </p>
-                    )}
-                  </div>
+          <div className="mb-6 space-y-4">
+            {questions.map((q, i) => (
+              <Card key={i}>
+                <Pill className="mb-3 capitalize">Q{i + 1} · {q.question_type.replace(/_/g, ' ')}</Pill>
 
-                  <textarea
+                {/* Rendered preview — exactly how the child page will display it */}
+                <div className="mb-4 rounded-xl bg-muted p-4">
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Preview</p>
+                  <p className="font-medium text-ink"><MathText text={q.question_text} /></p>
+                  {q.question_type === 'multiple_choice' && (
+                    <ul className="mt-2 grid grid-cols-1 gap-1.5 text-sm text-ink-muted sm:grid-cols-2">
+                      {([['A', q.option_a], ['B', q.option_b], ['C', q.option_c], ['D', q.option_d]] as const).map(([letter, val]) => (
+                        <li key={letter} className={q.correct_answer?.toUpperCase().trim() === letter ? 'font-medium text-good-text' : ''}>
+                          <span className="font-bold">{letter}.</span> {val ? <MathText text={val} /> : <span className="text-ink-subtle">(empty)</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {q.question_type !== 'multiple_choice' && q.correct_answer && (
+                    <p className="mt-2 text-sm font-medium text-good-text">
+                      {q.question_type === 'open_ended' ? 'Rubric: ' : 'Answer: '}<MathText text={q.correct_answer} />
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Textarea
+                    aria-label={`Question ${i + 1} text`}
                     value={q.question_text}
                     onChange={e => updateQuestion(i, 'question_text', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-3 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="resize-none"
                     rows={2}
                   />
                   {q.question_type === 'multiple_choice' && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt, oi) => (
-                        <input
+                        <Input
                           key={opt}
+                          controlSize="sm"
+                          aria-label={`Question ${i + 1} option ${String.fromCharCode(65 + oi)}`}
                           value={q[opt] || ''}
                           onChange={e => updateQuestion(i, opt, e.target.value)}
                           placeholder={`Option ${String.fromCharCode(65 + oi)}`}
-                          className="px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                         />
                       ))}
                     </div>
                   )}
-                  <div className="mt-3">
-                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Correct Answer</label>
-                    <input
+                  <Field label="Correct answer" htmlFor={`correct-${i}`}>
+                    <Input
+                      id={`correct-${i}`}
+                      controlSize="sm"
                       value={q.correct_answer}
                       onChange={e => updateQuestion(i, 'correct_answer', e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     />
-                  </div>
+                  </Field>
                 </div>
-              ))}
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
-
-            <div className="flex flex-col-reverse sm:flex-row gap-3 sticky bottom-4">
-              <button onClick={handleGenerate} disabled={generating} className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3.5 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all shadow-lg">
-                {generating ? 'Regenerating...' : 'Regenerate'}
-              </button>
-              <button onClick={handlePublish} disabled={publishing} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25">
-                {publishing ? 'Publishing...' : 'Push to Child'}
-              </button>
-            </div>
+              </Card>
+            ))}
           </div>
-        )}
-      </main>
-    </>
+
+          {error && <Alert className="mb-4">{error}</Alert>}
+
+          {/* Floats above the phone tab bar */}
+          <div className="sticky bottom-[5.5rem] flex flex-col-reverse gap-2 rounded-2xl border border-line bg-surface p-3 shadow-pop sm:flex-row lg:bottom-4">
+            <Button variant="secondary" className="flex-1" onClick={handleGenerate} loading={generating}>
+              {generating ? 'Regenerating…' : 'Regenerate'}
+            </Button>
+            <Button className="flex-1" onClick={handlePublish} loading={publishing}>
+              {publishing ? 'Sending…' : 'Send to child'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Page>
   );
 }

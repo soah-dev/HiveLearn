@@ -3,15 +3,28 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  CalendarClock, ChevronRight, CircleCheck, ClipboardList, Flame, Inbox, Plus, Star, Target, UserPlus, UsersRound,
+} from 'lucide-react';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import StatCard from '@/components/StatCard';
-import AssignmentCard from '@/components/AssignmentCard';
+import { GRADES, subjectLabel } from '@/lib/subjects';
+import StatCard, { StatGrid } from '@/components/StatCard';
+import AssignmentRow from '@/components/AssignmentRow';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
 import Modal from '@/components/Modal';
 import { useToast } from '@/contexts/ToastContext';
-import Link from 'next/link';
+import Page, { PageLoader } from '@/components/ui/Page';
+import Card, { ListCard, SectionHeader } from '@/components/ui/Card';
+import Button, { buttonClass } from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Avatar from '@/components/ui/Avatar';
+import Pill, { Score } from '@/components/ui/Pill';
+import Hexagon from '@/components/ui/Hexagon';
+import SubjectIcon from '@/components/ui/SubjectIcon';
+import DifficultyMeter from '@/components/ui/DifficultyMeter';
+import { Field, Input, Select } from '@/components/ui/Field';
 
 interface DuePreset {
   id: string;
@@ -268,7 +281,7 @@ export default function ParentDashboard() {
     }
   };
 
-  if (loading || dataLoading) return <div className="p-8"><LoadingSpinner size="lg" /></div>;
+  if (loading || dataLoading) return <PageLoader />;
 
   const pendingOffline = offlineWork.filter(ow => ow.status === 'pending');
   const needsReviewAssignments = assignments.filter(a => a.status === 'submitted');
@@ -281,136 +294,123 @@ export default function ParentDashboard() {
 
   const openAddChild = () => { setShowModal(true); setInviteError(''); setInviteSuccess(''); };
 
-  const inputClass = 'w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white/70 dark:bg-gray-700/70 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all';
+  const subheading = 'text-sm font-semibold text-ink';
+  const subcount = 'ml-1.5 font-medium text-ink-subtle';
 
   return (
     <>
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <Page>
         <PageHeader
-          title="Parent Dashboard"
-          subtitle="Manage assignments and track progress"
+          title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
+          subtitle={attentionCount > 0
+            ? `${attentionCount} thing${attentionCount > 1 ? 's need' : ' needs'} your attention.`
+            : 'Nothing is waiting on you right now.'}
           actions={
             <>
-              <button
-                onClick={openAddChild}
-                className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all"
-              >
-                + Add Child
-              </button>
-              <Link
-                href="/parent/create"
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
-              >
-                + Create Assignment
+              <Button variant="secondary" onClick={openAddChild} icon={<UserPlus className="h-4 w-4" aria-hidden="true" />}>
+                Add child
+              </Button>
+              <Link href="/parent/create" className={buttonClass()}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create assignment
               </Link>
             </>
           }
         />
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <StatCard title="Needs Review" value={needsReviewAssignments.length} icon="⏳" accent="amber" />
-          <StatCard title="Completed" value={totalCompleted} icon="✅" accent="green" />
-          <StatCard title="Total Assignments" value={assignments.length} icon="📝" accent="purple" />
-          <StatCard title="Total Practice" value={practiceSessions.length} icon="🎯" accent="blue" />
-        </div>
+        <StatGrid className="mb-8">
+          <StatCard title="Needs review" value={needsReviewAssignments.length} icon={Inbox} accent={needsReviewAssignments.length > 0} />
+          <StatCard title="Completed" value={totalCompleted} icon={CircleCheck} />
+          <StatCard title="Assignments" value={assignments.length} icon={ClipboardList} />
+          <StatCard title="Practice sessions" value={practiceSessions.length} icon={Target} />
+        </StatGrid>
 
-        {/* Needs attention: everything the parent has to act on, grouped at the top */}
-        {attentionCount > 0 && (
-          <section className="mb-10" aria-labelledby="attention-heading">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 id="attention-heading" className="text-xl font-bold text-gray-900 dark:text-white">Needs Your Attention</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
-                {attentionCount}
-              </span>
-            </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="min-w-0 space-y-8 lg:col-span-2">
+            {/* Needs attention: everything the parent has to act on, grouped at the top */}
+            {attentionCount > 0 && (
+              <section aria-labelledby="attention-heading">
+                <SectionHeader id="attention-heading" title="Needs your attention" count={attentionCount} />
 
-            <div className="space-y-6">
-              {/* Due presets */}
-              {duePresets.length > 0 && (
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 animate-slide-up">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl" aria-hidden="true">🔄</span>
-                      <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white">
-                          {duePresets.length} scheduled preset{duePresets.length > 1 ? 's' : ''} ready to generate
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Based on your scheduled presets for today</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Link href="/parent/presets" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                        Manage
-                      </Link>
-                      <button
-                        onClick={generateAllPresets}
-                        disabled={generatingPresets.size > 0}
-                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
-                      >
-                        {generatingPresets.size > 0 ? 'Generating...' : 'Generate All'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {duePresets.map(preset => (
-                      <div key={preset.id} className="bg-white/80 dark:bg-gray-800/60 rounded-xl p-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">
-                            {preset.subject.replace('_', ' ')}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                            {preset.numQuestions}q · {preset.difficulty} · {preset.child.name || preset.child.email}
-                          </p>
+                <div className="space-y-5">
+                  {/* Due presets */}
+                  {duePresets.length > 0 && (
+                    <div>
+                      <Card padding="none" className="overflow-hidden">
+                        <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                          <div className="flex items-center gap-3">
+                            <Hexagon size={40} tone="soft">
+                              <CalendarClock className="h-[18px] w-[18px]" aria-hidden="true" />
+                            </Hexagon>
+                            <div>
+                              <h3 className="font-semibold text-ink">
+                                {duePresets.length} scheduled assignment{duePresets.length > 1 ? 's' : ''} ready to generate
+                              </h3>
+                              <p className="text-xs text-ink-muted">
+                                Based on your scheduled presets for today ·{' '}
+                                <Link href="/parent/presets" className="font-semibold text-honey-text hover:underline">Manage</Link>
+                              </p>
+                            </div>
+                          </div>
+                          <Button size="sm" className="self-start sm:self-auto" onClick={generateAllPresets} loading={generatingPresets.size > 0}>
+                            {generatingPresets.size > 0 ? 'Generating…' : 'Generate all'}
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {presetErrors[preset.id] && (
-                            <span className="text-xs text-red-500" title={presetErrors[preset.id]}>Failed</span>
-                          )}
-                          <button
-                            onClick={() => generateFromPreset(preset.id)}
-                            disabled={generatingPresets.has(preset.id)}
-                            className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-200 dark:hover:bg-indigo-900/60 disabled:opacity-50 transition-all"
-                          >
-                            {generatingPresets.has(preset.id) ? '...' : 'Generate'}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Submitted assignments */}
-              {needsReviewAssignments.length > 0 && (
-                <div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-                    <h3 className="font-bold text-gray-900 dark:text-white">
-                      Submitted assignments <span className="text-sm font-normal text-orange-600 dark:text-orange-400">({needsReviewAssignments.length})</span>
-                    </h3>
-                    {reviewableAssignments.length > 0 && (
-                      <button
-                        onClick={autoReviewAll}
-                        disabled={reviewingIds.size > 0}
-                        className="self-start sm:self-auto bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50"
-                      >
-                        {reviewingIds.size > 0 ? 'Reviewing...' : `Auto-Review All (${reviewableAssignments.length})`}
-                      </button>
-                    )}
-                  </div>
-
-                  {flaggedAssignments.length > 0 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                      {flaggedAssignments.length} assignment{flaggedAssignments.length > 1 ? 's have' : ' has'} flagged questions that need manual resolution before auto-review.
-                    </p>
+                        <ul className="divide-y divide-line">
+                          {duePresets.map(preset => (
+                            <li key={preset.id} className="flex items-center gap-3.5 px-4 py-3 sm:px-5">
+                              <SubjectIcon subject={preset.subject} size={36} tone="muted" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-ink">
+                                  {subjectLabel(preset.subject)}
+                                  {preset.topic && <span className="font-normal text-ink-muted"> · {preset.topic}</span>}
+                                </p>
+                                <p className="truncate text-xs text-ink-muted">
+                                  {preset.child.name || preset.child.email} · {preset.numQuestions} questions · {preset.difficulty}
+                                </p>
+                              </div>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => generateFromPreset(preset.id)}
+                                loading={generatingPresets.has(preset.id)}
+                              >
+                                Generate
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                      {duePresets.filter(p => presetErrors[p.id]).map(p => (
+                        <Alert key={p.id} className="mt-2">{subjectLabel(p.subject)}: {presetErrors[p.id]}</Alert>
+                      ))}
+                    </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {needsReviewAssignments.map(a => {
-                      const flagged = hasUnresolvedFlags(a);
-                      return (
-                        <div key={a.id}>
-                          <AssignmentCard
+                  {/* Submitted assignments */}
+                  {needsReviewAssignments.length > 0 && (
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <h3 className={subheading}>
+                          Submitted assignments<span className={subcount}>{needsReviewAssignments.length}</span>
+                        </h3>
+                        {reviewableAssignments.length > 0 && (
+                          <Button size="sm" onClick={autoReviewAll} loading={reviewingIds.size > 0}>
+                            {reviewingIds.size > 0 ? 'Reviewing…' : `Auto-review all (${reviewableAssignments.length})`}
+                          </Button>
+                        )}
+                      </div>
+
+                      {flaggedAssignments.length > 0 && (
+                        <p className="mb-2 text-xs text-warn-text">
+                          {flaggedAssignments.length} assignment{flaggedAssignments.length > 1 ? 's have' : ' has'} flagged questions that need manual resolution before auto-review.
+                        </p>
+                      )}
+
+                      <ListCard>
+                        {needsReviewAssignments.map(a => (
+                          <AssignmentRow
+                            key={a.id}
                             id={a.id}
                             subject={a.subject}
                             topic={a.topic}
@@ -423,337 +423,268 @@ export default function ParentDashboard() {
                             childName={a.child?.name || undefined}
                             role="parent"
                             flaggedCount={a.unresolvedFlagCount || 0}
-                          />
-                          {!flagged && (
-                            <div className="mt-2">
-                              {reviewErrors[a.id] && (
-                                <p className="text-xs text-red-500 mb-1">{reviewErrors[a.id]}</p>
-                              )}
-                              <button
+                            action={hasUnresolvedFlags(a) ? (
+                              <Link href={`/parent/assignment/${a.id}`} className={buttonClass({ variant: 'secondary', size: 'sm' })}>
+                                Resolve
+                              </Link>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => autoReviewAssignment(a.id)}
-                                disabled={reviewingIds.has(a.id) || reviewedIds.has(a.id)}
-                                className="w-full text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-3 py-2 rounded-xl font-bold hover:bg-orange-100 dark:hover:bg-orange-900/40 disabled:opacity-50 transition-all"
+                                loading={reviewingIds.has(a.id)}
+                                disabled={reviewedIds.has(a.id)}
                               >
-                                {reviewingIds.has(a.id) ? 'Reviewing...' : reviewedIds.has(a.id) ? 'Reviewed' : 'Auto-Review'}
-                              </button>
+                                {reviewedIds.has(a.id) ? 'Reviewed' : 'Auto-review'}
+                              </Button>
+                            )}
+                          />
+                        ))}
+                      </ListCard>
+                      {needsReviewAssignments.filter(a => reviewErrors[a.id]).map(a => (
+                        <Alert key={a.id} className="mt-2">{subjectLabel(a.subject)}: {reviewErrors[a.id]}</Alert>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Offline work */}
+                  {pendingOffline.length > 0 && (
+                    <div>
+                      <h3 className={`${subheading} mb-2`}>
+                        Offline work to approve<span className={subcount}>{pendingOffline.length}</span>
+                      </h3>
+                      <ListCard>
+                        {pendingOffline.map(ow => (
+                          <li key={ow.id} className="px-4 py-3.5 sm:px-5">
+                            <div className="flex items-center gap-3.5">
+                              <SubjectIcon subject={ow.subject} tone="muted" />
+                              <div className="min-w-0 flex-1">
+                                <p className="break-words font-semibold text-ink sm:truncate">
+                                  {subjectLabel(ow.subject)}
+                                  {ow.bookReference && <span className="font-normal text-ink-muted"> · {ow.bookReference}</span>}
+                                </p>
+                                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+                                  <span className="font-medium text-ink">{ow.child?.name || 'Child'}</span>
+                                  <span>{ow.numQuestions} questions</span>
+                                  <DifficultyMeter difficulty={ow.difficulty} />
+                                  <span>Self-reported: {ow.score}%</span>
+                                  <span className="text-ink-subtle">{new Date(ow.createdAt).toLocaleDateString()}</span>
+                                </p>
+                              </div>
+                              {reviewingOwId !== ow.id && (
+                                <Button variant="secondary" size="sm" onClick={() => setReviewingOwId(ow.id)}>Review</Button>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
-              {/* Offline work */}
-              {pendingOffline.length > 0 && (
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white mb-3">
-                    Offline work to approve <span className="text-sm font-normal text-gray-500">({pendingOffline.length})</span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {pendingOffline.map(ow => (
-                      <div key={ow.id} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border-2 border-teal-200 dark:border-teal-800 p-5 card-hover">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-bold text-teal-600 dark:text-teal-400 capitalize">{ow.subject.replace('_', ' ')}</span>
-                          <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
-                            Pending
-                          </span>
-                        </div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{ow.child?.name || 'Child'}</p>
-                        {ow.bookReference && <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{ow.bookReference}</p>}
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-3">
-                          {ow.difficulty} · {ow.numQuestions} questions · Self-reported: {ow.score}%
-                        </p>
-
-                        {reviewingOwId === ow.id ? (
-                          <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                            <input
-                              type="text"
-                              value={owComment}
-                              onChange={e => setOwComment(e.target.value)}
-                              placeholder="Comment (optional)"
-                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleOfflineReview(ow.id, 'approve')}
-                                disabled={owProcessing}
-                                className="flex-1 bg-green-600 text-white text-sm py-2 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 transition-all"
-                              >
-                                {owProcessing ? '...' : 'Approve'}
-                              </button>
-                              <button
-                                onClick={() => handleOfflineReview(ow.id, 'reject')}
-                                disabled={owProcessing}
-                                className="flex-1 bg-red-500 text-white text-sm py-2 rounded-xl font-bold hover:bg-red-600 disabled:opacity-50 transition-all"
-                              >
-                                {owProcessing ? '...' : 'Reject'}
-                              </button>
-                              <button
-                                onClick={() => { setReviewingOwId(null); setOwComment(''); }}
-                                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 px-2"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setReviewingOwId(ow.id)}
-                            className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm py-2.5 rounded-xl font-bold hover:from-teal-600 hover:to-emerald-600 transition-all shadow-sm"
-                          >
-                            Review
-                          </button>
-                        )}
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(ow.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Children (linked + pending invites) */}
-        <section className="mb-10" aria-labelledby="children-heading">
-          <div className="flex items-center justify-between mb-4">
-            <h2 id="children-heading" className="text-xl font-bold text-gray-900 dark:text-white">
-              Your Children
-              {children.length > 0 && <span className="text-sm font-normal text-gray-500 ml-2">({children.length})</span>}
-            </h2>
-            {hasChildren && (
-              <button
-                onClick={openAddChild}
-                className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
-              >
-                + Add another
-              </button>
-            )}
-          </div>
-
-          {!hasChildren ? (
-            <EmptyState
-              icon="👨‍👩‍👧‍👦"
-              title="No children linked yet"
-              description="Invite your child by email. Once they accept, you can create assignments and follow their progress here."
-              action={
-                <button
-                  onClick={openAddChild}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25"
-                >
-                  + Add Child
-                </button>
-              }
-            />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {children.map((child, i) => (
-                <Link
-                  key={child.id}
-                  href={`/parent/analytics/${child.id}`}
-                  className="block bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 card-hover animate-slide-up"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  <div className="flex items-center gap-3">
-                    {child.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={child.image} alt="" className="w-11 h-11 rounded-full ring-2 ring-indigo-200 dark:ring-indigo-800 shadow-sm" />
-                    ) : (
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold shadow-sm">
-                        {(child.name || 'C')[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 dark:text-white truncate">{child.name || child.email}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        ⭐ {child.gamification?.totalPoints || 0} pts · 🔥 {child.gamification?.currentStreak || 0} day streak
-                      </p>
-                    </div>
-                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0">Progress &rarr;</span>
-                  </div>
-                </Link>
-              ))}
-
-              {pendingInvites.map(invite => (
-                <div key={invite.id} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border-2 border-dashed border-yellow-300 dark:border-yellow-800 p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white font-bold">
-                      {invite.childName[0].toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 dark:text-white truncate">{invite.childName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{invite.childEmail}</p>
-                    </div>
-                    <span className="flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                      Invited
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-400">Expires {new Date(invite.expiresAt).toLocaleDateString()}</span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => resendInvite(invite)}
-                        disabled={inviteActionId === invite.id}
-                        className="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50 transition-all"
-                      >
-                        {inviteActionId === invite.id ? '...' : 'Resend'}
-                      </button>
-                      <button
-                        onClick={() => cancelInvite(invite.id)}
-                        disabled={inviteActionId === invite.id}
-                        className="text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 transition-all"
-                      >
-                        {inviteActionId === invite.id ? '...' : 'Cancel'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Recent Assignments */}
-        <section className="mb-10" aria-labelledby="recent-heading">
-          <h2 id="recent-heading" className="text-xl font-bold text-gray-900 dark:text-white mb-4">Recent Assignments</h2>
-          {assignments.length === 0 ? (
-            <EmptyState
-              icon="📝"
-              title="No assignments yet"
-              description={children.length > 0 ? 'Create one and it will show up on your child\'s dashboard right away.' : 'Link a child first, then create their first assignment.'}
-              action={children.length > 0 ? (
-                <Link
-                  href="/parent/create"
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25"
-                >
-                  + Create Assignment
-                </Link>
-              ) : undefined}
-            />
-          ) : otherAssignments.length === 0 ? (
-            <EmptyState compact icon="✅" title="Everything is in the review queue" description="All assignments are listed above under Needs Your Attention." />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {otherAssignments.slice(0, 9).map(a => (
-                <AssignmentCard
-                  key={a.id}
-                  id={a.id}
-                  subject={a.subject}
-                  topic={a.topic}
-                  difficulty={a.difficulty}
-                  status={a.status}
-                  score={a.score}
-                  numQuestions={a.numQuestions}
-                  timeLimitMin={a.timeLimitMin}
-                  createdAt={a.createdAt}
-                  childName={a.child?.name || undefined}
-                  role="parent"
-                  flaggedCount={a.unresolvedFlagCount || 0}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Practice Sessions */}
-        {practiceSessions.length > 0 && (
-          <section className="mb-8" aria-labelledby="practice-heading">
-            <h2 id="practice-heading" className="text-xl font-bold text-gray-900 dark:text-white mb-4">Practice Sessions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {practiceSessions.slice(0, 6).map((s, i) => (
-                <div
-                  key={s.id}
-                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 card-hover animate-slide-up"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 capitalize">{s.subject.replace('_', ' ')}</span>
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                      s.status === 'completed'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                    }`}>
-                      {s.status === 'completed' ? 'Done' : 'In Progress'}
-                    </span>
-                  </div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm mb-1">{s.topic || `Grade ${s.grade} ${s.subject.replace('_', ' ')}`}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-2">{s.difficulty} · Grade {s.grade} · {s.child?.name}</p>
-                  {s.status === 'completed' && s.score !== null && (
-                    <div className="flex items-center justify-between">
-                      <span className={`text-lg font-extrabold ${s.score >= 80 ? 'text-green-600' : s.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {s.score}%
-                      </span>
-                      {s.pointsAwarded && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">+{s.pointsAwarded} pts</span>}
+                            {reviewingOwId === ow.id && (
+                              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:pl-[54px]">
+                                <Input
+                                  controlSize="sm"
+                                  type="text"
+                                  aria-label="Comment"
+                                  value={owComment}
+                                  onChange={e => setOwComment(e.target.value)}
+                                  placeholder="Comment (optional)"
+                                  className="sm:flex-1"
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => handleOfflineReview(ow.id, 'approve')} disabled={owProcessing}>Approve</Button>
+                                  <Button size="sm" variant="danger" onClick={() => handleOfflineReview(ow.id, 'reject')} disabled={owProcessing}>Reject</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => { setReviewingOwId(null); setOwComment(''); }}>Cancel</Button>
+                                </div>
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                      </ListCard>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              </section>
+            )}
+
+            {/* Recent Assignments */}
+            <section aria-labelledby="recent-heading">
+              <SectionHeader id="recent-heading" title="Recent assignments" />
+              {assignments.length === 0 ? (
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No assignments yet"
+                  description={children.length > 0 ? 'Create one and it will show up on your child\'s dashboard right away.' : 'Link a child first, then create their first assignment.'}
+                  action={children.length > 0 ? (
+                    <Link href="/parent/create" className={buttonClass()}>
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      Create assignment
+                    </Link>
+                  ) : undefined}
+                />
+              ) : otherAssignments.length === 0 ? (
+                <EmptyState compact icon={CircleCheck} title="Everything is in the review queue" description="All assignments are listed above under Needs your attention." />
+              ) : (
+                <ListCard>
+                  {otherAssignments.slice(0, 9).map(a => (
+                    <AssignmentRow
+                      key={a.id}
+                      id={a.id}
+                      subject={a.subject}
+                      topic={a.topic}
+                      difficulty={a.difficulty}
+                      status={a.status}
+                      score={a.score}
+                      numQuestions={a.numQuestions}
+                      timeLimitMin={a.timeLimitMin}
+                      createdAt={a.createdAt}
+                      childName={a.child?.name || undefined}
+                      role="parent"
+                      flaggedCount={a.unresolvedFlagCount || 0}
+                    />
+                  ))}
+                </ListCard>
+              )}
+            </section>
+
+            {/* Practice Sessions */}
+            {practiceSessions.length > 0 && (
+              <section aria-labelledby="practice-heading">
+                <SectionHeader id="practice-heading" title="Practice sessions" description="Started by your children on their own." />
+                <ListCard>
+                  {practiceSessions.slice(0, 6).map(s => {
+                    const done = s.status === 'completed';
+                    return (
+                      <li key={s.id} className="flex items-center gap-3.5 px-4 py-3.5 sm:px-5">
+                        <SubjectIcon subject={s.subject} tone="muted" />
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words font-semibold text-ink sm:truncate">{s.topic || `Grade ${s.grade} ${subjectLabel(s.subject)}`}</p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+                            {s.child?.name && <span className="font-medium text-ink">{s.child.name}</span>}
+                            <span>{subjectLabel(s.subject)}</span>
+                            <DifficultyMeter difficulty={s.difficulty} />
+                            <span>Grade {s.grade}</span>
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {done && s.pointsAwarded ? <span className="hidden text-xs font-semibold text-honey-text sm:inline">+{s.pointsAwarded} pts</span> : null}
+                          {done && s.score !== null ? (
+                            <Score value={s.score} className="text-base" />
+                          ) : (
+                            <Pill tone={done ? 'good' : 'honey'}>{done ? 'Done' : 'In progress'}</Pill>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ListCard>
+              </section>
+            )}
+          </div>
+
+          {/* Children (linked + pending invites). Leads the page on phones until the first child is added. */}
+          <section className={hasChildren ? 'min-w-0' : 'order-first min-w-0 lg:order-none'} aria-labelledby="children-heading">
+            <SectionHeader
+              id="children-heading"
+              title="Your children"
+              count={children.length || undefined}
+              action={hasChildren ? (
+                <button onClick={openAddChild} className="text-sm font-semibold text-honey-text hover:underline">Add another</button>
+              ) : undefined}
+            />
+
+            {!hasChildren ? (
+              <EmptyState
+                compact
+                icon={UsersRound}
+                title="No children linked yet"
+                description="Invite your child by email. Once they accept, you can create assignments and follow their progress here."
+                action={<Button onClick={openAddChild} icon={<UserPlus className="h-4 w-4" aria-hidden="true" />}>Add child</Button>}
+              />
+            ) : (
+              <ListCard>
+                {children.map(child => (
+                  <li key={child.id}>
+                    <Link href={`/parent/analytics/${child.id}`} className="group flex items-center gap-3 px-4 py-3.5">
+                      <Avatar name={child.name || child.email} image={child.image} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-ink group-hover:underline">{child.name || child.email}</p>
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-ink-muted">
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="h-3.5 w-3.5" aria-hidden="true" />
+                            {(child.gamification?.totalPoints || 0).toLocaleString()} pts
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Flame className="h-3.5 w-3.5" aria-hidden="true" />
+                            {child.gamification?.currentStreak || 0} day streak
+                          </span>
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+
+                {pendingInvites.map(invite => (
+                  <li key={invite.id} className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={invite.childName} pending />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-ink">{invite.childName}</p>
+                        <p className="truncate text-xs text-ink-muted">{invite.childEmail}</p>
+                      </div>
+                      <Pill>Invited</Pill>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="whitespace-nowrap text-xs text-ink-subtle">Expires {new Date(invite.expiresAt).toLocaleDateString()}</span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => resendInvite(invite)} disabled={inviteActionId === invite.id}>
+                          Resend
+                        </Button>
+                        <Button variant="ghost" size="sm" className="hover:!bg-bad-soft hover:!text-bad-text" onClick={() => cancelInvite(invite.id)} disabled={inviteActionId === invite.id}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ListCard>
+            )}
           </section>
-        )}
-      </main>
+        </div>
+      </Page>
 
       {/* Add Child Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Child">
-        <form onSubmit={e => { e.preventDefault(); sendInvite(); }}>
-          <div className="mb-4">
-            <label htmlFor="child-name" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Child&apos;s Name</label>
-            <input
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add child">
+        <form onSubmit={e => { e.preventDefault(); sendInvite(); }} className="space-y-4">
+          <Field label="Child's name" htmlFor="child-name">
+            <Input
               id="child-name"
               type="text"
               value={childName}
               onChange={(e) => setChildName(e.target.value)}
               placeholder="Enter your child's name"
-              className={inputClass}
             />
-          </div>
+          </Field>
 
-          <div className="mb-4">
-            <label htmlFor="child-grade" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Child&apos;s Grade</label>
-            <select
-              id="child-grade"
-              value={childGrade}
-              onChange={e => setChildGrade(Number(e.target.value))}
-              className={inputClass}
-            >
-              {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>Grade {g}</option>)}
-            </select>
-          </div>
+          <Field label="Child's grade" htmlFor="child-grade">
+            <Select id="child-grade" value={childGrade} onChange={e => setChildGrade(Number(e.target.value))}>
+              {GRADES.map(g => <option key={g} value={g}>Grade {g}</option>)}
+            </Select>
+          </Field>
 
-          <div className="mb-6">
-            <label htmlFor="child-email" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Child&apos;s Email</label>
-            <input
+          <Field label="Child's email" htmlFor="child-email" hint="We'll email them an invite link to join your family.">
+            <Input
               id="child-email"
               type="email"
               value={childEmail}
               onChange={(e) => setChildEmail(e.target.value)}
               placeholder="Enter your child's email"
-              className={inputClass}
             />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">We&apos;ll email them an invite link to join your family.</p>
-          </div>
+          </Field>
 
-          {inviteError && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 animate-slide-up">
-              {inviteError}
-            </div>
-          )}
+          {inviteError && <Alert>{inviteError}</Alert>}
+          {inviteSuccess && <Alert tone="good">{inviteSuccess}</Alert>}
 
-          {inviteSuccess && (
-            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-600 dark:text-green-400 animate-slide-up">
-              {inviteSuccess}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={sending || !childName.trim() || !childEmail.trim()}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25"
-          >
-            {sending ? 'Sending...' : 'Send Invite'}
-          </button>
+          <Button type="submit" size="lg" block loading={sending} disabled={!childName.trim() || !childEmail.trim()}>
+            {sending ? 'Sending…' : 'Send invite'}
+          </Button>
         </form>
       </Modal>
     </>

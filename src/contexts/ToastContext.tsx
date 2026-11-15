@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useRef, useState, ReactNode } from 'react';
+import { CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -16,13 +17,13 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType>({ toast: () => {} });
 
-const styles: Record<ToastType, string> = {
-  success: 'bg-green-600 text-white',
-  error: 'bg-red-600 text-white',
-  info: 'bg-gray-900 dark:bg-gray-700 text-white',
+// One quiet surface for every toast; the icon carries the type
+const icons = { success: CircleCheck, error: TriangleAlert, info: Info };
+const iconColors: Record<ToastType, string> = {
+  success: 'text-good-text',
+  error: 'text-bad-text',
+  info: 'text-honey-text',
 };
-
-const icons: Record<ToastType, string> = { success: '✓', error: '!', info: 'i' };
 
 /**
  * Lightweight transient notifications for actions whose result isn't
@@ -45,29 +46,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
+      {/* Sits above the mobile tab bar */}
       <div
         aria-live="polite"
-        className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[60] flex flex-col items-end gap-2 pointer-events-none"
+        className="pointer-events-none fixed bottom-24 left-4 right-4 z-[60] flex flex-col items-end gap-2 sm:left-auto sm:right-6 lg:bottom-6"
       >
-        {toasts.map(t => (
-          <div
-            key={t.id}
-            role="status"
-            className={`pointer-events-auto w-full sm:w-auto sm:max-w-sm flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-up ${styles[t.type]}`}
-          >
-            <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20 text-xs font-bold" aria-hidden="true">
-              {icons[t.type]}
-            </span>
-            <span className="text-sm font-medium flex-1">{t.message}</span>
-            <button
-              onClick={() => dismiss(t.id)}
-              aria-label="Dismiss"
-              className="text-white/70 hover:text-white text-lg leading-none -mt-0.5"
+        {toasts.map(t => {
+          const Icon = icons[t.type];
+          return (
+            <div
+              key={t.id}
+              role="status"
+              className="pointer-events-auto flex w-full animate-enter items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-ink shadow-pop sm:w-auto sm:max-w-sm"
             >
-              &times;
-            </button>
-          </div>
-        ))}
+              <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${iconColors[t.type]}`} aria-hidden="true" />
+              <span className="flex-1 text-sm font-medium">{t.message}</span>
+              <button
+                onClick={() => dismiss(t.id)}
+                aria-label="Dismiss"
+                className="-m-1 rounded-md p-1 text-ink-subtle hover:text-ink"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );

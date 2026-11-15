@@ -1,13 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import {
+  Activity, Brain, CircleCheck, ClipboardCheck, ClipboardList, GraduationCap, Hourglass, House, NotebookPen, Sparkles,
+  Target, ThumbsUp, TrendingUp, UserCheck, UsersRound,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { subjectLabel } from '@/lib/subjects';
 import PageHeader from '@/components/PageHeader';
-import StatCard from '@/components/StatCard';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import StatCard, { StatGrid } from '@/components/StatCard';
+import Page, { PageLoader, PageMessage } from '@/components/ui/Page';
+import Card, { SectionHeader } from '@/components/ui/Card';
+import Button, { buttonClass } from '@/components/ui/Button';
+import Pill from '@/components/ui/Pill';
+import Spinner from '@/components/ui/Spinner';
+import Switch from '@/components/ui/Switch';
+import { Textarea } from '@/components/ui/Field';
+import ChartCard from '@/components/charts/ChartCard';
+import {
+  activeDotProps, axisProps, barCursor, ChartTooltip, gridProps, lineCursor, series,
+} from '@/components/charts/chartTheme';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 interface AdminStats {
   users: {
@@ -130,287 +146,280 @@ export default function AdminDashboard() {
     }
   }, [user, token, loading, router]);
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (error) return <><div className="p-8 text-center text-red-500">{error}</div></>;
-  if (!data) return <><div className="p-8 text-center text-gray-500">No data available</div></>;
+  if (loading || dataLoading) return <PageLoader />;
+  if (error) return <PageMessage tone="bad">{error}</PageMessage>;
+  if (!data) return <PageMessage>No data available</PageMessage>;
+
+  const subjectData = data.subjects.map(d => ({ ...d, label: subjectLabel(d.subject) }));
+  const hasSignups = data.users.signupTrend.some(d => d.count > 0);
+
+  const recalculateStreaks = async () => {
+    if (!token) return;
+    setStreakRecalculating(true);
+    setStreakResult(null);
+    try {
+      const res = await fetch('/api/admin/recalculate-streaks', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      const count = data.results?.length || 0;
+      const updated = data.results?.filter((r: { currentStreak: number }) => r.currentStreak > 0).length || 0;
+      setStreakResult(`Recalculated ${count} children. ${updated} have active streaks.`);
+    } catch {
+      setStreakResult('Failed to recalculate streaks.');
+    }
+    setStreakRecalculating(false);
+  };
+
+  const toggleSat = async (child: SATChild) => {
+    if (!token) return;
+    setSatToggling(child.id);
+    try {
+      await fetch('/api/admin/sat-access', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ childId: child.id, enabled: !child.satEnabled }),
+      });
+      setSatChildren(prev => prev.map(c => c.id === child.id ? { ...c, satEnabled: !c.satEnabled } : c));
+    } catch { /* ignore */ }
+    setSatToggling(null);
+  };
 
   return (
-    <>
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <PageHeader
-          title="Admin Dashboard"
-          subtitle="Platform-wide metrics and activity"
-          actions={
-            <a
-              href="/admin/ai-usage"
-              className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
-            >
-              AI Usage
-            </a>
-          }
-        />
+    <Page>
+      <PageHeader
+        title="Admin"
+        subtitle="Platform-wide metrics and activity"
+        actions={
+          <Link href="/admin/ai-usage" className={buttonClass({ variant: 'secondary' })}>
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            AI usage
+          </Link>
+        }
+      />
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <StatCard title="Total Users" value={data.users.total} icon="👥" />
-          <StatCard title="Parents" value={data.users.parents} icon="👨‍👩‍👧" />
-          <StatCard title="Children" value={data.users.children} icon="🧒" />
-          <StatCard title="Active (7d)" value={data.users.activeLastWeek} icon="🟢" />
-          <StatCard title="Families" value={data.families.totalLinks} icon="🏠" />
-          <StatCard title="Incomplete Onboarding" value={data.users.unfinishedOnboarding} icon="⏳" />
-        </div>
+      {/* Key Metrics */}
+      <section className="mb-8" aria-labelledby="users-heading">
+        <SectionHeader id="users-heading" title="People" />
+        <StatGrid cols="grid-cols-2 lg:grid-cols-3">
+          <StatCard title="Total users" value={data.users.total} icon={UsersRound} />
+          <StatCard title="Parents" value={data.users.parents} icon={UserCheck} />
+          <StatCard title="Children" value={data.users.children} icon={GraduationCap} />
+          <StatCard title="Active (7d)" value={data.users.activeLastWeek} icon={Activity} />
+          <StatCard title="Families" value={data.families.totalLinks} icon={House} />
+          <StatCard title="Incomplete onboarding" value={data.users.unfinishedOnboarding} icon={Hourglass} />
+        </StatGrid>
+      </section>
 
-        {/* Signup Trend */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Signups (Last 30 Days)</h2>
-          {data.users.signupTrend.some(d => d.count > 0) ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.users.signupTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="#6366F1" strokeWidth={2} dot={{ fill: '#6366F1' }} name="Signups" />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-12">No signups in the last 30 days</p>
-          )}
-        </div>
+      {/* Signup Trend */}
+      <ChartCard
+        className="mb-8"
+        title="Signups"
+        subtitle="New accounts per day, last 30 days."
+        empty={!hasSignups && 'No signups in the last 30 days'}
+        table={{ columns: ['Date', 'Signups'], rows: data.users.signupTrend.map(d => [d.date, d.count]) }}
+      >
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={data.users.signupTrend} margin={{ top: 8, right: 12, bottom: 0, left: -20 }}>
+            <CartesianGrid {...gridProps} />
+            <XAxis dataKey="date" minTickGap={24} {...axisProps} />
+            <YAxis allowDecimals={false} {...axisProps} axisLine={false} />
+            <Tooltip content={<ChartTooltip />} cursor={lineCursor} />
+            <Line
+              type="monotone"
+              dataKey="count"
+              name="Signups"
+              stroke={series[1]}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              dot={false}
+              activeDot={activeDotProps(series[1])}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
 
-        {/* Activity Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <StatCard title="Assignments Created" value={data.assignments.total} icon="📝" />
-          <StatCard title="Assignments Completed" value={data.assignments.completed} icon="✅" />
-          <StatCard title="Completion Rate" value={`${data.assignments.completionRate}%`} icon="📈" />
-          <StatCard title="Practice Sessions" value={data.practice.total} icon="🧠" />
-          <StatCard title="Practice Completed" value={data.practice.completed} icon="🎯" />
-          <StatCard title="Awaiting Review" value={data.assignments.submitted} icon="⏰" />
-          <StatCard title="Offline Work Logged" value={data.offlineWork.total} icon="📓" />
-          <StatCard title="Offline Approved" value={data.offlineWork.approved} icon="👍" />
-        </div>
+      {/* Activity Metrics */}
+      <section className="mb-8" aria-labelledby="activity-heading">
+        <SectionHeader id="activity-heading" title="Activity" />
+        <StatGrid>
+          <StatCard title="Assignments created" value={data.assignments.total} icon={ClipboardList} />
+          <StatCard title="Assignments completed" value={data.assignments.completed} icon={CircleCheck} />
+          <StatCard title="Completion rate" value={`${data.assignments.completionRate}%`} icon={TrendingUp} />
+          <StatCard title="Awaiting review" value={data.assignments.submitted} icon={ClipboardCheck} />
+          <StatCard title="Practice sessions" value={data.practice.total} icon={Brain} />
+          <StatCard title="Practice completed" value={data.practice.completed} icon={Target} />
+          <StatCard title="Offline work logged" value={data.offlineWork.total} icon={NotebookPen} />
+          <StatCard title="Offline approved" value={data.offlineWork.approved} icon={ThumbsUp} />
+        </StatGrid>
+      </section>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Subject Popularity */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Subject Popularity</h2>
-            {data.subjects.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.subjects}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="subject" tick={{ fontSize: 10 }} stroke="#9CA3AF" />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#6366F1" radius={[6, 6, 0, 0]} name="Activities" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No data yet</p>
-            )}
-          </div>
+      {/* Charts Row */}
+      <div className="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Subject Popularity */}
+        <ChartCard
+          title="Subject popularity"
+          subtitle="Activities per subject."
+          empty={subjectData.length === 0 && 'No data yet'}
+          table={{ columns: ['Subject', 'Activities'], rows: subjectData.map(d => [d.label, d.count]) }}
+        >
+          <ResponsiveContainer width="100%" height={Math.max(120, subjectData.length * 40 + 36)}>
+            <BarChart data={subjectData} layout="vertical" margin={{ top: 0, right: 36, bottom: 0, left: 0 }}>
+              <CartesianGrid {...gridProps} vertical horizontal={false} />
+              <XAxis type="number" allowDecimals={false} {...axisProps} axisLine={false} />
+              <YAxis type="category" dataKey="label" width={118} {...axisProps} />
+              <Tooltip content={<ChartTooltip />} cursor={barCursor} />
+              <Bar dataKey="count" name="Activities" fill={series[1]} radius={[0, 4, 4, 0]} maxBarSize={16}>
+                <LabelList dataKey="count" position="right" fill="rgb(var(--ink))" fontSize={12} fontWeight={600} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-          {/* Most Active Families */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Most Active Families</h2>
-            {data.families.mostActive.length > 0 ? (
-              <div className="space-y-3">
-                {data.families.mostActive.map((f, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{f.parentName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{f.parentEmail}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{f.assignmentCount} assignments</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{f.childCount} {f.childCount === 1 ? 'child' : 'children'}</p>
-                    </div>
+        {/* Most Active Families */}
+        <Card>
+          <h3 className="mb-2 font-display text-base font-semibold text-ink">Most active families</h3>
+          {data.families.mostActive.length > 0 ? (
+            <ul className="divide-y divide-line">
+              {data.families.mostActive.map((f, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{f.parentName}</p>
+                    <p className="truncate text-xs text-ink-muted">{f.parentEmail}</p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-12">No family activity yet</p>
-            )}
-          </div>
-        </div>
-
-        {/* Admin Tools */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Admin Tools</h2>
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              onClick={async () => {
-                if (!token) return;
-                setStreakRecalculating(true);
-                setStreakResult(null);
-                try {
-                  const res = await fetch('/api/admin/recalculate-streaks', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({}),
-                  });
-                  const data = await res.json();
-                  const count = data.results?.length || 0;
-                  const updated = data.results?.filter((r: { currentStreak: number }) => r.currentStreak > 0).length || 0;
-                  setStreakResult(`Recalculated ${count} children. ${updated} have active streaks.`);
-                } catch {
-                  setStreakResult('Failed to recalculate streaks.');
-                }
-                setStreakRecalculating(false);
-              }}
-              disabled={streakRecalculating}
-              className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {streakRecalculating ? 'Recalculating...' : 'Recalculate All Streaks'}
-            </button>
-            {streakResult && (
-              <span className="text-sm text-gray-700 dark:text-gray-300">{streakResult}</span>
-            )}
-          </div>
-        </div>
-
-        {/* SAT Access Management */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">SAT Access Management</h2>
-          {satLoading ? (
-            <LoadingSpinner size="sm" />
-          ) : satChildren.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">No children registered yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700">
-                    <th className="py-2 pr-4">Child</th>
-                    <th className="py-2 pr-4">Parent</th>
-                    <th className="py-2 pr-4 text-center">SAT Access</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {satChildren.map(child => (
-                    <tr key={child.id} className="border-b border-gray-100 dark:border-gray-700 last:border-0">
-                      <td className="py-3 pr-4">
-                        <p className="font-medium text-gray-900 dark:text-white">{child.name || 'Unnamed'}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{child.email}</p>
-                      </td>
-                      <td className="py-3 pr-4">
-                        <p className="text-gray-700 dark:text-gray-300">{child.parentName || '-'}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{child.parentEmail || ''}</p>
-                      </td>
-                      <td className="py-3 pr-4 text-center">
-                        <button
-                          onClick={async () => {
-                            if (!token) return;
-                            setSatToggling(child.id);
-                            try {
-                              await fetch('/api/admin/sat-access', {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ childId: child.id, enabled: !child.satEnabled }),
-                              });
-                              setSatChildren(prev => prev.map(c => c.id === child.id ? { ...c, satEnabled: !c.satEnabled } : c));
-                            } catch { /* ignore */ }
-                            setSatToggling(null);
-                          }}
-                          disabled={satToggling === child.id}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            child.satEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
-                          } ${satToggling === child.id ? 'opacity-50' : ''}`}
-                        >
-                          <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                            child.satEnabled ? 'translate-x-6' : 'translate-x-1'
-                          }`} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Feedback */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 card-hover mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">User Feedback</h2>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{data.feedback.length} total</span>
-          </div>
-          {data.feedback.length > 0 ? (
-            <div className="space-y-4">
-              {data.feedback.map(f => (
-                <div key={f.id} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">{f.userName}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">{f.userEmail}</span>
-                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
-                        f.userRole === 'parent'
-                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200'
-                          : f.userRole === 'child'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>{f.userRole}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        f.status === 'resolved'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-                      }`}>{f.status === 'resolved' ? 'resolved' : 'open'}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        f.category === 'bug' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' :
-                        f.category === 'feature' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200' :
-                        'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>{f.category}</span>
-                    </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold tabular-nums text-ink">{f.assignmentCount} assignments</p>
+                    <p className="text-xs text-ink-muted">{f.childCount} {f.childCount === 1 ? 'child' : 'children'}</p>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{f.message}</p>
-                  {f.hasScreenshot && (
-                    <details className="mt-2" onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) loadScreenshot(f.id); }}>
-                      <summary className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
-                        View screenshot
-                      </summary>
-                      {screenshots[f.id]
-                        ? <img src={screenshots[f.id]} alt="Feedback screenshot" className="mt-2 max-w-full rounded-lg border border-gray-200 dark:border-gray-700" />
-                        : <p className="mt-2 text-xs text-gray-400">Loading screenshot…</p>}
-                    </details>
-                  )}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{new Date(f.createdAt).toLocaleString()}</p>
-
-                  {f.response ? (
-                    <div className="mt-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/40">
-                      <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-1">Your reply{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleString()}` : ''}</p>
-                      <p className="text-sm text-indigo-900 dark:text-indigo-100 whitespace-pre-wrap">{f.response}</p>
-                    </div>
-                  ) : (
-                    <div className="mt-3">
-                      <textarea
-                        value={replyDrafts[f.id] || ''}
-                        onChange={e => setReplyDrafts(prev => ({ ...prev, [f.id]: e.target.value }))}
-                        placeholder="Write a reply…"
-                        rows={2}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          onClick={() => handleReply(f.id)}
-                          disabled={replyingId === f.id || !(replyDrafts[f.id] || '').trim()}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2 rounded-xl disabled:opacity-50 transition-all"
-                        >
-                          {replyingId === f.id ? 'Sending…' : 'Send reply'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No feedback submitted yet</p>
+            <p className="py-10 text-center text-sm text-ink-muted">No family activity yet</p>
           )}
+        </Card>
+      </div>
+
+      {/* Admin Tools */}
+      <Card className="mb-8">
+        <h2 className="font-display text-base font-semibold text-ink">Admin tools</h2>
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <Button variant="secondary" onClick={recalculateStreaks} loading={streakRecalculating}>
+            {streakRecalculating ? 'Recalculating…' : 'Recalculate all streaks'}
+          </Button>
+          {streakResult && <span className="text-sm text-ink-muted">{streakResult}</span>}
         </div>
-      </main>
-    </>
+      </Card>
+
+      {/* SAT Access Management */}
+      <Card className="mb-8">
+        <h2 className="mb-2 font-display text-base font-semibold text-ink">SAT access</h2>
+        {satLoading ? (
+          <Spinner className="text-honey" />
+        ) : satChildren.length === 0 ? (
+          <p className="text-sm text-ink-muted">No children registered yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-ink-subtle">
+                  <th className="py-2 pr-4">Child</th>
+                  <th className="py-2 pr-4">Parent</th>
+                  <th className="py-2 text-right">SAT access</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {satChildren.map(child => (
+                  <tr key={child.id}>
+                    <td className="py-3 pr-4">
+                      <p className="font-semibold text-ink">{child.name || 'Unnamed'}</p>
+                      <p className="text-xs text-ink-muted">{child.email}</p>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <p className="text-ink">{child.parentName || '-'}</p>
+                      <p className="text-xs text-ink-muted">{child.parentEmail || ''}</p>
+                    </td>
+                    <td className="py-3 text-right">
+                      <Switch
+                        label={`SAT access for ${child.name || child.email}`}
+                        checked={child.satEnabled}
+                        onChange={() => toggleSat(child)}
+                        disabled={satToggling === child.id}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Feedback */}
+      <section aria-labelledby="feedback-heading">
+        <SectionHeader id="feedback-heading" title="User feedback" count={data.feedback.length} />
+        {data.feedback.length > 0 ? (
+          <div className="space-y-4">
+            {data.feedback.map(f => (
+              <Card key={f.id}>
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink">{f.userName}</p>
+                    <p className="truncate text-xs text-ink-muted">{f.userEmail}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Pill className="capitalize">{f.userRole}</Pill>
+                    <Pill tone={f.category === 'bug' ? 'bad' : f.category.startsWith('feature') ? 'info' : 'neutral'} className="capitalize">
+                      {f.category.replace(/_/g, ' ')}
+                    </Pill>
+                    <Pill tone={f.status === 'resolved' ? 'good' : 'warn'}>{f.status === 'resolved' ? 'Resolved' : 'Open'}</Pill>
+                  </div>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-ink">{f.message}</p>
+                {f.hasScreenshot && (
+                  <details className="mt-2" onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) loadScreenshot(f.id); }}>
+                    <summary className="cursor-pointer text-xs font-semibold text-honey-text hover:underline">
+                      View screenshot
+                    </summary>
+                    {screenshots[f.id]
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={screenshots[f.id]} alt="Feedback screenshot" className="mt-2 max-w-full rounded-lg border border-line" />
+                      : <p className="mt-2 text-xs text-ink-subtle">Loading screenshot…</p>}
+                  </details>
+                )}
+                <p className="mt-2 text-xs text-ink-subtle">{new Date(f.createdAt).toLocaleString()}</p>
+
+                {f.response ? (
+                  <div className="mt-3 rounded-xl bg-honey-soft p-3.5">
+                    <p className="mb-1 text-xs font-semibold text-honey-text">Your reply{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleString()}` : ''}</p>
+                    <p className="whitespace-pre-wrap text-sm text-ink">{f.response}</p>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <Textarea
+                      aria-label={`Reply to ${f.userName}`}
+                      value={replyDrafts[f.id] || ''}
+                      onChange={e => setReplyDrafts(prev => ({ ...prev, [f.id]: e.target.value }))}
+                      placeholder="Write a reply…"
+                      rows={2}
+                    />
+                    <div className="mt-2 flex justify-end">
+                      <Button size="sm" onClick={() => handleReply(f.id)} loading={replyingId === f.id} disabled={!(replyDrafts[f.id] || '').trim()}>
+                        {replyingId === f.id ? 'Sending…' : 'Send reply'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-line-strong py-8 text-center text-sm text-ink-muted">No feedback submitted yet</p>
+        )}
+      </section>
+    </Page>
   );
 }

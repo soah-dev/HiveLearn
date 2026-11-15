@@ -1,3 +1,6 @@
+import { Timer } from 'lucide-react';
+import { cn } from '@/lib/cn';
+
 interface QuizProgressProps {
   answered: number;
   total: number;
@@ -11,21 +14,22 @@ const formatTime = (s: number) => {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 };
 
-/** Countdown pill that turns red and pulses in the final minute. */
-export function Countdown({ seconds, className = '' }: { seconds: number; className?: string }) {
+/** Countdown chip that turns red in the final minute. */
+export function Countdown({ seconds, className }: { seconds: number; className?: string }) {
   const urgent = seconds < 60;
   return (
     <div
-      className={`inline-flex items-center px-3 py-1.5 rounded-xl font-mono text-lg font-extrabold tabular-nums ${
-        urgent
-          ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 animate-pulse-soft'
-          : 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
-      } ${className}`}
+      className={cn(
+        'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 font-mono text-base font-semibold tabular-nums',
+        urgent ? 'bg-bad-soft text-bad-text' : 'bg-muted text-ink',
+        className
+      )}
       role="timer"
       aria-live="off"
       aria-label="Time remaining"
     >
-      ⏱ {formatTime(seconds)}
+      <Timer className="h-4 w-4" aria-hidden="true" />
+      {formatTime(seconds)}
     </div>
   );
 }
@@ -36,26 +40,23 @@ export default function QuizProgress({ answered, total, timeLeft }: QuizProgress
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-ink-muted">
           <span>{answered} of {total} answered</span>
-          <span>{pct}%</span>
+          <span className="tabular-nums">{pct}%</span>
         </div>
         <div
-          className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+          className="h-2 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={total}
           aria-valuenow={answered}
           aria-label="Questions answered"
         >
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-[width] duration-300"
-            style={{ width: `${pct}%` }}
-          />
+          <div className="h-full rounded-full bg-honey transition-[width] duration-300" style={{ width: `${pct}%` }} />
         </div>
       </div>
-      {timeLeft !== null && timeLeft !== undefined && <Countdown seconds={timeLeft} className="flex-shrink-0" />}
+      {timeLeft !== null && timeLeft !== undefined && <Countdown seconds={timeLeft} className="shrink-0" />}
     </div>
   );
 }
