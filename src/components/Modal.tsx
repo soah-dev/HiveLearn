@@ -1,6 +1,8 @@
 'use client';
 
 import { ReactNode, useEffect, useId, useRef } from 'react';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface ModalProps {
   open: boolean;
@@ -12,7 +14,8 @@ interface ModalProps {
 
 /**
  * Accessible dialog: closes on Escape and backdrop click, locks page scroll,
- * moves focus into the dialog on open and returns it on close.
+ * moves focus into the dialog on open and returns it on close. On phones it
+ * rises from the bottom edge as a sheet.
  */
 export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -31,7 +34,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
 
     // Focus the first form control, falling back to the panel itself
     const focusable = panelRef.current?.querySelector<HTMLElement>(
-      'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]):not([data-modal-close])'
     );
     (focusable || panelRef.current)?.focus();
 
@@ -51,7 +54,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -60,21 +63,21 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 w-full ${
-          size === 'lg' ? 'max-w-lg' : 'max-w-md'
-        } border border-white/50 dark:border-gray-700/50 animate-slide-up max-h-[90vh] overflow-y-auto outline-none`}
+        className={cn(
+          'max-h-[92vh] w-full animate-sheet-up overflow-y-auto rounded-t-3xl border border-line bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-pop outline-none sm:animate-enter sm:rounded-2xl sm:p-6',
+          size === 'lg' ? 'sm:max-w-lg' : 'sm:max-w-md'
+        )}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h3 id={titleId} className="text-xl font-extrabold text-gray-900 dark:text-white">{title}</h3>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h3 id={titleId} className="font-display text-xl font-bold text-ink">{title}</h3>
           <button
             type="button"
+            data-modal-close
             onClick={onClose}
             aria-label="Close"
-            className="-mr-2 w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="-mr-1.5 flex h-9 w-9 items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-muted hover:text-ink"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         {children}

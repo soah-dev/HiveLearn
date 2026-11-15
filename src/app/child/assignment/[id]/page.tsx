@@ -1,13 +1,25 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Check, Flag, Hourglass } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { subjectLabel } from '@/lib/subjects';
 import MathText from '@/components/MathText';
 import QuizProgress, { Countdown } from '@/components/QuizProgress';
 import PageHeader from '@/components/PageHeader';
+import AnswerOption, { AnswerState } from '@/components/quiz/AnswerOption';
+import QuestionCard, { QuestionNote, ResultMark } from '@/components/quiz/QuestionCard';
+import Page, { PageLoader, PageMessage } from '@/components/ui/Page';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Pill, { scoreTone, toneTextClass } from '@/components/ui/Pill';
+import Hexagon from '@/components/ui/Hexagon';
+import SubjectIcon from '@/components/ui/SubjectIcon';
+import PrintButton from '@/components/ui/PrintButton';
+import { Input, Textarea } from '@/components/ui/Field';
 
 interface Question {
   id: string;
@@ -183,8 +195,8 @@ export default function ChildAssignmentPage() {
     setSaving(false);
   };
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!assignment) return <><div className="p-8 text-center text-gray-500">Assignment not found</div></>;
+  if (loading || dataLoading) return <PageLoader />;
+  if (!assignment) return <PageMessage>Assignment not found</PageMessage>;
 
   const isReviewed = assignment.status === 'reviewed';
   const isSubmitted = assignment.status === 'submitted';
@@ -194,298 +206,218 @@ export default function ChildAssignmentPage() {
   const answeredCount = assignment.questions.filter(q => !!answers[q.id]).length;
 
   return (
-    <>
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <PageHeader
-          back={{ href: '/child/dashboard', label: 'Back to Dashboard' }}
-          title={<span className="capitalize">{assignment.subject.replace('_', ' ')}: {assignment.topic}</span>}
-          subtitle={`Grade ${assignment.grade} · ${assignment.difficulty} · ${assignment.numQuestions} questions${assignment.timeLimitMin ? ` · ${assignment.timeLimitMin} min limit` : ''}`}
-          className="mb-6"
-          actions={(isReviewed || isActive) ? (
-            <>
-              {isReviewed && assignment.score !== null && (
-                <div className="text-left sm:text-right mr-auto sm:mr-0">
-                  <p className={`text-4xl font-extrabold leading-none ${assignment.score >= 80 ? 'text-green-600' : assignment.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {assignment.score}%
-                  </p>
-                  {assignment.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-1">+{assignment.pointsAwarded} pts</p>}
-                </div>
-              )}
-              <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                Print
-              </button>
-            </>
-          ) : undefined}
-        />
+    <Page width="narrow">
+      <PageHeader
+        back={{ href: '/child/dashboard', label: 'Back to dashboard' }}
+        title={`${subjectLabel(assignment.subject)}: ${assignment.topic}`}
+        subtitle={`Grade ${assignment.grade} · ${assignment.difficulty} · ${assignment.numQuestions} questions${assignment.timeLimitMin ? ` · ${assignment.timeLimitMin} min limit` : ''}`}
+        actions={(isReviewed || isActive) ? <PrintButton /> : undefined}
+      />
 
-        {/* Start button for pending */}
-        {isPending && (
-          <div className="text-center mb-8 animate-slide-up">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8">
-              <p className="text-5xl mb-4 animate-float">📝</p>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Ready to begin?</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
-                {assignment.numQuestions} questions · {assignment.difficulty}
-                {assignment.timeLimitMin && ` · ${assignment.timeLimitMin} min time limit`}
+      {/* Start card for pending */}
+      {isPending && (
+        <Card padding="lg" className="mb-8 text-center">
+          <SubjectIcon subject={assignment.subject} size={64} tone="honey" />
+          <h2 className="mt-4 font-display text-xl font-semibold text-ink">Ready to begin?</h2>
+          <p className="mt-1 text-ink-muted">
+            {assignment.numQuestions} questions · {assignment.difficulty}
+            {assignment.timeLimitMin && ` · ${assignment.timeLimitMin} min time limit`}
+          </p>
+          {timeLeft !== null && <Countdown seconds={timeLeft} className="mt-4" />}
+          <div className="mt-6">
+            <Button size="lg" onClick={startAssignment}>Start assignment</Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Result: score, points and overall feedback together */}
+      {isReviewed && (assignment.score !== null || assignment.aiFeedback) && (
+        <Card className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+          {assignment.score !== null && (
+            <div className="shrink-0 sm:text-center">
+              <p className={`text-5xl font-semibold leading-none tracking-tight ${toneTextClass(scoreTone(assignment.score))}`}>
+                {assignment.score}%
               </p>
-              {timeLeft !== null && <Countdown seconds={timeLeft} className="mb-6" />}
-              <button onClick={startAssignment} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
-                Start Assignment
-              </button>
+              {assignment.pointsAwarded ? <Pill tone="honey" className="mt-2">+{assignment.pointsAwarded} pts</Pill> : null}
             </div>
-          </div>
-        )}
+          )}
+          {assignment.aiFeedback && (
+            <div className="min-w-0 sm:border-l sm:border-line sm:pl-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">Feedback</p>
+              <p className="mt-1 text-sm leading-relaxed text-ink"><MathText text={assignment.aiFeedback} /></p>
+            </div>
+          )}
+        </Card>
+      )}
 
-        {/* Feedback banner */}
-        {isReviewed && assignment.aiFeedback && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl animate-slide-up">
-            <p className="text-sm font-bold text-indigo-800 dark:text-indigo-200">Feedback</p>
-            <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">{assignment.aiFeedback}</p>
-          </div>
-        )}
+      {isSubmitted && (
+        <Card padding="lg" className="text-center">
+          <Hexagon size={56} tone="info">
+            <Hourglass className="h-6 w-6" aria-hidden="true" />
+          </Hexagon>
+          <p className="mt-4 font-display text-lg font-semibold text-ink">Assignment submitted!</p>
+          <p className="mt-1 text-sm text-ink-muted">Your results will be visible once your parent reviews it.</p>
+        </Card>
+      )}
 
-        {isSubmitted && (
-          <div className="p-8 bg-yellow-50 dark:bg-yellow-900/30 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl text-center animate-slide-up">
-            <p className="text-5xl mb-3 animate-float">⏳</p>
-            <p className="text-yellow-800 dark:text-yellow-200 font-bold text-lg">Assignment submitted!</p>
-            <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-1">Your results will be visible once your parent reviews it.</p>
-          </div>
-        )}
+      {/* Questions */}
+      {(isActive || isReviewed) && (
+        <div className="mb-8 space-y-4">
+          {assignment.questions.map((q, i) => {
+            const ans = q.answers[0];
+            const myAnswer = answers[q.id] || '';
+            const isFlagged = flags[q.id] || false;
+            const wasFlagged = ans?.flagged || false;
 
-        {/* Questions */}
-        {(isActive || isReviewed) && (
-          <div className="space-y-4 mb-8">
-            {assignment.questions.map((q, i) => {
-              const ans = q.answers[0];
-              const myAnswer = answers[q.id] || '';
-              const isFlagged = flags[q.id] || false;
-              const wasFlagged = ans?.flagged || false;
+            const optionState = (key: string): AnswerState => {
+              if (isReviewed) {
+                if (key === q.correctAnswer) return 'correct';
+                return myAnswer === key && !ans?.isCorrect ? 'wrong' : 'dim';
+              }
+              return myAnswer === key ? 'selected' : 'idle';
+            };
+            const pick = (value: string) => (canAnswer ? () => setAnswers(prev => ({ ...prev, [q.id]: value })) : undefined);
 
-              return (
-                <div
-                  key={q.id}
-                  className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border p-6 animate-slide-up print-break-inside-avoid ${
-                    (isFlagged || wasFlagged)
-                      ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10'
-                      : 'border-gray-200/60 dark:border-gray-700/60'
-                  }`}
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <p className="text-gray-900 dark:text-white font-bold">
-                      <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 mr-2 rounded-lg text-xs font-extrabold align-middle bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                        {i + 1}
-                      </span>
-                      <MathText text={q.questionText} />
-                    </p>
-                    {canAnswer && myAnswer && !isFlagged && (
-                      <span className="text-xs font-bold text-green-600 dark:text-green-400 flex-shrink-0 mt-1" aria-label="Answered">✓</span>
-                    )}
-                    {isReviewed && wasFlagged && !ans.flagResolvedAt && (
-                      <span className="text-sm font-bold text-amber-600 dark:text-amber-400 ml-2 flex-shrink-0">Pending review</span>
-                    )}
-                    {isReviewed && wasFlagged && ans.flagResolvedAt && (
-                      <span className="text-sm font-bold text-green-600 dark:text-green-400 ml-2 flex-shrink-0">Resolved</span>
-                    )}
-                    {isReviewed && !wasFlagged && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
-                      <span className={`text-xl ml-2 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
-                        {ans.isCorrect ? '✓' : '✗'}
-                      </span>
+            let status = null;
+            if (canAnswer && myAnswer && !isFlagged) {
+              status = <Check className="h-4 w-4 text-good-text" aria-label="Answered" />;
+            } else if (isReviewed && wasFlagged) {
+              status = ans.flagResolvedAt ? <Pill tone="good">Resolved</Pill> : <Pill tone="warn">Pending review</Pill>;
+            } else if (isReviewed && ans?.isCorrect !== null && ans?.isCorrect !== undefined) {
+              status = <ResultMark correct={ans.isCorrect} />;
+            }
+
+            return (
+              <QuestionCard key={q.id} number={i + 1} question={q.questionText} status={status} flagged={isFlagged || wasFlagged}>
+                {/* Multiple Choice */}
+                {q.questionType === 'multiple_choice' && (
+                  <div className="space-y-2">
+                    {[
+                      { key: 'A', val: q.optionA },
+                      { key: 'B', val: q.optionB },
+                      { key: 'C', val: q.optionC },
+                      { key: 'D', val: q.optionD },
+                    ].map(opt => (
+                      <AnswerOption key={opt.key} letter={opt.key} state={optionState(opt.key)} onSelect={pick(opt.key)}>
+                        {opt.val && <MathText text={opt.val} />}
+                      </AnswerOption>
+                    ))}
+                  </div>
+                )}
+
+                {/* True/False */}
+                {q.questionType === 'true_false' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {['True', 'False'].map(val => (
+                      <AnswerOption key={val} state={optionState(val)} onSelect={pick(val)}>{val}</AnswerOption>
+                    ))}
+                  </div>
+                )}
+
+                {/* Fill in the Blank */}
+                {q.questionType === 'fill_in_blank' && (
+                  <Input
+                    type="text"
+                    aria-label={`Answer to question ${i + 1}`}
+                    value={myAnswer}
+                    onChange={e => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                    disabled={!canAnswer}
+                    placeholder="Type your answer..."
+                  />
+                )}
+
+                {/* Open Ended */}
+                {q.questionType === 'open_ended' && (
+                  <Textarea
+                    aria-label={`Answer to question ${i + 1}`}
+                    value={myAnswer}
+                    onChange={e => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                    disabled={!canAnswer}
+                    placeholder="Write your response..."
+                    rows={4}
+                    className="resize-none"
+                  />
+                )}
+
+                {/* Flag checkbox - during quiz */}
+                {canAnswer && (
+                  <div className="no-print mt-4">
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-ink-muted hover:text-ink">
+                      <input
+                        type="checkbox"
+                        checked={isFlagged}
+                        onChange={e => setFlags(prev => ({ ...prev, [q.id]: e.target.checked }))}
+                        className="h-4 w-4 accent-warn"
+                      />
+                      <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+                      Flag this question
+                    </label>
+                    {isFlagged && (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-xs text-warn-text">Make your best guess and your parent will review</p>
+                        <Input
+                          controlSize="sm"
+                          type="text"
+                          value={flagReasons[q.id] || ''}
+                          onChange={e => setFlagReasons(prev => ({ ...prev, [q.id]: e.target.value }))}
+                          placeholder="What's wrong with this question? (optional)"
+                        />
+                      </div>
                     )}
                   </div>
-
-                  {/* Multiple Choice */}
-                  {q.questionType === 'multiple_choice' && (
-                    <div className="space-y-2">
-                      {[
-                        { key: 'A', val: q.optionA },
-                        { key: 'B', val: q.optionB },
-                        { key: 'C', val: q.optionC },
-                        { key: 'D', val: q.optionD },
-                      ].map(opt => (
-                        <button
-                          key={opt.key}
-                          onClick={() => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: opt.key }))}
-                          disabled={!canAnswer}
-                          className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
-                            isReviewed
-                              ? opt.key === q.correctAnswer
-                                ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
-                                : myAnswer === opt.key && !ans?.isCorrect
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-900/30'
-                                  : 'border-gray-200/60 dark:border-gray-600/60'
-                              : myAnswer === opt.key
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-sm shadow-indigo-500/20'
-                                : 'border-gray-200/60 dark:border-gray-600/60 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
-                          }`}
-                        >
-                          <span className="font-bold">{opt.key}.</span> {opt.val && <MathText text={opt.val} />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* True/False */}
-                  {q.questionType === 'true_false' && (
-                    <div className="flex gap-3">
-                      {['True', 'False'].map(val => (
-                        <button
-                          key={val}
-                          onClick={() => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: val }))}
-                          disabled={!canAnswer}
-                          className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${
-                            isReviewed
-                              ? val === q.correctAnswer
-                                ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                                : myAnswer === val && !ans?.isCorrect
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                                  : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
-                              : myAnswer === val
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200'
-                                : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300 hover:border-indigo-300'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Fill in the Blank */}
-                  {q.questionType === 'fill_in_blank' && (
-                    <input
-                      type="text"
-                      value={myAnswer}
-                      onChange={e => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                      disabled={!canAnswer}
-                      placeholder="Type your answer..."
-                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-60 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    />
-                  )}
-
-                  {/* Open Ended */}
-                  {q.questionType === 'open_ended' && (
-                    <textarea
-                      value={myAnswer}
-                      onChange={e => canAnswer && setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                      disabled={!canAnswer}
-                      placeholder="Write your response..."
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 disabled:opacity-60 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                    />
-                  )}
-
-                  {/* Flag checkbox - during quiz */}
-                  {canAnswer && (
-                    <div className="mt-4">
-                      <label className="flex items-center gap-2 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={isFlagged}
-                          onChange={e => setFlags(prev => ({ ...prev, [q.id]: e.target.checked }))}
-                          className="rounded border-amber-300 text-amber-500 focus:ring-amber-500"
-                        />
-                        <span className="text-sm text-amber-700 dark:text-amber-400 font-medium group-hover:underline">
-                          Flag this question
-                        </span>
-                      </label>
-                      {isFlagged && (
-                        <div className="mt-2 ml-6">
-                          <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-                            Make your best guess and your parent will review
-                          </p>
-                          <input
-                            type="text"
-                            value={flagReasons[q.id] || ''}
-                            onChange={e => setFlagReasons(prev => ({ ...prev, [q.id]: e.target.value }))}
-                            placeholder="What's wrong with this question? (optional)"
-                            className="w-full px-3 py-2 border border-amber-200 dark:border-amber-700 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Post-review info */}
-                  {isReviewed && (
-                    <div className="mt-3 space-y-2">
-                      {wasFlagged && (
-                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                          <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
-                            {ans.flagResolvedAt ? 'Flag resolved by parent' : 'Flagged — awaiting parent review'}
-                          </p>
-                          {ans.flagReason && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Reason: {ans.flagReason}</p>}
-                          {ans.parentComment && (
-                            <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">Parent: {ans.parentComment}</p>
-                          )}
-                        </div>
-                      )}
-                      {!wasFlagged && q.questionType !== 'open_ended' && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Correct answer: <span className="font-bold text-green-600 dark:text-green-400">
-                            {q.questionType === 'multiple_choice'
-                              ? <><span>{q.correctAnswer}.</span> <MathText text={(q.correctAnswer === 'A' ? q.optionA : q.correctAnswer === 'B' ? q.optionB : q.correctAnswer === 'C' ? q.optionC : q.optionD) || q.correctAnswer} /></>
-                              : <MathText text={q.correctAnswer} />}
-                          </span>
-                        </p>
-                      )}
-                      {ans?.aiScore !== null && ans?.aiScore !== undefined && (
-                        <p className="text-sm text-gray-500">Score: {ans.aiScore}/100</p>
-                      )}
-                      {ans?.aiExplanation && (
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                          <p className="text-sm text-blue-800 dark:text-blue-200">{ans.aiExplanation}</p>
-                        </div>
-                      )}
-                      {!wasFlagged && ans?.parentComment && (
-                        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-bold">Parent says:</p>
-                          <p className="text-sm text-yellow-800 dark:text-yellow-200">{ans.parentComment}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {error && (
-          <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
-
-        {/* Sticky action bar: progress, timer and submit always in view */}
-        {isActive && (
-          <div className="sticky bottom-0 -mx-4 px-4 pb-4 pt-6 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent dark:from-gray-900 dark:via-gray-900/95 no-print">
-            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-xl shadow-gray-900/10 p-4 space-y-3">
-              <QuizProgress answered={answeredCount} total={assignment.questions.length} timeLeft={timeLeft} />
-              <div className="flex gap-3">
-                {!assignment.timeLimitMin && (
-                  <button
-                    onClick={saveProgress}
-                    disabled={saving}
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-                  >
-                    {saving ? 'Saving...' : 'Save Progress'}
-                  </button>
                 )}
-                <button
-                  onClick={() => handleSubmit()}
-                  disabled={submitting}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
-                >
-                  {submitting ? 'Submitting...' : answeredCount < assignment.questions.length ? `Submit (${answeredCount}/${assignment.questions.length})` : 'Submit Assignment'}
-                </button>
-              </div>
+
+                {/* Post-review info */}
+                {isReviewed && (
+                  <div className="mt-4 space-y-2">
+                    {wasFlagged && (
+                      <QuestionNote tone="warn" label={ans.flagResolvedAt ? 'Flag resolved by parent' : 'Flagged — awaiting parent review'}>
+                        {ans.flagReason && <p>Reason: {ans.flagReason}</p>}
+                        {ans.parentComment && <p className="mt-1">Parent: {ans.parentComment}</p>}
+                      </QuestionNote>
+                    )}
+                    {!wasFlagged && q.questionType !== 'open_ended' && (
+                      <p className="text-sm text-ink-muted">
+                        Correct answer: <span className="font-semibold text-good-text">
+                          {q.questionType === 'multiple_choice'
+                            ? <><span>{q.correctAnswer}.</span> <MathText text={(q.correctAnswer === 'A' ? q.optionA : q.correctAnswer === 'B' ? q.optionB : q.correctAnswer === 'C' ? q.optionC : q.optionD) || q.correctAnswer} /></>
+                            : <MathText text={q.correctAnswer} />}
+                        </span>
+                      </p>
+                    )}
+                    {ans?.aiScore !== null && ans?.aiScore !== undefined && (
+                      <p className="text-sm text-ink-muted">Score: {ans.aiScore}/100</p>
+                    )}
+                    {ans?.aiExplanation && <QuestionNote label="Explanation"><MathText text={ans.aiExplanation} /></QuestionNote>}
+                    {!wasFlagged && ans?.parentComment && <QuestionNote label="Parent says">{ans.parentComment}</QuestionNote>}
+                  </div>
+                )}
+              </QuestionCard>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <Alert className="mb-4">{error}</Alert>}
+
+      {/* Sticky action bar: progress, timer and submit always in view */}
+      {isActive && (
+        <div className="no-print sticky bottom-0 -mx-4 bg-gradient-to-t from-canvas via-canvas/95 to-transparent px-4 pb-4 pt-6 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+          <div className="space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-pop">
+            <QuizProgress answered={answeredCount} total={assignment.questions.length} timeLeft={timeLeft} />
+            <div className="flex gap-3">
+              {!assignment.timeLimitMin && (
+                <Button variant="secondary" className="flex-1" onClick={saveProgress} loading={saving}>
+                  Save progress
+                </Button>
+              )}
+              <Button className="flex-1" onClick={() => handleSubmit()} loading={submitting}>
+                {answeredCount < assignment.questions.length ? `Submit (${answeredCount}/${assignment.questions.length})` : 'Submit assignment'}
+              </Button>
             </div>
           </div>
-        )}
-
-      </main>
-    </>
+        </div>
+      )}
+    </Page>
   );
 }

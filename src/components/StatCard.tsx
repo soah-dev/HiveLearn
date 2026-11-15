@@ -1,37 +1,43 @@
-type Accent = 'purple' | 'green' | 'amber' | 'rose' | 'teal' | 'blue';
+import { ReactNode } from 'react';
+import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
+
+interface StatGridProps {
+  /** Grid column classes. The tiles are divided by hairlines, so fill every row. */
+  cols?: string;
+  className?: string;
+  children: ReactNode;
+}
+
+/** A row of stat tiles sharing one outline, divided by hairlines. */
+export function StatGrid({ cols = 'grid-cols-2 lg:grid-cols-4', className, children }: StatGridProps) {
+  return (
+    <dl className={cn('grid gap-px overflow-hidden rounded-2xl border border-line bg-line', cols, className)}>
+      {children}
+    </dl>
+  );
+}
 
 interface StatCardProps {
   title: string;
-  value: string | number;
-  subtitle?: string;
-  icon?: string;
-  /** Background accent. Defaults to a stable colour derived from the title. */
-  accent?: Accent;
+  value: ReactNode;
+  subtitle?: ReactNode;
+  icon?: LucideIcon;
+  /** Tint the icon honey: for the one stat a view wants to celebrate. */
+  accent?: boolean;
+  className?: string;
 }
 
-const accents: Accent[] = ['purple', 'green', 'amber', 'rose', 'teal', 'blue'];
-
-// Derive the accent from the title so a given stat always gets the same
-// colour, regardless of render order or how many times the page re-renders.
-const accentFor = (title: string): Accent => {
-  let hash = 0;
-  for (let i = 0; i < title.length; i++) hash = (hash * 31 + title.charCodeAt(i)) >>> 0;
-  return accents[hash % accents.length];
-};
-
-export default function StatCard({ title, value, subtitle, icon, accent }: StatCardProps) {
-  const bg = `stat-gradient-${accent || accentFor(title)}`;
-
+/** One headline number. Use inside a StatGrid. */
+export default function StatCard({ title, value, subtitle, icon: Icon, accent, className }: StatCardProps) {
   return (
-    <div className={`${bg} rounded-2xl p-4 sm:p-5 card-hover border border-white/50 dark:border-white/10 animate-slide-up`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 truncate">{title}</p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1 tabular-nums break-words">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{subtitle}</p>}
-        </div>
-        {icon && <span className="text-3xl sm:text-4xl animate-float-slow flex-shrink-0" aria-hidden="true">{icon}</span>}
-      </div>
+    <div className={cn('min-w-0 bg-surface p-4 sm:p-5', className)}>
+      <dt className="flex items-center gap-1.5 text-sm text-ink-muted">
+        {Icon && <Icon className={cn('h-4 w-4 shrink-0', accent ? 'text-honey-text' : 'text-ink-subtle')} aria-hidden="true" />}
+        <span className="truncate">{title}</span>
+      </dt>
+      <dd className="mt-2 break-words text-2xl font-semibold leading-none tracking-tight text-ink sm:text-[28px]">{value}</dd>
+      {subtitle && <dd className="mt-1.5 text-xs text-ink-subtle">{subtitle}</dd>}
     </div>
   );
 }

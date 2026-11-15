@@ -4,12 +4,20 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { BookOpen, Calculator, ChartColumn, ChevronDown, ChevronUp, Coffee, Gauge, LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import SATTimer from '@/components/sat/SATTimer';
 import SATModuleHeader from '@/components/sat/SATModuleHeader';
-import SATQuestionNav from '@/components/sat/SATQuestionNav';
+import SATQuestionNav, { navStateClass } from '@/components/sat/SATQuestionNav';
 import SATQuestionView from '@/components/sat/SATQuestionView';
 import SATScoreCard from '@/components/sat/SATScoreCard';
+import PageHeader from '@/components/PageHeader';
+import Page, { PageLoader, PageMessage } from '@/components/ui/Page';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Hexagon from '@/components/ui/Hexagon';
+import { toneTextClass } from '@/components/ui/Pill';
 
 interface SATAnswer {
   selectedAnswer: string | null;
@@ -198,51 +206,43 @@ export default function SATSessionPage() {
     setActionLoading(false);
   };
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!session) return <><div className="p-8 text-center text-red-500">{error || 'Session not found'}</div></>;
+  if (loading || dataLoading) return <PageLoader />;
+  if (!session) return <PageMessage tone="bad">{error || 'Session not found'}</PageMessage>;
 
   // --- STATE MACHINE RENDERING ---
 
   // NOT STARTED
   if (session.status === 'not_started') {
+    const outline: Array<{ icon: LucideIcon; title: string; text: string }> = [
+      { icon: BookOpen, title: 'Section 1: Reading & Writing', text: '2 modules, 27 questions each, 32 minutes per module' },
+      { icon: Coffee, title: 'Break', text: '10 minute break between sections' },
+      { icon: Calculator, title: 'Section 2: Math', text: '2 modules, 22 questions each, 35 minutes per module' },
+      { icon: Gauge, title: 'Adaptive', text: 'Module 2 difficulty adapts based on your Module 1 performance' },
+      { icon: ChartColumn, title: 'Scoring', text: '200-800 per section, 400-1600 composite' },
+    ];
     return (
-      <>
-        <main className="max-w-3xl mx-auto px-4 py-8">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center animate-slide-up">
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-4">Digital SAT Practice Test</h1>
-            <div className="text-left max-w-md mx-auto space-y-3 mb-8">
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-lg">📖</span>
-                <p><strong>Section 1: Reading & Writing</strong> - 2 modules, 27 questions each, 32 minutes per module</p>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-lg">☕</span>
-                <p><strong>Break</strong> - 10 minute break between sections</p>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-lg">🔢</span>
-                <p><strong>Section 2: Math</strong> - 2 modules, 22 questions each, 35 minutes per module</p>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-lg">🎯</span>
-                <p><strong>Adaptive</strong> - Module 2 difficulty adapts based on your Module 1 performance</p>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-lg">📊</span>
-                <p><strong>Scoring</strong> - 200-800 per section, 400-1600 composite</p>
-              </div>
-            </div>
-            {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
-            <button
-              onClick={() => handleStartModule('rw', 1)}
-              disabled={actionLoading}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-lg text-lg"
-            >
-              {actionLoading ? 'Starting...' : 'Begin Test'}
-            </button>
-          </div>
-        </main>
-      </>
+      <Page width="narrow">
+        <PageHeader back={{ href: '/child/sat', label: 'Back to SAT practice' }} title="Digital SAT practice test" subtitle="Here's how the test is laid out." />
+        <Card padding="lg">
+          <ul className="space-y-4">
+            {outline.map(item => (
+              <li key={item.title} className="flex items-start gap-3.5">
+                <Hexagon size={40} tone="soft">
+                  <item.icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                </Hexagon>
+                <div className="min-w-0 pt-0.5">
+                  <p className="font-semibold text-ink">{item.title}</p>
+                  <p className="text-sm text-ink-muted">{item.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {error && <Alert className="mt-6">{error}</Alert>}
+          <Button size="lg" block className="mt-6" onClick={() => handleStartModule('rw', 1)} loading={actionLoading}>
+            {actionLoading ? 'Starting…' : 'Begin test'}
+          </Button>
+        </Card>
+      </Page>
     );
   }
 
@@ -254,99 +254,102 @@ export default function SATSessionPage() {
     const rwMax = (rwMod1?.numQuestions ?? 0) + (rwMod2?.numQuestions ?? 0);
 
     return (
-      <>
-        <main className="max-w-3xl mx-auto px-4 py-8">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 text-center animate-slide-up">
-            <p className="text-5xl mb-4">☕</p>
-            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">Break Time</h1>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">Take a 10-minute break before the Math section.</p>
+      <Page width="narrow">
+        <Card padding="lg" className="text-center">
+          <Hexagon size={64} tone="soft">
+            <Coffee className="h-7 w-7" aria-hidden="true" />
+          </Hexagon>
+          <h1 className="mt-4 font-display text-2xl font-bold text-ink">Break time</h1>
+          <p className="mt-1 text-ink-muted">Take a 10-minute break before the Math section.</p>
 
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 mb-6 inline-block">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Reading & Writing Raw Score</p>
-              <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">{rwTotal} / {rwMax}</p>
-            </div>
-
-            {session.breakStartedAt && (
-              <div className="mb-6">
-                <SATTimer
-                  startedAt={session.breakStartedAt}
-                  timeLimitMin={10}
-                  onExpiry={handleEndBreak}
-                />
-              </div>
-            )}
-
-            {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
-            <button
-              onClick={handleEndBreak}
-              disabled={actionLoading}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-lg"
-            >
-              {actionLoading ? 'Loading Math...' : 'Skip Break & Start Math'}
-            </button>
+          <div className="mx-auto mt-6 max-w-xs rounded-xl bg-muted p-4">
+            <p className="text-sm text-ink-muted">Reading &amp; Writing raw score</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">{rwTotal} / {rwMax}</p>
           </div>
-        </main>
-      </>
+
+          {session.breakStartedAt && (
+            <div className="mt-6">
+              <SATTimer
+                startedAt={session.breakStartedAt}
+                timeLimitMin={10}
+                onExpiry={handleEndBreak}
+              />
+            </div>
+          )}
+
+          {error && <Alert className="mt-6 text-left">{error}</Alert>}
+          <div className="mt-6">
+            <Button size="lg" onClick={handleEndBreak} loading={actionLoading}>
+              {actionLoading ? 'Loading Math…' : 'Skip break & start Math'}
+            </Button>
+          </div>
+        </Card>
+      </Page>
     );
   }
 
   // COMPLETED
   if (session.status === 'completed') {
+    const sections: Array<{ key: string; label: string }> = [
+      { key: 'rw', label: 'Reading & Writing' },
+      { key: 'math', label: 'Math' },
+    ];
+
     return (
-      <>
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="mb-8 animate-slide-up">
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">Test Complete!</h1>
-            <p className="text-gray-500 dark:text-gray-400">Here are your results.</p>
-          </div>
+      <Page width="medium">
+        <PageHeader back={{ href: '/child/sat', label: 'Back to SAT practice' }} title="Test complete" subtitle="Here are your results." />
 
-          <div className="mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
-            <SATScoreCard
-              compositeScore={session.compositeScore || 0}
-              rwScore={session.rwScaledScore || 0}
-              mathScore={session.mathScaledScore || 0}
-              pointsAwarded={session.pointsAwarded || undefined}
-            />
-          </div>
+        <div className="mb-6">
+          <SATScoreCard
+            compositeScore={session.compositeScore || 0}
+            rwScore={session.rwScaledScore || 0}
+            mathScore={session.mathScaledScore || 0}
+            pointsAwarded={session.pointsAwarded || undefined}
+          />
+        </div>
 
-          {/* Domain Breakdown */}
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 mb-8 animate-slide-up" style={{ animationDelay: '200ms' }}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Domain Breakdown</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {['rw', 'math'].map(sec => {
-                const mods = session.modules.filter(m => m.section === sec);
-                const allQ = mods.flatMap(m => m.questions);
-                const domains = [...new Set(allQ.map(q => q.domain))];
-                return domains.map(domain => {
-                  const domainQs = allQ.filter(q => q.domain === domain);
-                  const correct = domainQs.filter(q => q.answers[0]?.isCorrect).length;
-                  const pct = domainQs.length > 0 ? Math.round((correct / domainQs.length) * 100) : 0;
-                  return (
-                    <div key={domain} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                      <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">{domain.replace(/_/g, ' ')}</span>
-                      <span className={`text-sm font-bold ${pct >= 70 ? 'text-green-600 dark:text-green-400' : pct >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {correct}/{domainQs.length} ({pct}%)
-                      </span>
-                    </div>
-                  );
-                });
-              })}
-            </div>
+        {/* Domain Breakdown */}
+        <Card className="mb-6">
+          <h2 className="font-display text-lg font-semibold text-ink">Domain breakdown</h2>
+          <div className="mt-4 grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
+            {sections.map(sec => {
+              const allQ = session.modules.filter(m => m.section === sec.key).flatMap(m => m.questions);
+              const domains = [...new Set(allQ.map(q => q.domain))];
+              return (
+                <div key={sec.key}>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">{sec.label}</p>
+                  <ul className="space-y-3">
+                    {domains.map(domain => {
+                      const domainQs = allQ.filter(q => q.domain === domain);
+                      const correct = domainQs.filter(q => q.answers[0]?.isCorrect).length;
+                      const pct = domainQs.length > 0 ? Math.round((correct / domainQs.length) * 100) : 0;
+                      const tone = pct >= 70 ? 'good' : pct >= 50 ? 'warn' : 'bad';
+                      const bar = { good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad' }[tone];
+                      const track = { good: 'bg-good-soft', warn: 'bg-warn-soft', bad: 'bg-bad-soft' }[tone];
+                      return (
+                        <li key={domain}>
+                          <div className="flex items-baseline justify-between gap-3 text-sm">
+                            <span className="capitalize text-ink">{domain.replace(/_/g, ' ')}</span>
+                            <span className={`shrink-0 font-semibold tabular-nums ${toneTextClass(tone)}`}>
+                              {correct}/{domainQs.length} ({pct}%)
+                            </span>
+                          </div>
+                          <div className={cn('mt-1.5 h-1.5 overflow-hidden rounded-full', track)}>
+                            <div className={cn('h-full rounded-full', bar)} style={{ width: `${pct}%` }} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
+        </Card>
 
-          {/* Review Answers */}
-          <ReviewAnswersSection session={session} />
-
-          <div className="text-center mt-8">
-            <button
-              onClick={() => router.push('/child/sat')}
-              className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
-            >
-              ← Back to SAT Practice
-            </button>
-          </div>
-        </main>
-      </>
+        {/* Review Answers */}
+        <ReviewAnswersSection session={session} />
+      </Page>
     );
   }
 
@@ -361,20 +364,14 @@ export default function SATSessionPage() {
       math_mod2: { section: 'math', mod: 2, label: 'Math Module 2' },
     };
     const target = statusToTarget[session.status];
-    if (!target) return <><div className="p-8 text-center text-gray-500">Unknown session state: {session.status}</div></>;
+    if (!target) return <PageMessage>Unknown session state: {session.status}</PageMessage>;
 
     return (
-      <>
-        <main className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <button
-            onClick={() => handleStartModule(target.section, target.mod)}
-            disabled={actionLoading}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-xl font-bold disabled:opacity-50"
-          >
-            {actionLoading ? 'Loading...' : `Start ${target.label}`}
-          </button>
-        </main>
-      </>
+      <Page width="narrow" className="text-center">
+        <Button size="lg" onClick={() => handleStartModule(target.section, target.mod)} loading={actionLoading}>
+          {actionLoading ? 'Loading…' : `Start ${target.label}`}
+        </Button>
+      </Page>
     );
   }
 
@@ -383,152 +380,133 @@ export default function SATSessionPage() {
     const section = activeModule.section;
     const modNum = activeModule.moduleNumber;
     return (
-      <>
-        <main className="max-w-3xl mx-auto px-4 py-8 text-center">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-8 animate-slide-up">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              {section === 'rw' ? 'Reading & Writing' : 'Math'} - Module {modNum}
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-2">{activeModule.numQuestions} questions, {activeModule.timeLimitMin} minutes</p>
-            {modNum === 2 && activeModule.difficulty !== 'standard' && (
-              <p className="text-sm mb-4">
-                <span className={`font-bold ${activeModule.difficulty === 'hard' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                  {activeModule.difficulty === 'hard' ? 'Advanced' : 'Standard'} difficulty
-                </span> based on Module 1 performance
-              </p>
-            )}
-            {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
-            <button
-              onClick={() => handleStartModule(section, modNum)}
-              disabled={actionLoading}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-lg"
-            >
-              {actionLoading ? 'Starting...' : 'Start Module'}
-            </button>
+      <Page width="narrow">
+        <Card padding="lg" className="text-center">
+          <Hexagon size={64} tone="soft">
+            {section === 'rw' ? <BookOpen className="h-7 w-7" aria-hidden="true" /> : <Calculator className="h-7 w-7" aria-hidden="true" />}
+          </Hexagon>
+          <h2 className="mt-4 font-display text-xl font-semibold text-ink">
+            {section === 'rw' ? 'Reading & Writing' : 'Math'} · Module {modNum}
+          </h2>
+          <p className="mt-1 text-ink-muted">{activeModule.numQuestions} questions, {activeModule.timeLimitMin} minutes</p>
+          {modNum === 2 && activeModule.difficulty !== 'standard' && (
+            <p className="mt-2 text-sm text-ink-muted">
+              <span className="font-semibold text-ink">
+                {activeModule.difficulty === 'hard' ? 'Advanced' : 'Standard'} difficulty
+              </span> based on Module 1 performance
+            </p>
+          )}
+          {error && <Alert className="mt-6 text-left">{error}</Alert>}
+          <div className="mt-6">
+            <Button size="lg" onClick={() => handleStartModule(section, modNum)} loading={actionLoading}>
+              {actionLoading ? 'Starting…' : 'Start module'}
+            </Button>
           </div>
-        </main>
-      </>
+        </Card>
+      </Page>
     );
   }
 
   // Module is in_progress — quiz UI
   const questions = activeModule.questions;
   const currentQ = questions[currentIndex];
-  if (!currentQ) return <><div className="p-8 text-center text-gray-500">No questions loaded</div></>;
+  if (!currentQ) return <PageMessage>No questions loaded</PageMessage>;
 
   const answeredSet = new Set(questions.map((q, i) => answers[q.id] ? i : -1).filter(i => i >= 0));
   const markedIndexSet = new Set(questions.map((q, i) => markedForReview.has(q.id) ? i : -1).filter(i => i >= 0));
 
   return (
-    <>
-      <main className="max-w-5xl mx-auto px-4 py-4">
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
+    <Page className="lg:py-6">
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-        {/* Header with timer */}
-        <div className="flex items-center justify-between mb-4">
-          <SATModuleHeader
-            section={activeModule.section as 'rw' | 'math'}
-            moduleNumber={activeModule.moduleNumber}
-            questionIndex={currentIndex}
-            totalQuestions={questions.length}
-            difficulty={activeModule.difficulty}
+      {/* Header with timer */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <SATModuleHeader
+          section={activeModule.section as 'rw' | 'math'}
+          moduleNumber={activeModule.moduleNumber}
+          questionIndex={currentIndex}
+          totalQuestions={questions.length}
+          difficulty={activeModule.difficulty}
+        />
+        {activeModule.startedAt && (
+          <SATTimer
+            startedAt={activeModule.startedAt}
+            timeLimitMin={activeModule.timeLimitMin}
+            onExpiry={() => handleSubmitModule(true)}
           />
-          {activeModule.startedAt && (
-            <SATTimer
-              startedAt={activeModule.startedAt}
-              timeLimitMin={activeModule.timeLimitMin}
-              onExpiry={() => handleSubmitModule(true)}
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        {/* Question nav sidebar */}
+        <div className="order-2 lg:order-1 lg:col-span-1">
+          <Card padding="sm" className="lg:sticky lg:top-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Questions</p>
+            <SATQuestionNav
+              totalQuestions={questions.length}
+              currentIndex={currentIndex}
+              answeredSet={answeredSet}
+              markedSet={markedIndexSet}
+              onJump={setCurrentIndex}
             />
-          )}
+            <ul className="mt-4 space-y-1.5 text-xs text-ink-muted">
+              <li className="flex items-center gap-2"><span className={cn('inline-block h-3 w-3 rounded', navStateClass.answered)} /> Answered</li>
+              <li className="flex items-center gap-2"><span className={cn('inline-block h-3 w-3 rounded', navStateClass.marked)} /> Marked</li>
+              <li className="flex items-center gap-2"><span className={cn('inline-block h-3 w-3 rounded', navStateClass.unanswered)} /> Unanswered</li>
+            </ul>
+          </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Question nav sidebar */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-4 sticky top-20">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase">Questions</p>
-              <SATQuestionNav
-                totalQuestions={questions.length}
-                currentIndex={currentIndex}
-                answeredSet={answeredSet}
-                markedSet={markedIndexSet}
-                onJump={setCurrentIndex}
-              />
-              <div className="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-indigo-200 dark:bg-indigo-800 inline-block" /> Answered</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-amber-400 dark:bg-amber-600 inline-block" /> Marked</div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-700 inline-block" /> Unanswered</div>
-              </div>
-            </div>
-          </div>
+        {/* Question area */}
+        <div className="order-1 lg:order-2 lg:col-span-3">
+          <Card>
+            <SATQuestionView
+              questionType={currentQ.questionType}
+              passage={currentQ.passage}
+              questionText={currentQ.questionText}
+              optionA={currentQ.optionA}
+              optionB={currentQ.optionB}
+              optionC={currentQ.optionC}
+              optionD={currentQ.optionD}
+              selectedAnswer={answers[currentQ.id] || null}
+              isMarked={markedForReview.has(currentQ.id)}
+              onAnswer={(ans) => setAnswers(prev => ({ ...prev, [currentQ.id]: ans }))}
+              onToggleMark={() => setMarkedForReview(prev => {
+                const next = new Set(prev);
+                if (next.has(currentQ.id)) next.delete(currentQ.id);
+                else next.add(currentQ.id);
+                return next;
+              })}
+              section={activeModule.section as 'rw' | 'math'}
+            />
+          </Card>
 
-          {/* Question area */}
-          <div className="lg:col-span-3 order-1 lg:order-2">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6">
-              <SATQuestionView
-                questionType={currentQ.questionType}
-                passage={currentQ.passage}
-                questionText={currentQ.questionText}
-                optionA={currentQ.optionA}
-                optionB={currentQ.optionB}
-                optionC={currentQ.optionC}
-                optionD={currentQ.optionD}
-                selectedAnswer={answers[currentQ.id] || null}
-                isMarked={markedForReview.has(currentQ.id)}
-                onAnswer={(ans) => setAnswers(prev => ({ ...prev, [currentQ.id]: ans }))}
-                onToggleMark={() => setMarkedForReview(prev => {
-                  const next = new Set(prev);
-                  if (next.has(currentQ.id)) next.delete(currentQ.id);
-                  else next.add(currentQ.id);
-                  return next;
-                })}
-                section={activeModule.section as 'rw' | 'math'}
-              />
-            </div>
+          {/* Navigation buttons */}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => { handleSaveProgress(); setCurrentIndex(Math.max(0, currentIndex - 1)); }}
+              disabled={currentIndex === 0}
+            >
+              Previous
+            </Button>
 
-            {/* Navigation buttons */}
-            <div className="flex items-center justify-between mt-4">
-              <button
-                onClick={() => { handleSaveProgress(); setCurrentIndex(Math.max(0, currentIndex - 1)); }}
-                disabled={currentIndex === 0}
-                className="px-5 py-2.5 rounded-xl font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 transition-all"
-              >
-                Previous
-              </button>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveProgress}
-                  className="px-4 py-2.5 rounded-xl font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm"
-                >
-                  Save
-                </button>
-                {currentIndex === questions.length - 1 ? (
-                  <button
-                    onClick={() => handleSubmitModule(false)}
-                    disabled={actionLoading}
-                    className="px-6 py-2.5 rounded-xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 transition-all shadow-md"
-                  >
-                    {actionLoading ? 'Submitting...' : 'Submit Module'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { handleSaveProgress(); setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1)); }}
-                    className="px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
-                  >
-                    Next
-                  </button>
-                )}
-              </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={handleSaveProgress}>Save</Button>
+              {currentIndex === questions.length - 1 ? (
+                <Button onClick={() => handleSubmitModule(false)} loading={actionLoading}>
+                  {actionLoading ? 'Submitting…' : 'Submit module'}
+                </Button>
+              ) : (
+                <Button onClick={() => { handleSaveProgress(); setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1)); }}>
+                  Next
+                </Button>
+              )}
             </div>
           </div>
         </div>
-      </main>
-    </>
+      </div>
+    </Page>
   );
 }
 
@@ -536,56 +514,54 @@ export default function SATSessionPage() {
 function ReviewAnswersSection({ session }: { session: SATSession }) {
   const [expanded, setExpanded] = useState(false);
 
-  if (!expanded) {
-    return (
-      <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
-        <button
-          onClick={() => setExpanded(true)}
-          className="w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-750 transition-all"
-        >
-          <span className="font-bold text-indigo-600 dark:text-indigo-400">Review All Answers</span>
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up" style={{ animationDelay: '300ms' }}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Answer Review</h2>
-        <button onClick={() => setExpanded(false)} className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Collapse</button>
-      </div>
-      {session.modules.map(mod => (
-        <div key={mod.id} className="mb-6">
-          <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-3 capitalize">
-            {mod.section === 'rw' ? 'Reading & Writing' : 'Math'} Module {mod.moduleNumber}
-            <span className="ml-2 text-sm font-normal text-gray-500">({mod.rawScore}/{mod.numQuestions})</span>
-          </h3>
-          <div className="space-y-4">
-            {mod.questions.map((q, i) => (
-              <div key={q.id} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0">
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Q{i + 1} - {q.domain.replace(/_/g, ' ')}</p>
-                <SATQuestionView
-                  questionType={q.questionType}
-                  passage={q.passage}
-                  questionText={q.questionText}
-                  optionA={q.optionA}
-                  optionB={q.optionB}
-                  optionC={q.optionC}
-                  optionD={q.optionD}
-                  selectedAnswer={q.answers[0]?.selectedAnswer || null}
-                  isMarked={false}
-                  onAnswer={() => {}}
-                  onToggleMark={() => {}}
-                  showCorrect
-                  correctAnswer={q.correctAnswer}
-                  section={mod.section as 'rw' | 'math'}
-                />
+    <Card padding="none">
+      <button
+        onClick={() => setExpanded(e => !e)}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-3 p-5 text-left sm:p-6"
+      >
+        <span className="font-display text-lg font-semibold text-ink">Review all answers</span>
+        {expanded
+          ? <ChevronUp className="h-5 w-5 text-ink-subtle" aria-hidden="true" />
+          : <ChevronDown className="h-5 w-5 text-ink-subtle" aria-hidden="true" />}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-line p-5 sm:p-6">
+          {session.modules.map(mod => (
+            <div key={mod.id} className="mb-8 last:mb-0">
+              <h3 className="mb-4 font-semibold text-ink">
+                {mod.section === 'rw' ? 'Reading & Writing' : 'Math'} Module {mod.moduleNumber}
+                <span className="ml-2 text-sm font-normal text-ink-muted">({mod.rawScore}/{mod.numQuestions})</span>
+              </h3>
+              <div className="space-y-6">
+                {mod.questions.map((q, i) => (
+                  <div key={q.id} className="border-b border-line pb-6 last:border-0 last:pb-0">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">Q{i + 1} · {q.domain.replace(/_/g, ' ')}</p>
+                    <SATQuestionView
+                      questionType={q.questionType}
+                      passage={q.passage}
+                      questionText={q.questionText}
+                      optionA={q.optionA}
+                      optionB={q.optionB}
+                      optionC={q.optionC}
+                      optionD={q.optionD}
+                      selectedAnswer={q.answers[0]?.selectedAnswer || null}
+                      isMarked={false}
+                      onAnswer={() => {}}
+                      onToggleMark={() => {}}
+                      showCorrect
+                      correctAnswer={q.correctAnswer}
+                      section={mod.section as 'rw' | 'math'}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+    </Card>
   );
 }

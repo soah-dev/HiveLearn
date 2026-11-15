@@ -1,11 +1,10 @@
-import Navbar from '@/components/Navbar';
+import AppShell from '@/components/AppShell';
 import RoleGuard from '@/components/RoleGuard';
 
 export default function ChildLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <Navbar />
+    <AppShell>
       <RoleGuard role="child">{children}</RoleGuard>
-    </>
+    </AppShell>
   );
 }

@@ -1,13 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ArrowRight, ChartColumn, ChevronRight, CircleCheck, GraduationCap, Hourglass, Lock, Trophy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import StatCard from '@/components/StatCard';
+import StatCard, { StatGrid } from '@/components/StatCard';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
+import Page, { PageLoader } from '@/components/ui/Page';
+import Card, { ListCard, SectionHeader } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Hexagon from '@/components/ui/Hexagon';
+import { toneTextClass } from '@/components/ui/Pill';
 
 interface SATSessionSummary {
   id: string;
@@ -20,6 +27,15 @@ interface SATSessionSummary {
   completedAt: string | null;
   createdAt: string;
 }
+
+const stageLabels: Record<string, string> = {
+  not_started: 'Not started',
+  rw_mod1: 'Reading & Writing · Module 1',
+  rw_mod2: 'Reading & Writing · Module 2',
+  break: 'On break',
+  math_mod1: 'Math · Module 1',
+  math_mod2: 'Math · Module 2',
+};
 
 export default function SATHubPage() {
   const { user, token, loading } = useAuth();
@@ -54,22 +70,22 @@ export default function SATHubPage() {
   };
 
   // Sessions are only fetched when SAT is enabled, so only wait on them in that case
-  if (loading || (user?.satEnabled && dataLoading)) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
+  if (loading || (user?.satEnabled && dataLoading)) return <PageLoader />;
 
   // Locked state
   if (!user?.satEnabled) {
     return (
-      <>
-        <main className="max-w-3xl mx-auto px-4 py-16 text-center">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-12">
-            <p className="text-5xl mb-4">🔒</p>
-            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-3">SAT Practice Locked</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              SAT Practice is not yet enabled for your account. Ask your parent to contact support.
-            </p>
-          </div>
-        </main>
-      </>
+      <Page width="narrow" className="lg:pt-20">
+        <Card padding="lg" className="text-center">
+          <Hexagon size={64} tone="muted">
+            <Lock className="h-7 w-7" aria-hidden="true" />
+          </Hexagon>
+          <h1 className="mt-4 font-display text-2xl font-bold text-ink">SAT practice is locked</h1>
+          <p className="mx-auto mt-2 max-w-sm text-ink-muted">
+            SAT Practice is not yet enabled for your account. Ask your parent to contact support.
+          </p>
+        </Card>
+      </Page>
     );
   }
 
@@ -83,104 +99,82 @@ export default function SATHubPage() {
     : 0;
 
   return (
-    <>
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <PageHeader
-          title="SAT Practice"
-          subtitle="Full Digital SAT simulation with adaptive scoring"
-          actions={
-            <button
-              onClick={startNewTest}
-              disabled={creating}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-5 py-2.5 rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20"
-            >
-              {creating ? 'Creating...' : 'Start New Practice Test'}
-            </button>
-          }
-        />
+    <Page>
+      <PageHeader
+        title="SAT practice"
+        subtitle="Full Digital SAT simulation with adaptive scoring"
+        actions={
+          <Button onClick={startNewTest} loading={creating}>
+            {creating ? 'Creating…' : 'Start new practice test'}
+          </Button>
+        }
+      />
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <StatCard title="Tests Completed" value={completedSessions.length} icon="📝" />
-          <StatCard title="Best Score" value={bestScore || '-'} icon="🏆" />
-          <StatCard title="Average Score" value={avgScore || '-'} icon="📊" />
-          <StatCard title="In Progress" value={inProgressSessions.length} icon="⏳" />
-        </div>
+      <StatGrid className="mb-8">
+        <StatCard title="Tests completed" value={completedSessions.length} icon={CircleCheck} />
+        <StatCard title="Best score" value={bestScore || '–'} icon={Trophy} />
+        <StatCard title="Average score" value={avgScore || '–'} icon={ChartColumn} />
+        <StatCard title="In progress" value={inProgressSessions.length} icon={Hourglass} />
+      </StatGrid>
 
-        {/* In Progress Sessions */}
-        {inProgressSessions.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">In Progress</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {inProgressSessions.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => router.push(`/child/sat/${s.id}`)}
-                  className="text-left bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border-2 border-amber-300 dark:border-amber-600 p-5 card-hover"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                      {s.status.replace(/_/g, ' ').toUpperCase()}
-                    </span>
+      {inProgressSessions.length > 0 && (
+        <section className="mb-8" aria-labelledby="sat-progress-heading">
+          <SectionHeader id="sat-progress-heading" title="In progress" count={inProgressSessions.length} />
+          <ListCard>
+            {inProgressSessions.map(s => (
+              <li key={s.id}>
+                <Link href={`/child/sat/${s.id}`} className="group flex items-center gap-3.5 px-4 py-3.5 sm:px-5">
+                  <Hexagon size={40} tone="soft">
+                    <GraduationCap className="h-[18px] w-[18px]" aria-hidden="true" />
+                  </Hexagon>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-ink group-hover:underline">
+                      {stageLabels[s.status] ?? s.status.replace(/_/g, ' ')}
+                    </p>
+                    <p className="mt-0.5 text-xs text-ink-muted">
+                      Started {new Date(s.startedAt || s.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Started {new Date(s.startedAt || s.createdAt).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-2">
-                    Continue Test →
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+                  <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-honey-text">
+                    Continue <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ListCard>
+        </section>
+      )}
 
-        {/* Completed Sessions */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Past Tests {completedSessions.length > 0 && <span className="text-sm font-normal text-gray-500">({completedSessions.length})</span>}
-          </h2>
-          {completedSessions.length === 0 ? (
-            <EmptyState icon="📚" title="No completed tests yet" description="Start your first practice test to get a scaled score for Reading & Writing and Math." />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {completedSessions.map((s, i) => {
-                const scoreColor = (s.compositeScore || 0) >= 1200
-                  ? 'text-green-600 dark:text-green-400'
-                  : (s.compositeScore || 0) >= 800
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-red-600 dark:text-red-400';
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => router.push(`/child/sat/${s.id}`)}
-                    className="text-left bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-5 card-hover animate-slide-up"
-                    style={{ animationDelay: `${i * 50}ms` }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className={`text-2xl font-extrabold ${scoreColor}`}>{s.compositeScore}</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(s.completedAt!).toLocaleDateString()}</span>
+      <section aria-labelledby="sat-past-heading">
+        <SectionHeader id="sat-past-heading" title="Past tests" count={completedSessions.length || undefined} />
+        {completedSessions.length === 0 ? (
+          <EmptyState icon={GraduationCap} title="No completed tests yet" description="Start your first practice test to get a scaled score for Reading & Writing and Math." />
+        ) : (
+          <ListCard>
+            {completedSessions.map(s => {
+              const composite = s.compositeScore || 0;
+              const tone = composite >= 1200 ? 'good' : composite >= 800 ? 'warn' : 'bad';
+              return (
+                <li key={s.id}>
+                  <Link href={`/child/sat/${s.id}`} className="group flex items-center gap-4 px-4 py-3.5 sm:px-5">
+                    <p className={`w-16 shrink-0 text-2xl font-semibold tabular-nums tracking-tight ${toneTextClass(tone)}`}>{s.compositeScore}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink group-hover:underline">
+                        R&amp;W {s.rwScaledScore} · Math {s.mathScaledScore}
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-muted">{new Date(s.completedAt!).toLocaleDateString()}</p>
                     </div>
-                    <div className="flex gap-4 text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">R&W: <span className="font-bold">{s.rwScaledScore}</span></span>
-                      <span className="text-gray-600 dark:text-gray-400">Math: <span className="font-bold">{s.mathScaledScore}</span></span>
-                    </div>
-                    {s.pointsAwarded && (
-                      <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-2">+{s.pointsAwarded} pts</p>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </main>
-    </>
+                    {s.pointsAwarded ? <span className="shrink-0 text-xs font-semibold text-honey-text">+{s.pointsAwarded} pts</span> : null}
+                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ListCard>
+        )}
+      </section>
+    </Page>
   );
 }

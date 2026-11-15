@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { Timer } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface SATTimerProps {
   startedAt: string;
@@ -38,11 +40,15 @@ export default function SATTimer({ startedAt, timeLimitMin, onExpiry }: SATTimer
   const isWarning = timeLeft < 300; // < 5 min
 
   return (
-    <div className={`font-mono text-lg font-bold px-4 py-2 rounded-xl ${
-      isWarning
-        ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse'
-        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-    }`}>
+    <div
+      role="timer"
+      aria-label="Time remaining"
+      className={cn(
+        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 font-mono text-base font-semibold tabular-nums',
+        isWarning ? 'bg-bad-soft text-bad-text' : 'bg-muted text-ink'
+      )}
+    >
+      <Timer className="h-4 w-4" aria-hidden="true" />
       {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
     </div>
   );

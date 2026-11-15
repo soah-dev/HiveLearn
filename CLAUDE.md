@@ -10,8 +10,9 @@ HiveExcel is a parent-kid homework collaboration web app. Parents generate assig
 - **Database**: Prisma ORM v6 + PostgreSQL (Supabase)
 - **Auth**: Firebase Auth (Google sign-in + email/password) + Firebase Admin SDK v14 for server-side token verification (requires Node 20+)
 - **AI**: Gemini API (@google/generative-ai SDK) for question generation and auto-review
-- **Styling**: Tailwind CSS with class-based dark mode
-- **Charts**: Recharts for progress analytics
+- **Styling**: Tailwind CSS driven by design tokens (see "Design System"); class-based dark mode
+- **Icons**: lucide-react (no emoji in the UI)
+- **Charts**: Recharts for progress analytics, themed via `src/components/charts/chartTheme.tsx`
 - **Deployment target**: Vercel
 
 ## Project Structure
@@ -56,10 +57,19 @@ homework-hub/
 │   │       ├── leaderboard/   # GET - Family leaderboard
 │   │       └── analytics/[childId]/ # GET - Score trends, subject breakdown
 │   ├── components/
-│   │   ├── Navbar.tsx         # Role-based nav + dark mode toggle
-│   │   ├── LoadingSpinner.tsx # Animated spinner (sm/md/lg)
-│   │   ├── StatCard.tsx       # Dashboard stat card
-│   │   └── AssignmentCard.tsx # Assignment card with status/difficulty badges
+│   │   ├── AppShell.tsx       # App chrome: sidebar (desktop), top bar + bottom tabs (phone)
+│   │   ├── AuthLayout.tsx     # Frame for signed-out screens (brand panel + form)
+│   │   ├── PageHeader.tsx     # Page title row (title, subtitle, actions, back)
+│   │   ├── StatCard.tsx       # StatGrid + StatCard: hairline-divided stat tiles
+│   │   ├── AssignmentRow.tsx  # One assignment as a list row (use inside ListCard)
+│   │   ├── Leaderboard.tsx    # Family/global ranking, shared by child + parent
+│   │   ├── EmptyState.tsx, Modal.tsx, LoadingSpinner.tsx, QuizProgress.tsx
+│   │   ├── ui/                # Primitives: Button, Card/ListCard/SectionHeader, Field (Input/Select/Textarea),
+│   │   │                      #   Pill/Score, Alert, Switch, Choice (Segmented/Chips), Avatar, Hexagon,
+│   │   │                      #   SubjectIcon, BadgeMedal, DifficultyMeter, Page, Logo, Spinner
+│   │   ├── quiz/              # QuestionCard + AnswerOption, shared by every quiz and review screen
+│   │   ├── charts/            # ChartCard (chart + table view) and chartTheme (colours, axes, tooltip)
+│   │   └── sat/               # SAT module header, question nav, question view, timer, score card
 │   ├── contexts/
 │   │   ├── AuthContext.tsx     # Firebase auth state, Google + email/password sign-in
 │   │   └── ThemeContext.tsx    # Dark mode with localStorage persistence
@@ -70,7 +80,7 @@ homework-hub/
 │       ├── prisma.ts          # Prisma client singleton
 │       └── api.ts             # Fetch helper that attaches Bearer token
 ├── .env.local                 # Environment variables (gitignored)
-├── tailwind.config.ts         # darkMode: 'class' enabled
+├── tailwind.config.ts         # Maps design tokens to utilities; darkMode: 'class'
 └── package.json
 ```
 
@@ -80,6 +90,21 @@ homework-hub/
 - Server: API routes extract `Authorization: Bearer <token>`, verify via Firebase Admin SDK, then look up user in Prisma by `firebaseUid`
 - AuthContext exposes: `signInWithGoogle()`, `signInWithEmail()`, `signUpWithEmail()`, `signOut()`, `refreshUser()`
 - `firebase-admin.ts` uses lazy initialization via Proxy to avoid crashing at Next.js build time when env vars are placeholders
+
+## Design System ("Honey & hive")
+
+The look lives in one place. Follow these rules so screens stay calm and consistent:
+
+- **Tokens, not palette classes.** Colours are CSS variables in `src/app/globals.css` (light under `:root`, dark under `.dark`), mapped to Tailwind utilities in `tailwind.config.ts`: `canvas` / `surface` / `muted` (backgrounds), `line` / `line-strong` (borders), `ink` / `ink-muted` / `ink-subtle` (text), `honey` (+ `-hover`, `-soft`, `-line`, `-ink`, `-text`) for the brand, and `good` / `warn` / `bad` / `info` (+ `-soft`, `-text`) for status. Never use raw Tailwind colours (`gray-500`, `indigo-600`) or `dark:` variants in components; the tokens already switch with the theme.
+- **Colour has to mean something.** Honey = brand, the primary action, progress and points. Status colours are reserved for state (correct/incorrect, needs review, errors). Subjects are told apart by icon (`SubjectIcon`), difficulty by `DifficultyMeter`, never by colour.
+- **One primary button per view.** `Button variant="primary"` (honey fill, dark text) is the main action; everything else is `secondary`, `subtle`, `ghost` or `danger`. Links that look like buttons use `buttonClass()`.
+- **Build from the primitives** in `src/components/ui/` instead of restyling by hand: pages are `<Page>` + `<PageHeader>`, lists are `<ListCard>` rows, forms use `<Field>` with `<Input>`/`<Select>`/`<Textarea>`, toggles are `<Switch>`, either/or choices are `<Segmented>` (views) or `<Chips>` (form values), messages are `<Alert>`.
+- **Shape and type.** The hexagon (`Hexagon`) is the brand shape for icons, numbers and badges. Radii: cards `rounded-2xl`, controls `rounded-xl`. Headings use `font-display` (Bricolage Grotesque); body and figures use the default sans (DM Sans); timers use `font-mono`. Sentence case for labels and buttons.
+- **Motion.** Only `animate-enter` / `animate-sheet-up` for overlays. No decorative floating or bouncing.
+- **Navigation** is defined in `AppShell.tsx` (link lists per role). On phones the bottom tab bar hides on quiz/review detail routes (`FOCUS_ROUTES`) so the page's own action bar owns the bottom edge.
+- **Charts** take colours, axes and tooltips from `chartTheme.tsx`. The three series colours are validated colour-blind-safe as a set in both themes; don't add a fourth by eye. Every chart sits in a `ChartCard` with a table view.
+- **Emails** (`src/lib/email.ts`) repeat the light-theme hex values, because email clients can't read CSS variables. Update them when the tokens change.
+- Tailwind only scans `src/app`, `src/components`, `src/contexts` and `src/pages`. Markup with class names anywhere else needs adding to `content` in `tailwind.config.ts`.
 
 ## Gamification System
 
@@ -138,12 +163,13 @@ npm run dev
 - **firebase-admin.ts** uses a Proxy pattern for lazy initialization so the app builds even with placeholder env vars
 - **PostgreSQL** via Supabase (pooled + direct connections). Migrations were baselined to `0_init` from the live schema; use `prisma migrate dev --name <change>` locally and `prisma migrate deploy` in production. The production DB must have `0_init` marked applied once: `npx prisma migrate resolve --applied 0_init`
 - All API routes use `getAuthUser()` from `src/lib/auth.ts` for consistent auth checking; parent→child access goes through `getLinkedChild()`, admin routes through `requireAdmin()` (ADMIN_EMAILS)
-- Route segments `parent/`, `child/`, `admin/` have layouts that render the Navbar and a `RoleGuard`, so pages don't need their own redirect effects
+- Route segments `parent/`, `child/`, `admin/`, `settings/` have layouts that render the `AppShell` and a `RoleGuard`, so pages don't need their own redirect effects
 - Shared Gemini question generation (prompt, validation, retry) lives in `src/lib/question-generation.ts`; per-user daily quotas in `src/lib/ai-quota.ts`
 - Calendar-day logic (streaks, preset schedules) goes through `src/lib/dates.ts` (America/Chicago)
 - Lint: `npm run lint` (ESLint 9 flat config in `eslint.config.mjs`). Tests: `npm test` (Vitest, `tests/`)
 - Question generation and auto-review both call Gemini API (@google/generative-ai SDK)
-- Dark mode uses Tailwind `class` strategy with localStorage persistence
+- Dark mode uses Tailwind `class` strategy with localStorage persistence; components get both themes for free through the design tokens
+- Shared option lists (subjects, grades, difficulties) and `subjectLabel()` live in `src/lib/subjects.ts`
 
 ## Next Steps for Testing & Improvement
 
@@ -173,7 +199,7 @@ npm run dev
 - [ ] Add loading/error states to all data fetches
 - [ ] Add form validation (zod or similar)
 - [ ] Replace `<img>` tags with Next.js `<Image>` component
-- [ ] Add mobile hamburger menu to Navbar
+- [x] Mobile navigation (bottom tab bar in `AppShell`)
 - [ ] Add pagination for assignment lists
 - [ ] Add assignment due dates
 - [ ] Add push notifications (or email) when assignments are assigned/reviewed
@@ -188,3 +214,13 @@ npm run dev
 2. Optional: replace Firebase Auth with Supabase Auth if using Supabase DB
 3. Add rate limiting to AI generation endpoint
 4. Add row-level security if using Supabase
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -1,6 +1,10 @@
 'use client';
 
+import { Bookmark } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import MathText from '@/components/MathText';
+import AnswerOption, { AnswerState } from '@/components/quiz/AnswerOption';
+import { Input } from '@/components/ui/Field';
 
 interface SATQuestionViewProps {
   questionType: string;
@@ -33,7 +37,6 @@ export default function SATQuestionView({
   onToggleMark,
   showCorrect,
   correctAnswer,
-  section,
 }: SATQuestionViewProps) {
   const options = [
     { label: 'A', text: optionA },
@@ -42,83 +45,81 @@ export default function SATQuestionView({
     { label: 'D', text: optionD },
   ].filter(o => o.text);
 
-  const isMath = section === 'math';
+  const optionState = (label: string): AnswerState => {
+    if (showCorrect) {
+      if (correctAnswer === label) return 'correct';
+      return selectedAnswer === label ? 'wrong' : 'dim';
+    }
+    return selectedAnswer === label ? 'selected' : 'idle';
+  };
+
+  const producedCorrect = selectedAnswer?.trim() === correctAnswer?.trim();
 
   return (
     <div className="space-y-4">
       {/* Passage for R&W */}
       {passage && (
-        <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-h-60 overflow-y-auto">
+        <div className="max-h-60 overflow-y-auto rounded-xl bg-muted p-4 text-sm leading-relaxed text-ink">
           <MathText text={passage} />
         </div>
       )}
 
       {/* Question text */}
-      <div className="text-gray-900 dark:text-white font-medium">
+      <div className="text-[15px] font-medium leading-relaxed text-ink sm:text-base">
         <MathText text={questionText} />
       </div>
 
-      {/* Mark for Review */}
-      <button
-        onClick={onToggleMark}
-        className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${
-          isMarked
-            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-        }`}
-      >
-        {isMarked ? 'Marked for Review' : 'Mark for Review'}
-      </button>
+      {/* Mark for review: only while the test is being taken */}
+      {!showCorrect && (
+        <button
+          onClick={onToggleMark}
+          aria-pressed={isMarked}
+          className={cn(
+            'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors',
+            isMarked
+              ? 'border-warn/50 bg-warn-soft text-warn-text'
+              : 'border-line-strong text-ink-muted hover:border-ink-subtle hover:text-ink'
+          )}
+        >
+          <Bookmark className="h-3.5 w-3.5" fill={isMarked ? 'currentColor' : 'none'} aria-hidden="true" />
+          {isMarked ? 'Marked for review' : 'Mark for review'}
+        </button>
+      )}
 
       {/* Multiple choice options */}
       {questionType === 'multiple_choice' && options.length > 0 && (
         <div className="space-y-2">
-          {options.map(opt => {
-            const isSelected = selectedAnswer === opt.label;
-            const isCorrectOption = showCorrect && correctAnswer === opt.label;
-            const isWrong = showCorrect && isSelected && correctAnswer !== opt.label;
-
-            let optClass = 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600';
-            if (isCorrectOption) optClass = 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-600';
-            else if (isWrong) optClass = 'border-red-500 bg-red-50 dark:bg-red-900/20 dark:border-red-600';
-            else if (isSelected) optClass = 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-600';
-
-            return (
-              <button
-                key={opt.label}
-                onClick={() => !showCorrect && onAnswer(opt.label)}
-                disabled={!!showCorrect}
-                className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${optClass} ${showCorrect ? 'cursor-default' : ''}`}
-              >
-                <span className="font-bold text-gray-500 dark:text-gray-400 mr-3">{opt.label}.</span>
-                <MathText text={opt.text!} className="text-gray-800 dark:text-gray-200" />
-              </button>
-            );
-          })}
+          {options.map(opt => (
+            <AnswerOption
+              key={opt.label}
+              letter={opt.label}
+              state={optionState(opt.label)}
+              onSelect={showCorrect ? undefined : () => onAnswer(opt.label)}
+            >
+              <MathText text={opt.text!} />
+            </AnswerOption>
+          ))}
         </div>
       )}
 
       {/* Student produced (grid-in) input */}
       {questionType === 'student_produced' && (
         <div>
-          <label className="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Your Answer</label>
-          <input
-            type="text"
-            value={selectedAnswer || ''}
-            onChange={e => !showCorrect && onAnswer(e.target.value)}
-            disabled={!!showCorrect}
-            placeholder="Enter a numeric value (e.g., 42, 3.5, 7/2)"
-            className={`w-full px-4 py-3 border-2 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
-              showCorrect
-                ? selectedAnswer?.trim() === correctAnswer?.trim()
-                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                  : 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                : 'border-gray-200 dark:border-gray-700'
-            }`}
-          />
+          <label className="mb-1.5 block text-sm font-medium text-ink">
+            Your answer
+            <Input
+              type="text"
+              value={selectedAnswer || ''}
+              onChange={e => !showCorrect && onAnswer(e.target.value)}
+              disabled={!!showCorrect}
+              placeholder="Enter a numeric value (e.g., 42, 3.5, 7/2)"
+              // Important modifiers: these must win over the control's own disabled styling
+              className={cn('mt-1.5', showCorrect && (producedCorrect ? '!border-good !bg-good-soft !text-ink' : '!border-bad !bg-bad-soft !text-ink'))}
+            />
+          </label>
           {showCorrect && correctAnswer && (
-            <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-              Correct answer: <MathText text={correctAnswer} className="font-bold" />
+            <p className="mt-2 text-sm text-ink-muted">
+              Correct answer: <MathText text={correctAnswer} className="font-semibold text-good-text" />
             </p>
           )}
         </div>

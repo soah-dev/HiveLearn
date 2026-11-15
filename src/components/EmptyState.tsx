@@ -1,7 +1,10 @@
 import { ReactNode } from 'react';
+import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import Hexagon from '@/components/ui/Hexagon';
 
 interface EmptyStateProps {
-  icon: string;
+  icon: LucideIcon;
   title: string;
   description?: ReactNode;
   /** A button or link shown under the description. */
@@ -10,16 +13,14 @@ interface EmptyStateProps {
   compact?: boolean;
 }
 
-export default function EmptyState({ icon, title, description, action, compact }: EmptyStateProps) {
+export default function EmptyState({ icon: Icon, title, description, action, compact }: EmptyStateProps) {
   return (
-    <div
-      className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 text-center ${
-        compact ? 'p-6' : 'p-10'
-      }`}
-    >
-      <p className={`${compact ? 'text-4xl' : 'text-5xl'} mb-3 animate-float`} aria-hidden="true">{icon}</p>
-      <p className="font-bold text-gray-900 dark:text-white">{title}</p>
-      {description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">{description}</p>}
+    <div className={cn('rounded-2xl border border-dashed border-line-strong text-center', compact ? 'px-6 py-7' : 'px-6 py-10')}>
+      <Hexagon size={compact ? 44 : 56} tone="muted" className="mb-3">
+        <Icon className={compact ? 'h-5 w-5' : 'h-6 w-6'} aria-hidden="true" />
+      </Hexagon>
+      <p className="font-display font-semibold text-ink">{title}</p>
+      {description && <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">{description}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );

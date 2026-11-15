@@ -1,5 +1,7 @@
 'use client';
 
+import { cn } from '@/lib/cn';
+
 interface SATQuestionNavProps {
   totalQuestions: number;
   currentIndex: number;
@@ -8,24 +10,28 @@ interface SATQuestionNavProps {
   onJump: (index: number) => void;
 }
 
+// Shared with the legend on the session page
+export const navStateClass = {
+  current: 'bg-ink text-canvas',
+  marked: 'bg-warn-soft text-warn-text ring-1 ring-inset ring-warn/50',
+  answered: 'bg-honey-soft text-honey-text',
+  unanswered: 'bg-muted text-ink-muted',
+};
+
 export default function SATQuestionNav({ totalQuestions, currentIndex, answeredSet, markedSet, onJump }: SATQuestionNavProps) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {Array.from({ length: totalQuestions }, (_, i) => {
         const isCurrent = i === currentIndex;
-        const isAnswered = answeredSet.has(i);
-        const isMarked = markedSet.has(i);
-
-        let colorClass = 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400';
-        if (isCurrent) colorClass = 'bg-indigo-600 text-white ring-2 ring-indigo-400';
-        else if (isMarked) colorClass = 'bg-amber-400 dark:bg-amber-600 text-white';
-        else if (isAnswered) colorClass = 'bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200';
+        const state = isCurrent ? 'current' : markedSet.has(i) ? 'marked' : answeredSet.has(i) ? 'answered' : 'unanswered';
 
         return (
           <button
             key={i}
             onClick={() => onJump(i)}
-            className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${colorClass} hover:opacity-80`}
+            aria-label={`Question ${i + 1}, ${state}`}
+            aria-current={isCurrent ? 'step' : undefined}
+            className={cn('h-8 w-8 rounded-lg text-xs font-semibold tabular-nums transition-opacity hover:opacity-80', navStateClass[state])}
           >
             {i + 1}
           </button>

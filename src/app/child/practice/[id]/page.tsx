@@ -1,13 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { subjectLabel } from '@/lib/subjects';
 import MathText from '@/components/MathText';
 import QuizProgress from '@/components/QuizProgress';
 import PageHeader from '@/components/PageHeader';
+import AnswerOption, { AnswerState } from '@/components/quiz/AnswerOption';
+import QuestionCard, { ResultMark } from '@/components/quiz/QuestionCard';
+import Page, { PageLoader, PageMessage } from '@/components/ui/Page';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Alert from '@/components/ui/Alert';
+import Pill, { scoreTone, toneTextClass } from '@/components/ui/Pill';
+import PrintButton from '@/components/ui/PrintButton';
 
 interface PracticeQuestion {
   id: string;
@@ -100,167 +109,131 @@ export default function PracticeSessionPage() {
     setSubmitting(false);
   };
 
-  if (loading || dataLoading) return <><div className="p-8"><LoadingSpinner size="lg" /></div></>;
-  if (!session) return <><div className="p-8 text-center text-gray-500">Session not found</div></>;
+  if (loading || dataLoading) return <PageLoader />;
+  if (!session) return <PageMessage>Session not found</PageMessage>;
 
   const isCompleted = session.status === 'completed';
   const answeredCount = session.questions.filter(q => !!answers[q.id]).length;
 
+  // Prefer the submit response; fall back to the stored session when revisiting
+  const score = result?.score ?? session.score;
+  const points = result?.pointsAwarded ?? session.pointsAwarded;
+  const correctCount = result?.correct ?? session.questions.filter(q => q.answers[0]?.isCorrect).length;
+  const totalCount = result?.total ?? session.questions.length;
+
   return (
-    <>
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <PageHeader
-          back={{ href: '/child/practice', label: 'Back to Practice' }}
-          title={<span className="capitalize">{session.subject.replace('_', ' ')}{session.topic ? `: ${session.topic}` : ''}</span>}
-          subtitle={`Grade ${session.grade} · ${session.difficulty} · ${session.questions.length} questions`}
-          className="mb-6"
-          actions={
-            <>
-              {isCompleted && session.score !== null && (
-                <div className="text-left sm:text-right mr-auto sm:mr-0">
-                  <p className={`text-4xl font-extrabold leading-none ${session.score >= 80 ? 'text-green-600' : session.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {session.score}%
-                  </p>
-                  {session.pointsAwarded && <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-1">+{session.pointsAwarded} pts</p>}
-                </div>
-              )}
-              <button onClick={() => window.print()} className="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                Print
-              </button>
-            </>
+    <Page width="narrow">
+      <PageHeader
+        back={{ href: '/child/practice', label: 'Back to practice' }}
+        title={`${subjectLabel(session.subject)}${session.topic ? `: ${session.topic}` : ''}`}
+        subtitle={`Grade ${session.grade} · ${session.difficulty} · ${session.questions.length} questions`}
+        actions={<PrintButton />}
+      />
+
+      {/* Result */}
+      {(isCompleted || result) && score !== null && (
+        <Card className="mb-6 flex items-center gap-5 sm:gap-6">
+          <p className={`text-5xl font-semibold leading-none tracking-tight ${toneTextClass(scoreTone(score))}`}>{score}%</p>
+          <div className="min-w-0 border-l border-line pl-5 sm:pl-6">
+            <p className="font-semibold text-ink">{correctCount} of {totalCount} correct</p>
+            {points ? <Pill tone="honey" className="mt-1.5">+{points} pts</Pill> : null}
+          </div>
+        </Card>
+      )}
+
+      {/* Questions */}
+      <div className="mb-8 space-y-4">
+        {session.questions.map((q, i) => {
+          const ans = q.answers[0];
+          const myAnswer = answers[q.id] || '';
+
+          const optionState = (key: string): AnswerState => {
+            if (isCompleted) {
+              if (key === q.correctAnswer) return 'correct';
+              return myAnswer === key && !ans?.isCorrect ? 'wrong' : 'dim';
+            }
+            return myAnswer === key ? 'selected' : 'idle';
+          };
+
+          let status = null;
+          if (!isCompleted && myAnswer) {
+            status = <Check className="h-4 w-4 text-good-text" aria-label="Answered" />;
+          } else if (isCompleted && ans?.isCorrect !== null && ans?.isCorrect !== undefined) {
+            status = <ResultMark correct={ans.isCorrect} />;
           }
-        />
 
-        {/* Result banner */}
-        {result && (
-          <div className="mb-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-2 border-indigo-200 dark:border-indigo-800 rounded-2xl text-center animate-slide-up">
-            <p className="text-3xl font-extrabold text-indigo-800 dark:text-indigo-200 mb-1">{result.correct}/{result.total} correct</p>
-            <p className="text-indigo-600 dark:text-indigo-300 font-medium">You earned <strong>+{result.pointsAwarded} points</strong>!</p>
-          </div>
-        )}
-
-        {/* Questions */}
-        <div className="space-y-4 mb-8">
-          {session.questions.map((q, i) => {
-            const ans = q.answers[0];
-            const myAnswer = answers[q.id] || '';
-
-            return (
-              <div
-                key={q.id}
-                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 animate-slide-up print-break-inside-avoid"
-                style={{ animationDelay: `${i * 30}ms` }}
-              >
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <p className="text-gray-900 dark:text-white font-bold">
-                    <span className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 mr-2 rounded-lg text-xs font-extrabold align-middle bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                      {i + 1}
-                    </span>
-                    <MathText text={q.questionText} />
-                  </p>
-                  {!isCompleted && myAnswer && (
-                    <span className="text-xs font-bold text-green-600 dark:text-green-400 flex-shrink-0 mt-1" aria-label="Answered">✓</span>
-                  )}
-                  {isCompleted && ans?.isCorrect !== null && ans?.isCorrect !== undefined && (
-                    <span className={`text-xl ml-2 flex-shrink-0 ${ans.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
-                      {ans.isCorrect ? '✓' : '✗'}
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {[
-                    { key: 'A', val: q.optionA },
-                    { key: 'B', val: q.optionB },
-                    { key: 'C', val: q.optionC },
-                    { key: 'D', val: q.optionD },
-                  ].map(opt => (
-                    <button
-                      key={opt.key}
-                      onClick={() => !isCompleted && setAnswers(prev => ({ ...prev, [q.id]: opt.key }))}
-                      disabled={isCompleted}
-                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
-                        isCompleted
-                          ? opt.key === q.correctAnswer
-                            ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                            : myAnswer === opt.key && !ans?.isCorrect
-                              ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                              : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300'
-                          : myAnswer === opt.key
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 shadow-sm shadow-indigo-500/20'
-                            : 'border-gray-200/60 dark:border-gray-600/60 text-gray-700 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
-                      }`}
-                    >
-                      <span className="font-bold">{opt.key}.</span> {opt.val && <MathText text={opt.val} />}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Flag checkbox - disabled for practice to prevent abuse
-                {!isCompleted && (
-                  <label className="flex items-center gap-2 mt-4 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={isFlagged}
-                      onChange={e => setFlags(prev => ({ ...prev, [q.id]: e.target.checked }))}
-                      className="rounded border-amber-300 text-amber-500 focus:ring-amber-500"
-                    />
-                    <span className="text-sm text-amber-700 dark:text-amber-400 font-medium group-hover:underline">
-                      Flag this question (will be excluded from scoring)
-                    </span>
-                  </label>
-                )}
-                {!isCompleted && isFlagged && (
-                  <p className="mt-1 ml-6 text-xs text-amber-600 dark:text-amber-400">
-                    This question will be disregarded from scoring
-                  </p>
-                )}
-                */}
-
-                {/* After completion: show correct answer */}
-                {isCompleted && myAnswer !== q.correctAnswer && (
-                  <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                    Correct answer: <span className="font-bold text-green-600 dark:text-green-400">
-                      <span>{q.correctAnswer}.</span> <MathText text={(q.correctAnswer === 'A' ? q.optionA : q.correctAnswer === 'B' ? q.optionB : q.correctAnswer === 'C' ? q.optionC : q.optionD) || q.correctAnswer} />
-                    </span>
-                  </p>
-                )}
+          return (
+            <QuestionCard key={q.id} number={i + 1} question={q.questionText} status={status}>
+              <div className="space-y-2">
+                {[
+                  { key: 'A', val: q.optionA },
+                  { key: 'B', val: q.optionB },
+                  { key: 'C', val: q.optionC },
+                  { key: 'D', val: q.optionD },
+                ].map(opt => (
+                  <AnswerOption
+                    key={opt.key}
+                    letter={opt.key}
+                    state={optionState(opt.key)}
+                    onSelect={isCompleted ? undefined : () => setAnswers(prev => ({ ...prev, [q.id]: opt.key }))}
+                  >
+                    {opt.val && <MathText text={opt.val} />}
+                  </AnswerOption>
+                ))}
               </div>
-            );
-          })}
+
+              {/* Flag checkbox - disabled for practice to prevent abuse
+              {!isCompleted && (
+                <label className="flex items-center gap-2 mt-4 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={isFlagged}
+                    onChange={e => setFlags(prev => ({ ...prev, [q.id]: e.target.checked }))}
+                    className="h-4 w-4 accent-warn"
+                  />
+                  <span className="text-sm font-medium text-ink-muted">
+                    Flag this question (will be excluded from scoring)
+                  </span>
+                </label>
+              )}
+              {!isCompleted && isFlagged && (
+                <p className="mt-1 ml-6 text-xs text-warn-text">
+                  This question will be disregarded from scoring
+                </p>
+              )}
+              */}
+
+              {/* After completion: show correct answer */}
+              {isCompleted && myAnswer !== q.correctAnswer && (
+                <p className="mt-3 text-sm text-ink-muted">
+                  Correct answer: <span className="font-semibold text-good-text">
+                    <span>{q.correctAnswer}.</span> <MathText text={(q.correctAnswer === 'A' ? q.optionA : q.correctAnswer === 'B' ? q.optionB : q.correctAnswer === 'C' ? q.optionC : q.optionD) || q.correctAnswer} />
+                  </span>
+                </p>
+              )}
+            </QuestionCard>
+          );
+        })}
+      </div>
+
+      {error && <Alert className="mb-4">{error}</Alert>}
+
+      {!isCompleted && (
+        <div className="no-print sticky bottom-0 -mx-4 bg-gradient-to-t from-canvas via-canvas/95 to-transparent px-4 pb-4 pt-6 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+          <div className="space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-pop">
+            <QuizProgress answered={answeredCount} total={session.questions.length} />
+            <Button block onClick={handleSubmit} loading={submitting}>
+              {answeredCount < session.questions.length ? `Submit (${answeredCount}/${session.questions.length})` : 'Submit practice'}
+            </Button>
+          </div>
         </div>
+      )}
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
-
-        {!isCompleted && (
-          <div className="sticky bottom-0 -mx-4 px-4 pb-4 pt-6 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent dark:from-gray-900 dark:via-gray-900/95 no-print">
-            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-xl shadow-gray-900/10 p-4 space-y-3">
-              <QuizProgress answered={answeredCount} total={session.questions.length} />
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3 rounded-xl font-bold disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/25"
-              >
-                {submitting ? 'Submitting...' : answeredCount < session.questions.length ? `Submit (${answeredCount}/${session.questions.length})` : 'Submit Practice'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isCompleted && (
-          <button
-            onClick={() => router.push('/child/practice')}
-            className="no-print w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/25"
-          >
-            Start Another Session
-          </button>
-        )}
-      </main>
-    </>
+      {isCompleted && (
+        <Button size="lg" block className="no-print" onClick={() => router.push('/child/practice')}>
+          Start another session
+        </Button>
+      )}
+    </Page>
   );
 }

@@ -1,13 +1,25 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Bricolage_Grotesque, DM_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { Providers } from './providers';
 
-const inter = Inter({ subsets: ['latin'] });
+// Display face for headings, a friendly geometric sans for everything else,
+// and a mono for timers so ticking digits never shift.
+const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
+const sans = DM_Sans({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+const mono = localFont({ src: './fonts/GeistMonoVF.woff', variable: '--font-mono', weight: '100 900' });
 
 export const metadata: Metadata = {
   title: 'HiveExcel - Learning Collaboration for Families',
   description: 'Homework assignments for grades 6-12 with gamification and analytics',
+};
+
+// viewport-fit=cover lets the mobile tab bar pad itself above the home indicator
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={`${inter.className} bg-gray-50 dark:bg-gray-900 min-h-screen`}>
+      <body className={`${display.variable} ${sans.variable} ${mono.variable} font-sans antialiased bg-canvas text-ink min-h-screen`}>
         <Providers>{children}</Providers>
       </body>
     </html>
