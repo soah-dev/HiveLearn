@@ -25,7 +25,7 @@ export default function Avatar({ name, image, size = 'md', pending, className }:
       aria-hidden="true"
       className={cn(
         'inline-flex shrink-0 items-center justify-center rounded-full font-display font-bold',
-        pending ? 'border border-dashed border-line-strong bg-surface text-ink-subtle' : 'bg-honey-soft text-honey-text',
+        pending ? 'border border-dashed border-line-strong bg-surface text-ink-subtle' : 'bg-brand-soft text-brand-text',
         sizes[size],
         className
       )}

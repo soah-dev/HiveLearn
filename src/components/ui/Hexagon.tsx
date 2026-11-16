@@ -22,11 +22,14 @@ function roundedHexPath(cx: number, cy: number, r: number, corner: number): stri
 
 export const HEX_PATH = roundedHexPath(50, 50, 48, 9);
 
-export type HexTone = 'honey' | 'soft' | 'muted' | 'outline' | 'ink' | 'good' | 'warn' | 'bad' | 'info';
+export type HexTone = 'brand' | 'soft' | 'honey' | 'honey-soft' | 'muted' | 'outline' | 'ink' | 'good' | 'warn' | 'bad' | 'info';
 
 const tones: Record<HexTone, { shape: string; content: string }> = {
+  brand: { shape: 'fill-brand', content: 'text-brand-ink' },
+  soft: { shape: 'fill-brand-soft', content: 'text-brand-text' },
+  // Reward tones: earned badges, top ranks
   honey: { shape: 'fill-honey', content: 'text-honey-ink' },
-  soft: { shape: 'fill-honey-soft', content: 'text-honey-text' },
+  'honey-soft': { shape: 'fill-honey-soft', content: 'text-honey-text' },
   muted: { shape: 'fill-muted', content: 'text-ink-muted' },
   outline: { shape: 'fill-transparent stroke-line-strong [stroke-width:3]', content: 'text-ink-subtle' },
   ink: { shape: 'fill-ink', content: 'text-canvas' },

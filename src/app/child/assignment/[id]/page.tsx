@@ -217,7 +217,7 @@ export default function ChildAssignmentPage() {
       {/* Start card for pending */}
       {isPending && (
         <Card padding="lg" className="mb-8 text-center">
-          <SubjectIcon subject={assignment.subject} size={64} tone="honey" />
+          <SubjectIcon subject={assignment.subject} size={64} tone="brand" />
           <h2 className="mt-4 font-display text-xl font-semibold text-ink">Ready to begin?</h2>
           <p className="mt-1 text-ink-muted">
             {assignment.numQuestions} questions · {assignment.difficulty}

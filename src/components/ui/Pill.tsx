@@ -1,11 +1,12 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-export type Tone = 'neutral' | 'honey' | 'good' | 'warn' | 'bad' | 'info';
+export type Tone = 'neutral' | 'brand' | 'honey' | 'good' | 'warn' | 'bad' | 'info';
 
 const tones: Record<Tone, string> = {
   neutral: 'bg-muted text-ink-muted',
-  honey: 'bg-honey-soft text-honey-text',
+  brand: 'bg-brand-soft text-brand-text',
+  honey: 'bg-honey-soft text-honey-text', // points and other rewards
   good: 'bg-good-soft text-good-text',
   warn: 'bg-warn-soft text-warn-text',
   bad: 'bg-bad-soft text-bad-text',

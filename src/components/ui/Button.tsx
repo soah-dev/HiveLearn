@@ -10,7 +10,7 @@ const base =
 
 const variants: Record<ButtonVariant, string> = {
   // The one filled, coloured button: reserve it for the main action in a view
-  primary: 'bg-honey text-honey-ink hover:bg-honey-hover shadow-[inset_0_-2px_0_rgb(0_0_0/0.14)]',
+  primary: 'bg-brand text-brand-ink hover:bg-brand-hover shadow-[inset_0_-2px_0_rgb(0_0_0/0.14)]',
   secondary: 'bg-surface text-ink border border-line-strong hover:bg-muted',
   subtle: 'bg-muted text-ink hover:bg-line',
   ghost: 'text-ink-muted hover:bg-muted hover:text-ink',

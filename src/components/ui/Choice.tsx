@@ -75,11 +75,11 @@ export function Chips<T extends string | number>({ options, value, onChange, lab
               // Equal-width chips get tighter padding so labels fit on phones
               block ? 'min-w-0 flex-1 px-2' : 'px-3.5',
               active
-                ? 'border-honey bg-honey-soft text-ink'
+                ? 'border-brand bg-brand-soft text-ink'
                 : 'border-line-strong bg-surface text-ink-muted hover:border-ink-subtle hover:text-ink'
             )}
           >
-            {active && <Check className="h-3.5 w-3.5 shrink-0 text-honey-text" aria-hidden="true" />}
+            {active && <Check className="h-3.5 w-3.5 shrink-0 text-brand-text" aria-hidden="true" />}
             <span className="truncate">{opt.label}</span>
           </button>
         );

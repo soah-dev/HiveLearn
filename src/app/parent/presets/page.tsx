@@ -198,7 +198,7 @@ export default function PresetsPage() {
                     <span className="capitalize">{preset.questionTypes.replace(/,/g, ', ').replace(/_/g, ' ')}</span>
                   </p>
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs">
-                    <span className="inline-flex items-center gap-1 font-medium text-honey-text">
+                    <span className="inline-flex items-center gap-1 font-medium text-brand-text">
                       <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
                       {formatDays(preset.daysOfWeek)}
                     </span>

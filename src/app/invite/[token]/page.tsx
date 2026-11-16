@@ -261,11 +261,11 @@ export default function InviteSignupPage() {
       <p className="mt-6 text-sm text-ink-muted">
         {mode === 'signup' ? (
           <>Already have an account?{' '}
-            <button onClick={() => switchMode('login')} className="font-semibold text-honey-text hover:underline">Sign in</button>
+            <button onClick={() => switchMode('login')} className="font-semibold text-brand-text hover:underline">Sign in</button>
           </>
         ) : (
           <>Need an account?{' '}
-            <button onClick={() => switchMode('signup')} className="font-semibold text-honey-text hover:underline">Sign up</button>
+            <button onClick={() => switchMode('signup')} className="font-semibold text-brand-text hover:underline">Sign up</button>
           </>
         )}
       </p>

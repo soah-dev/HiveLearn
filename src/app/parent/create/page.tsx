@@ -182,7 +182,7 @@ export default function CreateAssignment() {
         {steps.map((st, i) => (
           <li key={st.key} className="flex items-center gap-2" aria-current={i === stepIndex ? 'step' : undefined}>
             {i > 0 && <span className="mr-1 h-px w-6 bg-line-strong sm:w-10" aria-hidden="true" />}
-            <Hexagon size={28} tone={i <= stepIndex ? 'honey' : 'muted'}>
+            <Hexagon size={28} tone={i <= stepIndex ? 'brand' : 'muted'}>
               {i < stepIndex
                 ? <Check className="h-3.5 w-3.5" aria-hidden="true" />
                 : <span className="text-xs font-bold">{i + 1}</span>}

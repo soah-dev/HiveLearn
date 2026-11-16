@@ -101,10 +101,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         aria-current={active ? 'page' : undefined}
         className={cn(
           'flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors',
-          active ? 'bg-honey-soft font-semibold text-ink' : 'font-medium text-ink-muted hover:bg-muted hover:text-ink'
+          active ? 'bg-brand-soft font-semibold text-ink' : 'font-medium text-ink-muted hover:bg-muted hover:text-ink'
         )}
       >
-        <link.icon className={cn('h-[18px] w-[18px] shrink-0', active && 'text-honey-text')} aria-hidden="true" />
+        <link.icon className={cn('h-[18px] w-[18px] shrink-0', active && 'text-brand-text')} aria-hidden="true" />
         {link.label}
       </Link>
     );
@@ -216,7 +216,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     aria-current={active ? 'page' : undefined}
                     className="flex h-16 flex-col items-center justify-center gap-1"
                   >
-                    <span className={cn('flex h-7 w-12 items-center justify-center rounded-full transition-colors', active ? 'bg-honey-soft text-honey-text' : 'text-ink-subtle')}>
+                    <span className={cn('flex h-7 w-12 items-center justify-center rounded-full transition-colors', active ? 'bg-brand-soft text-brand-text' : 'text-ink-subtle')}>
                       <link.icon className="h-5 w-5" aria-hidden="true" />
                     </span>
                     <span className={cn('text-[11px] leading-none', active ? 'font-semibold text-ink' : 'font-medium text-ink-muted')}>

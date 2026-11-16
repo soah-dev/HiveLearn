@@ -83,16 +83,16 @@ export default function Leaderboard({ highlightId, emptyMessage }: LeaderboardPr
             return (
               <li
                 key={entry.id}
-                className={cn('flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5', isYou && 'shadow-[inset_3px_0_0_rgb(var(--honey))]')}
+                className={cn('flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5', isYou && 'shadow-[inset_3px_0_0_rgb(var(--brand))]')}
               >
-                <Hexagon size={34} tone={i === 0 ? 'honey' : i < 3 ? 'soft' : 'muted'}>
+                <Hexagon size={34} tone={i === 0 ? 'honey' : i < 3 ? 'honey-soft' : 'muted'}>
                   <span className="text-sm font-bold tabular-nums">{i + 1}</span>
                 </Hexagon>
                 <Avatar name={entry.name} />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 font-semibold text-ink">
                     <span className="truncate">{entry.name || 'Student'}</span>
-                    {isYou && <Pill tone="honey">You</Pill>}
+                    {isYou && <Pill tone="brand">You</Pill>}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted">
                     <Flame className="h-3.5 w-3.5" aria-hidden="true" />

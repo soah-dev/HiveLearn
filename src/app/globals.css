@@ -4,29 +4,35 @@
 
 /*
  * Design tokens. Values are RGB channels so Tailwind can apply opacity
- * (`bg-honey/20`). Names are mapped to utilities in tailwind.config.ts.
+ * (`bg-brand/20`). Names are mapped to utilities in tailwind.config.ts.
  * Text/background pairs are checked for WCAG AA contrast in both themes.
  */
 :root {
   color-scheme: light;
 
   /* Surfaces */
-  --canvas: 250 247 240;       /* page background: warm cream */
+  --canvas: 248 247 252;       /* page background: cool lavender-white */
   --surface: 255 255 255;      /* cards, sheets, inputs */
-  --muted: 243 238 227;        /* quiet fills: chips, hover, inset panels */
-  --line: 231 223 207;         /* hairline borders */
-  --line-strong: 211 200 178;  /* control borders */
+  --muted: 240 238 248;        /* quiet fills: chips, hover, inset panels */
+  --line: 228 225 240;         /* hairline borders */
+  --line-strong: 200 196 218;  /* control borders */
 
   /* Text */
-  --ink: 28 24 20;
-  --ink-muted: 95 87 75;
-  --ink-subtle: 113 104 90;
+  --ink: 24 21 38;
+  --ink-muted: 82 78 102;
+  --ink-subtle: 102 98 122;
 
-  /* Brand: honey */
+  /* Brand: purple. Primary actions, navigation, selection, progress, links */
+  --brand: 100 70 224;         /* fills (always paired with --brand-ink text) */
+  --brand-hover: 86 56 204;
+  --brand-soft: 237 233 254;   /* tinted backgrounds */
+  --brand-line: 200 188 248;   /* tinted borders */
+  --brand-ink: 255 255 255;    /* text on a brand fill */
+  --brand-text: 87 56 200;     /* brand-coloured text on canvas/surface */
+
+  /* Reward: honey. Points, streaks, badges and rankings only */
   --honey: 245 181 10;         /* fills (always paired with --honey-ink text) */
-  --honey-hover: 232 168 0;
   --honey-soft: 252 239 199;   /* tinted backgrounds */
-  --honey-line: 240 212 138;   /* tinted borders */
   --honey-ink: 28 24 20;       /* text on a honey fill */
   --honey-text: 138 90 0;      /* honey-coloured text on canvas/surface */
 
@@ -45,30 +51,35 @@
   --info-text: 36 91 143;
 
   /* Chart series: validated colour-blind-safe as a set (all pairs) on --surface */
-  --chart-1: 184 122 0;
-  --chart-2: 59 111 212;
-  --chart-3: 194 71 127;
+  --chart-1: 100 70 224;
+  --chart-2: 184 122 0;
+  --chart-3: 26 154 160;
 
-  --shadow: 60 45 20;
+  --shadow: 30 24 60;
 }
 
 .dark {
   color-scheme: dark;
 
-  --canvas: 20 17 13;
-  --surface: 29 25 20;
-  --muted: 38 33 26;
-  --line: 52 45 35;
-  --line-strong: 74 65 51;
+  --canvas: 18 16 26;
+  --surface: 27 25 37;
+  --muted: 37 34 50;
+  --line: 48 45 64;
+  --line-strong: 70 66 90;
 
-  --ink: 245 240 230;
-  --ink-muted: 185 175 158;
-  --ink-subtle: 149 139 122;
+  --ink: 241 239 248;
+  --ink-muted: 178 174 198;
+  --ink-subtle: 146 142 168;
+
+  --brand: 108 80 236;
+  --brand-hover: 118 92 242;
+  --brand-soft: 44 36 84;
+  --brand-line: 78 66 140;
+  --brand-ink: 255 255 255;
+  --brand-text: 180 164 255;
 
   --honey: 245 181 10;
-  --honey-hover: 255 198 46;
   --honey-soft: 58 46 14;
-  --honey-line: 107 84 23;
   --honey-ink: 28 24 20;
   --honey-text: 247 201 72;
 
@@ -85,9 +96,9 @@
   --info-soft: 23 40 56;
   --info-text: 143 192 238;
 
-  --chart-1: 201 133 0;
-  --chart-2: 57 135 229;
-  --chart-3: 213 81 129;
+  --chart-1: 140 116 255;
+  --chart-2: 201 133 0;
+  --chart-3: 31 160 166;
 
   --shadow: 0 0 0;
 }
@@ -110,7 +121,7 @@ textarea:focus-visible {
 
 /* Honeycomb backdrop. The pattern is a mask, so its colour follows the tokens. */
 .honeycomb {
-  background-color: rgb(var(--honey) / 0.22);
+  background-color: rgb(var(--brand) / 0.3);
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0 28 8v16L14 32 0 24V8ZM14 32v16' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0 28 8v16L14 32 0 24V8ZM14 32v16' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
   -webkit-mask-size: 42px 72px;
@@ -152,8 +163,10 @@ textarea:focus-visible {
     --ink: 0 0 0;
     --ink-muted: 60 60 60;
     --ink-subtle: 90 90 90;
+    --brand-soft: 245 245 245;
+    --brand-line: 156 163 175;
+    --brand-text: 0 0 0;
     --honey-soft: 245 245 245;
-    --honey-line: 156 163 175;
     --honey-text: 0 0 0;
   }
 

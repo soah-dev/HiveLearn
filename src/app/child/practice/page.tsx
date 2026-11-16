@@ -137,7 +137,7 @@ export default function PracticePage() {
                       {done && s.score !== null ? (
                         <Score value={s.score} className="text-base" />
                       ) : (
-                        <Pill tone={done ? 'good' : 'honey'}>{done ? 'Done' : 'In progress'}</Pill>
+                        <Pill tone={done ? 'good' : 'brand'}>{done ? 'Done' : 'In progress'}</Pill>
                       )}
                       {done && <ChevronRight className="h-4 w-4 text-ink-subtle" aria-hidden="true" />}
                     </div>

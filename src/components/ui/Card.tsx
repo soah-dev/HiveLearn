@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
-  /** Honey-tinted surface for the one thing on a page that deserves emphasis. */
+  /** Brand-tinted surface for the one thing on a page that deserves emphasis. */
   highlight?: boolean;
 }
 
@@ -15,7 +15,7 @@ export default function Card({ padding = 'md', highlight = false, className, chi
     <div
       className={cn(
         'rounded-2xl border',
-        highlight ? 'border-honey-line bg-honey-soft' : 'border-line bg-surface',
+        highlight ? 'border-brand-line bg-brand-soft' : 'border-line bg-surface',
         paddings[padding],
         className
       )}

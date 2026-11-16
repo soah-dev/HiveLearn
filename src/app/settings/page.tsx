@@ -189,7 +189,7 @@ export default function SettingsPage() {
             <p className="truncate font-display text-lg font-semibold text-ink">{user?.name}</p>
             <p className="truncate text-sm text-ink-muted">{user?.email}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Pill tone="honey" className="capitalize">{user?.role}</Pill>
+              <Pill tone="brand" className="capitalize">{user?.role}</Pill>
               {user?.role === 'child' && <Pill>{childGrade ? `Grade ${childGrade}` : 'Grade not set'}</Pill>}
             </div>
           </div>
@@ -359,8 +359,8 @@ export default function SettingsPage() {
                   </div>
                   <p className="whitespace-pre-wrap text-sm text-ink">{f.message}</p>
                   {f.response && (
-                    <div className="mt-3 rounded-xl bg-honey-soft p-3.5">
-                      <p className="mb-1 text-xs font-semibold text-honey-text">HiveExcel team{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleDateString()}` : ''}</p>
+                    <div className="mt-3 rounded-xl bg-brand-soft p-3.5">
+                      <p className="mb-1 text-xs font-semibold text-brand-text">HiveExcel team{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleDateString()}` : ''}</p>
                       <p className="whitespace-pre-wrap text-sm text-ink">{f.response}</p>
                     </div>
                   )}
