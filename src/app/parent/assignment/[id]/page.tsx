@@ -294,7 +294,7 @@ export default function ParentAssignmentPage() {
                             type="checkbox"
                             checked={resolveCorrect}
                             onChange={e => setResolveCorrect(e.target.checked)}
-                            className="h-4 w-4 accent-honey"
+                            className="h-4 w-4 accent-brand"
                           />
                           Mark as correct
                         </label>
@@ -353,7 +353,7 @@ export default function ParentAssignmentPage() {
                         type="checkbox"
                         checked={reviews[q.id]?.isCorrect ?? false}
                         onChange={e => setReviews(prev => ({ ...prev, [q.id]: { ...prev[q.id], isCorrect: e.target.checked, comment: prev[q.id]?.comment || '' } }))}
-                        className="h-4 w-4 accent-honey"
+                        className="h-4 w-4 accent-brand"
                       />
                       Mark correct
                     </label>

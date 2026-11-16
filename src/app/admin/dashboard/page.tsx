@@ -318,7 +318,7 @@ export default function AdminDashboard() {
       <Card className="mb-8">
         <h2 className="mb-2 font-display text-base font-semibold text-ink">SAT access</h2>
         {satLoading ? (
-          <Spinner className="text-honey" />
+          <Spinner className="text-brand" />
         ) : satChildren.length === 0 ? (
           <p className="text-sm text-ink-muted">No children registered yet.</p>
         ) : (
@@ -381,7 +381,7 @@ export default function AdminDashboard() {
                 <p className="whitespace-pre-wrap text-sm text-ink">{f.message}</p>
                 {f.hasScreenshot && (
                   <details className="mt-2" onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) loadScreenshot(f.id); }}>
-                    <summary className="cursor-pointer text-xs font-semibold text-honey-text hover:underline">
+                    <summary className="cursor-pointer text-xs font-semibold text-brand-text hover:underline">
                       View screenshot
                     </summary>
                     {screenshots[f.id]
@@ -393,8 +393,8 @@ export default function AdminDashboard() {
                 <p className="mt-2 text-xs text-ink-subtle">{new Date(f.createdAt).toLocaleString()}</p>
 
                 {f.response ? (
-                  <div className="mt-3 rounded-xl bg-honey-soft p-3.5">
-                    <p className="mb-1 text-xs font-semibold text-honey-text">Your reply{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleString()}` : ''}</p>
+                  <div className="mt-3 rounded-xl bg-brand-soft p-3.5">
+                    <p className="mb-1 text-xs font-semibold text-brand-text">Your reply{f.respondedAt ? ` · ${new Date(f.respondedAt).toLocaleString()}` : ''}</p>
                     <p className="whitespace-pre-wrap text-sm text-ink">{f.response}</p>
                   </div>
                 ) : (

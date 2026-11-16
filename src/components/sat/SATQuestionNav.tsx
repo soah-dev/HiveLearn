@@ -14,7 +14,7 @@ interface SATQuestionNavProps {
 export const navStateClass = {
   current: 'bg-ink text-canvas',
   marked: 'bg-warn-soft text-warn-text ring-1 ring-inset ring-warn/50',
-  answered: 'bg-honey-soft text-honey-text',
+  answered: 'bg-brand-soft text-brand-text',
   unanswered: 'bg-muted text-ink-muted',
 };
 

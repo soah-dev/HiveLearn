@@ -23,12 +23,19 @@ const config: Config = {
         line: { DEFAULT: token('line'), strong: token('line-strong') },
         // Text
         ink: { DEFAULT: token('ink'), muted: token('ink-muted'), subtle: token('ink-subtle') },
-        // Brand
+        // Brand: primary actions, navigation, selection, progress, links
+        brand: {
+          DEFAULT: token('brand'),
+          hover: token('brand-hover'),
+          soft: token('brand-soft'),
+          line: token('brand-line'),
+          ink: token('brand-ink'),
+          text: token('brand-text'),
+        },
+        // Reward: points, streaks, badges, rankings (never for actions)
         honey: {
           DEFAULT: token('honey'),
-          hover: token('honey-hover'),
           soft: token('honey-soft'),
-          line: token('honey-line'),
           ink: token('honey-ink'),
           text: token('honey-text'),
         },

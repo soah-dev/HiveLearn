@@ -132,16 +132,16 @@ export default function Home() {
       <p className="mt-6 text-sm text-ink-muted">
         {mode === 'login' ? (
           <>New to HiveExcel?{' '}
-            <button onClick={() => switchMode('signup')} className="font-semibold text-honey-text hover:underline">Create an account</button>
+            <button onClick={() => switchMode('signup')} className="font-semibold text-brand-text hover:underline">Create an account</button>
           </>
         ) : (
           <>Already have an account?{' '}
-            <button onClick={() => switchMode('login')} className="font-semibold text-honey-text hover:underline">Sign in</button>
+            <button onClick={() => switchMode('login')} className="font-semibold text-brand-text hover:underline">Sign in</button>
           </>
         )}
       </p>
       <p className="mt-2 text-sm">
-        <Link href="/how-it-works" className="font-semibold text-honey-text hover:underline">How does it work?</Link>
+        <Link href="/how-it-works" className="font-semibold text-brand-text hover:underline">How does it work?</Link>
       </p>
     </AuthLayout>
   );

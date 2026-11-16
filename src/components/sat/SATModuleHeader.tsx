@@ -21,7 +21,7 @@ export default function SATModuleHeader({ section, moduleNumber, questionIndex, 
       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
         <span>Question {questionIndex + 1} of {totalQuestions}</span>
         {moduleNumber === 2 && difficulty && difficulty !== 'standard' && (
-          <Pill tone={difficulty === 'hard' ? 'honey' : 'neutral'}>
+          <Pill tone={difficulty === 'hard' ? 'brand' : 'neutral'}>
             {difficulty === 'hard' ? 'Advanced' : 'Standard'} difficulty
           </Pill>
         )}

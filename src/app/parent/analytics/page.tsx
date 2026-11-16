@@ -80,7 +80,7 @@ export default function ReportsPage() {
                         </span>
                       </p>
                     </div>
-                    <span className="hidden text-sm font-semibold text-honey-text sm:inline">View progress</span>
+                    <span className="hidden text-sm font-semibold text-brand-text sm:inline">View progress</span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" aria-hidden="true" />
                   </Link>
                 </li>

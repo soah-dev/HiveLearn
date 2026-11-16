@@ -23,17 +23,17 @@ interface AssignmentRowProps {
   action?: ReactNode;
 }
 
-// Tone follows what the viewer has to do: honey = in motion, warn = waiting on you
+// Tone follows what the viewer has to do: brand = in motion, warn = waiting on you
 const statusPills: Record<'parent' | 'child', Record<string, { label: string; tone: Tone }>> = {
   parent: {
     pending: { label: 'Not started', tone: 'neutral' },
-    in_progress: { label: 'In progress', tone: 'honey' },
+    in_progress: { label: 'In progress', tone: 'brand' },
     submitted: { label: 'Needs review', tone: 'warn' },
     reviewed: { label: 'Reviewed', tone: 'good' },
   },
   child: {
     pending: { label: 'Not started', tone: 'neutral' },
-    in_progress: { label: 'In progress', tone: 'honey' },
+    in_progress: { label: 'In progress', tone: 'brand' },
     submitted: { label: 'Submitted', tone: 'info' },
     reviewed: { label: 'Reviewed', tone: 'good' },
   },

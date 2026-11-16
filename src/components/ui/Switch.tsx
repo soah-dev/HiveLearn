@@ -20,7 +20,7 @@ export default function Switch({ checked, onChange, label, disabled, className }
       onClick={() => onChange(!checked)}
       className={cn(
         'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50',
-        checked ? 'bg-honey' : 'bg-line-strong',
+        checked ? 'bg-brand' : 'bg-line-strong',
         className
       )}
     >

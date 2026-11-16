@@ -137,7 +137,7 @@ export default function SATHubPage() {
                       Started {new Date(s.startedAt || s.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-honey-text">
+                  <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-text">
                     Continue <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </span>
                 </Link>

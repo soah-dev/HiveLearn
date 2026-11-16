@@ -91,13 +91,13 @@ homework-hub/
 - AuthContext exposes: `signInWithGoogle()`, `signInWithEmail()`, `signUpWithEmail()`, `signOut()`, `refreshUser()`
 - `firebase-admin.ts` uses lazy initialization via Proxy to avoid crashing at Next.js build time when env vars are placeholders
 
-## Design System ("Honey & hive")
+## Design System ("Hive": purple brand, honey rewards)
 
 The look lives in one place. Follow these rules so screens stay calm and consistent:
 
-- **Tokens, not palette classes.** Colours are CSS variables in `src/app/globals.css` (light under `:root`, dark under `.dark`), mapped to Tailwind utilities in `tailwind.config.ts`: `canvas` / `surface` / `muted` (backgrounds), `line` / `line-strong` (borders), `ink` / `ink-muted` / `ink-subtle` (text), `honey` (+ `-hover`, `-soft`, `-line`, `-ink`, `-text`) for the brand, and `good` / `warn` / `bad` / `info` (+ `-soft`, `-text`) for status. Never use raw Tailwind colours (`gray-500`, `indigo-600`) or `dark:` variants in components; the tokens already switch with the theme.
-- **Colour has to mean something.** Honey = brand, the primary action, progress and points. Status colours are reserved for state (correct/incorrect, needs review, errors). Subjects are told apart by icon (`SubjectIcon`), difficulty by `DifficultyMeter`, never by colour.
-- **One primary button per view.** `Button variant="primary"` (honey fill, dark text) is the main action; everything else is `secondary`, `subtle`, `ghost` or `danger`. Links that look like buttons use `buttonClass()`.
+- **Tokens, not palette classes.** Colours are CSS variables in `src/app/globals.css` (light under `:root`, dark under `.dark`), mapped to Tailwind utilities in `tailwind.config.ts`: `canvas` / `surface` / `muted` (backgrounds), `line` / `line-strong` (borders), `ink` / `ink-muted` / `ink-subtle` (text), `brand` (+ `-hover`, `-soft`, `-line`, `-ink`, `-text`) for the purple brand, `honey` (+ `-soft`, `-ink`, `-text`) for rewards, and `good` / `warn` / `bad` / `info` (+ `-soft`, `-text`) for status. Never use raw Tailwind colours (`gray-500`, `indigo-600`) or `dark:` variants in components; the tokens already switch with the theme.
+- **Colour has to mean something.** Brand (purple) = the primary action, navigation, selection, progress and links. Honey = rewards only: points, streaks, earned badges, top leaderboard ranks (`Pill tone="honey"`, `Hexagon tone="honey"`, `StatCard accent="honey"`). Status colours are reserved for state (correct/incorrect, needs review, errors). Subjects are told apart by icon (`SubjectIcon`), difficulty by `DifficultyMeter`, never by colour.
+- **One primary button per view.** `Button variant="primary"` (purple fill, white text) is the main action; everything else is `secondary`, `subtle`, `ghost` or `danger`. Links that look like buttons use `buttonClass()`.
 - **Build from the primitives** in `src/components/ui/` instead of restyling by hand: pages are `<Page>` + `<PageHeader>`, lists are `<ListCard>` rows, forms use `<Field>` with `<Input>`/`<Select>`/`<Textarea>`, toggles are `<Switch>`, either/or choices are `<Segmented>` (views) or `<Chips>` (form values), messages are `<Alert>`.
 - **Shape and type.** The hexagon (`Hexagon`) is the brand shape for icons, numbers and badges. Radii: cards `rounded-2xl`, controls `rounded-xl`. Headings use `font-display` (Bricolage Grotesque); body and figures use the default sans (DM Sans); timers use `font-mono`. Sentence case for labels and buttons.
 - **Motion.** Only `animate-enter` / `animate-sheet-up` for overlays. No decorative floating or bouncing.

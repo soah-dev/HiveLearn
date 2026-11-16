@@ -53,7 +53,7 @@ export default function QuizProgress({ answered, total, timeLeft }: QuizProgress
           aria-valuenow={answered}
           aria-label="Questions answered"
         >
-          <div className="h-full rounded-full bg-honey transition-[width] duration-300" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${pct}%` }} />
         </div>
       </div>
       {timeLeft !== null && timeLeft !== undefined && <Countdown seconds={timeLeft} className="shrink-0" />}

@@ -10,7 +10,7 @@ export type AnswerState = 'idle' | 'selected' | 'correct' | 'wrong' | 'dim';
 
 const box: Record<AnswerState, string> = {
   idle: 'border-line-strong bg-surface text-ink',
-  selected: 'border-honey bg-honey-soft text-ink',
+  selected: 'border-brand bg-brand-soft text-ink',
   correct: 'border-good bg-good-soft text-ink',
   wrong: 'border-bad bg-bad-soft text-ink',
   dim: 'border-line bg-surface text-ink-muted',
@@ -18,7 +18,7 @@ const box: Record<AnswerState, string> = {
 
 const chip: Record<AnswerState, string> = {
   idle: 'border-line-strong text-ink-muted',
-  selected: 'border-honey bg-honey text-honey-ink',
+  selected: 'border-brand bg-brand text-brand-ink',
   correct: 'border-good bg-good text-canvas',
   wrong: 'border-bad bg-bad text-canvas',
   dim: 'border-line text-ink-subtle',

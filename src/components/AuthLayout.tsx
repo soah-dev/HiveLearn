@@ -17,9 +17,9 @@ const points: Array<{ icon: LucideIcon; title: string; text: string }> = [
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-      <div className="relative hidden overflow-hidden bg-[#1C1814] text-[#F5F0E6] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+      <div className="relative hidden overflow-hidden bg-[#16132A] text-[#F1EFF8] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="honeycomb absolute inset-0" aria-hidden="true" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1C1814] via-[#1C1814]/90 to-[#1C1814]/20" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#16132A] via-[#16132A]/90 to-[#16132A]/20" aria-hidden="true" />
 
         <Logo size="md" onDark className="relative" />
 
@@ -30,22 +30,22 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <ul className="mt-10 space-y-6">
             {points.map(p => (
               <li key={p.title} className="flex gap-4">
-                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center text-[#1C1814]">
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center text-white">
                   <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden="true">
-                    <path d={HEX_PATH} fill="#F5B50A" />
+                    <path d={HEX_PATH} fill="#6446E0" />
                   </svg>
                   <p.icon className="relative h-5 w-5" aria-hidden="true" />
                 </span>
                 <div>
                   <p className="font-semibold">{p.title}</p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-[#B9AF9E]">{p.text}</p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-[#B2AEC6]">{p.text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <p className="relative text-sm text-[#958B7A]">For parents and the students they cheer on.</p>
+        <p className="relative text-sm text-[#928EA8]">For parents and the students they cheer on.</p>
       </div>
 
       <div className="flex min-h-screen flex-col">

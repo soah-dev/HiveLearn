@@ -22,7 +22,7 @@ const icons = { success: CircleCheck, error: TriangleAlert, info: Info };
 const iconColors: Record<ToastType, string> = {
   success: 'text-good-text',
   error: 'text-bad-text',
-  info: 'text-honey-text',
+  info: 'text-brand-text',
 };
 
 /**

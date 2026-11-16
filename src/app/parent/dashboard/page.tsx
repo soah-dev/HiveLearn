@@ -319,7 +319,7 @@ export default function ParentDashboard() {
         />
 
         <StatGrid className="mb-8">
-          <StatCard title="Needs review" value={needsReviewAssignments.length} icon={Inbox} accent={needsReviewAssignments.length > 0} />
+          <StatCard title="Needs review" value={needsReviewAssignments.length} icon={Inbox} accent={needsReviewAssignments.length > 0 && 'brand'} />
           <StatCard title="Completed" value={totalCompleted} icon={CircleCheck} />
           <StatCard title="Assignments" value={assignments.length} icon={ClipboardList} />
           <StatCard title="Practice sessions" value={practiceSessions.length} icon={Target} />
@@ -348,7 +348,7 @@ export default function ParentDashboard() {
                               </h3>
                               <p className="text-xs text-ink-muted">
                                 Based on your scheduled presets for today ·{' '}
-                                <Link href="/parent/presets" className="font-semibold text-honey-text hover:underline">Manage</Link>
+                                <Link href="/parent/presets" className="font-semibold text-brand-text hover:underline">Manage</Link>
                               </p>
                             </div>
                           </div>
@@ -567,7 +567,7 @@ export default function ParentDashboard() {
                           {done && s.score !== null ? (
                             <Score value={s.score} className="text-base" />
                           ) : (
-                            <Pill tone={done ? 'good' : 'honey'}>{done ? 'Done' : 'In progress'}</Pill>
+                            <Pill tone={done ? 'good' : 'brand'}>{done ? 'Done' : 'In progress'}</Pill>
                           )}
                         </div>
                       </li>
@@ -585,7 +585,7 @@ export default function ParentDashboard() {
               title="Your children"
               count={children.length || undefined}
               action={hasChildren ? (
-                <button onClick={openAddChild} className="text-sm font-semibold text-honey-text hover:underline">Add another</button>
+                <button onClick={openAddChild} className="text-sm font-semibold text-brand-text hover:underline">Add another</button>
               ) : undefined}
             />
 

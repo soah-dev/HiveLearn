@@ -11,7 +11,7 @@ export default function DifficultyMeter({ difficulty, className }: { difficulty:
       <span className="inline-flex gap-px" aria-hidden="true">
         {[1, 2, 3].map(n => (
           <svg key={n} viewBox="0 0 100 100" className="h-2.5 w-2.5">
-            <path d={HEX_PATH} className={n <= level ? 'fill-honey' : 'fill-line-strong'} />
+            <path d={HEX_PATH} className={n <= level ? 'fill-brand' : 'fill-line-strong'} />
           </svg>
         ))}
       </span>

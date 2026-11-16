@@ -184,7 +184,7 @@ export default function ChildDashboard() {
           title="Day streak"
           value={streak}
           icon={Flame}
-          accent={streak > 0}
+          accent={streak > 0 && 'honey'}
           subtitle={gamification?.longestStreak ? `Best: ${gamification.longestStreak} days` : undefined}
         />
         <StatCard title="Points" value={(gamification?.totalPoints || 0).toLocaleString()} icon={Star} />
@@ -207,9 +207,9 @@ export default function ChildDashboard() {
             ) : (
               <div className="space-y-3">
                 <Card highlight className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <SubjectIcon subject={upNext.subject} size={56} tone="honey" />
+                  <SubjectIcon subject={upNext.subject} size={56} tone="brand" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-honey-text">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-text">
                       {upNext.status === 'in_progress' ? 'Pick up where you left off' : 'Up next'}
                     </p>
                     <p className="mt-0.5 break-words font-display text-xl font-semibold text-ink">
@@ -328,7 +328,7 @@ export default function ChildDashboard() {
           <Card>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="font-display text-base font-semibold text-ink">Recent badges</h2>
-              <Link href="/child/badges" className="text-sm font-semibold text-honey-text hover:underline">View all</Link>
+              <Link href="/child/badges" className="text-sm font-semibold text-brand-text hover:underline">View all</Link>
             </div>
             {recentBadges.length > 0 ? (
               <ul className="grid grid-cols-3 gap-2">

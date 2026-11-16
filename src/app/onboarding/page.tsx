@@ -69,10 +69,10 @@ export default function OnboardingPage() {
               onClick={() => setRole(r.value)}
               className={cn(
                 'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-colors',
-                active ? 'border-honey bg-honey-soft' : 'border-line-strong bg-surface hover:border-ink-subtle'
+                active ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface hover:border-ink-subtle'
               )}
             >
-              <Hexagon size={48} tone={active ? 'honey' : 'muted'}>
+              <Hexagon size={48} tone={active ? 'brand' : 'muted'}>
                 <r.icon className="h-5 w-5" aria-hidden="true" />
               </Hexagon>
               <span>

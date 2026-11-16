@@ -23,8 +23,8 @@ interface StatCardProps {
   value: ReactNode;
   subtitle?: ReactNode;
   icon?: LucideIcon;
-  /** Tint the icon honey: for the one stat a view wants to celebrate. */
-  accent?: boolean;
+  /** Tint the icon for the one stat a view wants to call out: honey for a reward (streak), brand otherwise. */
+  accent?: 'brand' | 'honey' | false;
   className?: string;
 }
 
@@ -33,7 +33,7 @@ export default function StatCard({ title, value, subtitle, icon: Icon, accent, c
   return (
     <div className={cn('min-w-0 bg-surface p-4 sm:p-5', className)}>
       <dt className="flex items-center gap-1.5 text-sm text-ink-muted">
-        {Icon && <Icon className={cn('h-4 w-4 shrink-0', accent ? 'text-honey-text' : 'text-ink-subtle')} aria-hidden="true" />}
+        {Icon && <Icon className={cn('h-4 w-4 shrink-0', accent === 'honey' ? 'text-honey-text' : accent ? 'text-brand-text' : 'text-ink-subtle')} aria-hidden="true" />}
         <span className="truncate">{title}</span>
       </dt>
       <dd className="mt-2 break-words text-2xl font-semibold leading-none tracking-tight text-ink sm:text-[28px]">{value}</dd>
