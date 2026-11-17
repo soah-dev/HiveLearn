@@ -4,8 +4,9 @@ import { QUESTION_TYPES } from './validation';
 
 /**
  * Shared Gemini question generation used by the parent "create assignment"
- * flow and by scheduled presets. Owns the prompt, response validation, the
- * retry-for-shortfall loop, and usage aggregation so the two callers can't drift.
+ * flow, scheduled presets and study-lesson practice. Owns the prompt, response
+ * validation, the retry-for-shortfall loop, and usage aggregation so the
+ * callers can't drift.
  */
 
 export interface GeneratedQuestion {
@@ -27,6 +28,8 @@ export interface GenerationParams {
   questionTypes: string[];
   /** Question texts the student has seen recently; the model is told not to repeat them. */
   avoidQuestions?: string[];
+  /** Plain text of a study lesson; when given, questions stay within what it taught. */
+  lessonNotes?: string | null;
 }
 
 export class AiResponseFormatError extends Error {}
@@ -80,6 +83,12 @@ function topicClause(topic?: string | null): string {
   return topic?.trim() ? `on the topic "${topic.trim()}"` : 'covering a variety of appropriate topics';
 }
 
+function lessonClause(notes?: string | null): string {
+  return notes?.trim()
+    ? `\n\nThe student has just studied the lesson below. Only ask about what it teaches, so a student who understood it can answer every question. Use fresh numbers, sentences and scenarios instead of repeating the lesson's worked examples.\n\n--- LESSON ---\n${notes.trim()}\n--- END OF LESSON ---`
+    : '';
+}
+
 export function buildGenerationPrompt(p: GenerationParams): string {
   const allowedTypes = p.questionTypes.join(', ');
   const avoidClause = p.avoidQuestions && p.avoidQuestions.length > 0
@@ -102,14 +111,14 @@ CRITICAL RULES:
 - For reading/language arts: If you include a passage, you MUST also include an explicit question after the passage in question_text (e.g. "Read the passage below:\\n\\n[passage]\\n\\nWhat is the main idea of this passage?"). Never leave the question implied — always state what the student is being asked.
 - For any math expressions, wrap them in dollar signs for LaTeX rendering: e.g. $\\frac{1}{2}$, $3 \\times 10^2$, $x^2 + y^2 = z^2$. Use $...$ for inline math in question_text, options, and correct_answer.
 
-Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among: ${allowedTypes}.${avoidClause}`;
+Return ONLY a JSON array. Ensure questions are age-appropriate, educational, and progressively challenging within the difficulty level. Distribute question types as evenly as possible among: ${allowedTypes}.${avoidClause}${lessonClause(p.lessonNotes)}`;
 }
 
 function buildRetryPrompt(p: GenerationParams, remaining: number): string {
   const avoidClause = p.avoidQuestions && p.avoidQuestions.length > 0
     ? `\n\nDo NOT repeat any of these recently asked questions:\n${p.avoidQuestions.map(q => `- ${q}`).join('\n')}`
     : '';
-  return `Generate ${remaining} MORE ${p.subject} questions for grade ${p.grade} ${topicClause(p.topic)} at ${p.difficulty} difficulty. Types: ${p.questionTypes.join(', ')}.\n\nSame format as before. CRITICAL: For multiple_choice, correct_answer MUST be "A", "B", "C", or "D" and that option must contain the correct answer. Return ONLY a JSON array.${avoidClause}`;
+  return `Generate ${remaining} MORE ${p.subject} questions for grade ${p.grade} ${topicClause(p.topic)} at ${p.difficulty} difficulty. Types: ${p.questionTypes.join(', ')}.\n\nSame format as before. CRITICAL: For multiple_choice, correct_answer MUST be "A", "B", "C", or "D" and that option must contain the correct answer. Return ONLY a JSON array.${avoidClause}${lessonClause(p.lessonNotes)}`;
 }
 
 /** Recent question texts for this child in the same subject and grade, bounded to keep prompt size small. */
@@ -126,7 +135,7 @@ export async function recentQuestionTexts(childId: string, subject: string, grad
     .slice(0, 40);
 }
 
-function sumUsage(records: AiUsageMetadata[]): AiUsageMetadata {
+export function sumUsage(records: AiUsageMetadata[]): AiUsageMetadata {
   return records.reduce(
     (acc, u) => ({
       model: u.model,

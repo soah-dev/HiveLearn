@@ -27,6 +27,7 @@ model User {
   gamification     Gamification?
   earnedBadges     EarnedBadge[]
   practiceSessions PracticeSession[]
+  studyLessons     StudyLesson[]
   offlineWork      OfflineWork[] @relation("ChildOfflineWork")
   reviewedOfflineWork OfflineWork[] @relation("ParentOfflineWork")
   feedback         Feedback[]
@@ -149,9 +150,28 @@ model PracticeSession {
   pointsAwarded Int?
   createdAt    DateTime  @default(now())
   completedAt  DateTime?
+  lessonId     String?   // set when the session was started from a study lesson
 
   child     User              @relation(fields: [childId], references: [id])
+  lesson    StudyLesson?      @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   questions PracticeQuestion[]
+
+  @@index([lessonId])
+}
+
+model StudyLesson {
+  id        String   @id @default(cuid())
+  childId   String
+  grade     Int
+  subject   String
+  topic     String
+  content   Json     // LessonContent, see src/lib/lesson.ts
+  createdAt DateTime @default(now())
+
+  child            User              @relation(fields: [childId], references: [id])
+  practiceSessions PracticeSession[]
+
+  @@index([childId, createdAt])
 }
 
 model PracticeQuestion {

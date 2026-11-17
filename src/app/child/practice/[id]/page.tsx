@@ -39,6 +39,8 @@ interface PracticeSession {
   status: string;
   score: number | null;
   pointsAwarded: number | null;
+  /** Set when the session was started from a study lesson. */
+  lessonId: string | null;
   questions: PracticeQuestion[];
 }
 
@@ -121,10 +123,13 @@ export default function PracticeSessionPage() {
   const correctCount = result?.correct ?? session.questions.filter(q => q.answers[0]?.isCorrect).length;
   const totalCount = result?.total ?? session.questions.length;
 
+  // Practice on a study lesson leads back to that lesson, not the practice list
+  const lessonHref = session.lessonId ? `/child/study/${session.lessonId}` : null;
+
   return (
     <Page width="narrow">
       <PageHeader
-        back={{ href: '/child/practice', label: 'Back to practice' }}
+        back={lessonHref ? { href: lessonHref, label: 'Back to lesson' } : { href: '/child/practice', label: 'Back to practice' }}
         title={`${subjectLabel(session.subject)}${session.topic ? `: ${session.topic}` : ''}`}
         subtitle={`Grade ${session.grade} · ${session.difficulty} · ${session.questions.length} questions`}
         actions={<PrintButton />}
@@ -230,8 +235,8 @@ export default function PracticeSessionPage() {
       )}
 
       {isCompleted && (
-        <Button size="lg" block className="no-print" onClick={() => router.push('/child/practice')}>
-          Start another session
+        <Button size="lg" block className="no-print" onClick={() => router.push(lessonHref ?? '/child/practice')}>
+          {lessonHref ? 'Back to lesson' : 'Start another session'}
         </Button>
       )}
     </Page>
