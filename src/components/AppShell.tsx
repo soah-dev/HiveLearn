@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Award, CalendarClock, ChartColumn, CircleHelp, CirclePlus, GraduationCap, House, LogOut, LucideIcon, Moon,
+  Award, BookOpenText, CalendarClock, ChartColumn, CircleHelp, CirclePlus, GraduationCap, House, LogOut, LucideIcon, Moon,
   Settings, ShieldCheck, Sparkles, Sun, Target, Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +33,7 @@ const parentLinks: NavLink[] = [
 
 const childLinks: NavLink[] = [
   { href: '/child/dashboard', label: 'Dashboard', short: 'Home', icon: House, also: ['/child/assignment'] },
+  { href: '/child/study', label: 'Study', icon: BookOpenText },
   { href: '/child/practice', label: 'Practice', icon: Target },
   { href: '/child/sat', label: 'SAT Prep', short: 'SAT', icon: GraduationCap },
   { href: '/child/badges', label: 'Badges', icon: Award },

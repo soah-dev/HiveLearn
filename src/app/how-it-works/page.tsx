@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  ChartColumn, ClipboardCheck, ClipboardList, LucideIcon, Mail, Pencil, SquarePen, Target, Trophy, UserPlus, UserRound, Zap,
+  BookOpenText, ChartColumn, ClipboardCheck, ClipboardList, LucideIcon, Mail, Pencil, SquarePen, Target, Trophy, UserPlus, UserRound, Zap,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppShell from '@/components/AppShell';
@@ -67,6 +67,11 @@ const childSteps: Step[] = [
     title: 'Get your results',
     description: 'See your score, read detailed explanations for each question, and learn from any mistakes right away.',
     icon: Target,
+  },
+  {
+    title: 'Study a topic',
+    description: 'Pick any topic to get a short lesson with the key ideas and worked examples, then practice it with questions on what you just learned.',
+    icon: BookOpenText,
   },
   {
     title: 'Practice on your own',
